@@ -276,6 +276,56 @@
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
+                <StackPanel Visibility="{c:Binding 'ConnectConfig==&quot;Scrcpy&quot;'}">
+                    <StackPanel
+                        Margin="10"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal">
+                        <Grid Width="420">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <hc:TextBox
+                                Height="30"
+                                hc:BorderElement.CornerRadius="4,0,0,4"
+                                hc:InfoElement.Placeholder="Example: C:\tools\scrcpy-win64-v3.3.4"
+                                hc:TitleElement.Title="{DynamicResource ScrcpyRuntimePath}"
+                                hc:TitleElement.TitlePlacement="Left"
+                                Text="{Binding ScrcpyExtras.RuntimePath}" />
+                            <Button
+                                Grid.Column="1"
+                                Width="60"
+                                Height="30"
+                                HorizontalAlignment="Right"
+                                hc:BorderElement.CornerRadius="0,4,4,0"
+                                BorderThickness="0,1,1,1"
+                                Command="{s:Action SelectScrcpyRuntimePath}"
+                                Content="{DynamicResource Select}" />
+                        </Grid>
+                    </StackPanel>
+                    <StackPanel
+                        Margin="10,5"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal">
+                        <hc:TextBox
+                            Width="180"
+                            hc:BorderElement.CornerRadius="4"
+                            hc:InfoElement.Placeholder="e.g. 3.3.4"
+                            hc:TitleElement.Title="{DynamicResource ScrcpyVersion}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            Text="{Binding ScrcpyExtras.Version}" />
+                        <hc:NumericUpDown
+                            Margin="10,0,0,0"
+                            Width="160"
+                            hc:InfoElement.Title="{DynamicResource ScrcpyBitrate}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            InputMethod.IsInputMethodEnabled="False"
+                            Minimum="1"
+                            Maximum="200"
+                            Value="{Binding ScrcpyExtras.Bitrate}" />
+                    </StackPanel>
+                </StackPanel>
             </StackPanel>
         </StackPanel>
 

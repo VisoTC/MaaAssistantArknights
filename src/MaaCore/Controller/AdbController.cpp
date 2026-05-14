@@ -336,6 +336,7 @@ std::optional<unsigned short> asst::AdbController::init_socket(const std::string
 
 void asst::AdbController::clear_info() noexcept
 {
+    m_scrcpy_capture.uninit();
     m_inited = false;
     m_adb = decltype(m_adb)();
     m_uuid.clear();
@@ -465,6 +466,7 @@ std::pair<int, int> asst::AdbController::get_screen_res() const noexcept
 
 void asst::AdbController::release()
 {
+    m_scrcpy_capture.uninit();
     close_socket();
 
     if (m_kill_adb_on_exit && !m_adb.release.empty()) {
@@ -624,6 +626,28 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
             all_methods_cost.emplace_back(AdbProperty::ScreencapMethod::Encode, "???");
         }
 
+        if (m_scrcpy_capture.inited()) {
+            start_time = steady_clock::now();
+            auto img_opt = m_scrcpy_capture.screencap();
+            if (img_opt) {
+                image_payload = std::move(img_opt.value());
+                auto duration = duration_cast<milliseconds>(steady_clock::now() - start_time);
+                if (duration < min_cost) {
+                    m_adb.screencap_method = AdbProperty::ScreencapMethod::ScrcpyServer;
+                    m_inited = true;
+                    min_cost = duration;
+                }
+                Log.info("ScrcpyServer cost", duration.count(), "ms");
+                all_methods_cost.emplace_back(
+                    AdbProperty::ScreencapMethod::ScrcpyServer,
+                    std::to_string(duration.count()));
+            }
+            else {
+                Log.info("ScrcpyServer is not supported");
+                all_methods_cost.emplace_back(AdbProperty::ScreencapMethod::ScrcpyServer, "???");
+            }
+        }
+
 #if ASST_WITH_EMULATOR_EXTRAS
         if (m_mumu_extras.inited()) {
             start_time = steady_clock::now();
@@ -668,6 +692,7 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
             { AdbProperty::ScreencapMethod::RawByNc, "RawByNc" },
             { AdbProperty::ScreencapMethod::RawWithGzip, "RawWithGzip" },
             { AdbProperty::ScreencapMethod::Encode, "Encode" },
+            { AdbProperty::ScreencapMethod::ScrcpyServer, "ScrcpyServer" },
 #if ASST_WITH_EMULATOR_EXTRAS
             { AdbProperty::ScreencapMethod::MumuExtras, "MumuExtras" },
             { AdbProperty::ScreencapMethod::LDExtras, "LDExtras" },
@@ -709,6 +734,20 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
         case AdbProperty::ScreencapMethod::Encode:
             screencap_ret = screencap(m_adb.screencap_encode, decode_encode, allow_reconnect);
             break;
+        case AdbProperty::ScreencapMethod::ScrcpyServer: {
+            auto img_opt = m_scrcpy_capture.screencap();
+            screencap_ret = img_opt.has_value();
+
+            if (!screencap_ret && allow_reconnect) {
+                m_scrcpy_capture.reload();
+                img_opt = m_scrcpy_capture.screencap();
+                screencap_ret = img_opt.has_value();
+            }
+
+            if (screencap_ret) {
+                image_payload = img_opt.value();
+            }
+        } break;
 #if ASST_WITH_EMULATOR_EXTRAS
         case AdbProperty::ScreencapMethod::MumuExtras: {
             auto img_opt = m_mumu_extras.screencap();
@@ -788,6 +827,9 @@ bool asst::AdbController::screencap(
     bool by_socket,
     int timeout)
 {
+    if (cmd.empty()) {
+        return false;
+    }
     if ((!m_support_socket || !m_server_started) && by_socket) [[unlikely]] {
         return false;
     }
@@ -1182,6 +1224,16 @@ bool asst::AdbController::connect(const std::string& adb_path, const std::string
     }
     else if (config == "LDPlayer") {
         init_ld_extras(adb_cfg, address);
+    }
+    else if (config == "Scrcpy") {
+        m_scrcpy_capture.init(
+            adb_cfg,
+            adb_path,
+            address,
+            [this](const std::string& cmd, int64_t timeout, bool allow_reconnect) {
+                return call_command(cmd, timeout, allow_reconnect);
+            },
+            [this](const std::string& cmd) { return m_platform_io->interactive_shell(cmd); });
     }
     if (need_exit()) {
         return false;

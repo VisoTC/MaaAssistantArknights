@@ -176,6 +176,12 @@ To customize rotation schedules, please use ｢{key=InfrastModeCustom}｣.</syst
     <system:String x:Key="CustomizeInfrastSelectionEmpty">Custom Base infrastructure selection is empty. Please check your configuration or turn off the Custom Base function.</system:String>
     <system:String x:Key="General">General Mode</system:String>
     <system:String x:Key="BlueStacks">BlueStacks</system:String>
+    <system:String x:Key="Scrcpy">Scrcpy Capture Mode</system:String>
+    <system:String x:Key="ScrcpyRuntimePath">Scrcpy Folder</system:String>
+    <system:String x:Key="ScrcpyVersion">Scrcpy Version</system:String>
+    <system:String x:Key="ScrcpyBitrate">Bitrate (Mbps)</system:String>
+    <system:String x:Key="ScrcpyRuntimePathNotFound">Scrcpy folder was not found.</system:String>
+    <system:String x:Key="ScrcpyRuntimeIncomplete">Scrcpy folder is missing scrcpy-server or FFmpeg DLL files.</system:String>
     <system:String x:Key="MuMuEmulator12">MuMu Emulator 12</system:String>
     <system:String x:Key="LDPlayer">LD Player</system:String>
     <system:String x:Key="AVD">Android Virtual Device (AVD)</system:String>
@@ -885,10 +891,10 @@ Right Click: Select Target Process</system:String>
     <system:String x:Key="ExportToLolicon">Arkntools</system:String>
     <system:String x:Key="ExportToMarkdown">Markdown</system:String>
     <system:String x:Key="ExportToCsv">CSV</system:String>
-    <system:String x:Key="CopiedToClipboard">Copied to Clipboard</system:String>
     <system:String x:Key="ExportedToFile">Exported to file</system:String>
     <system:String x:Key="ExportTo">Export to:</system:String>
     <system:String x:Key="Export">Export</system:String>
+    <system:String x:Key="CopiedToClipboard">Copied to Clipboard</system:String>
     <!--  !Depot Recognition  -->
     <!--  Operator Recognition  -->
     <system:String x:Key="OperBoxRecognition">{key=Operator}</system:String>

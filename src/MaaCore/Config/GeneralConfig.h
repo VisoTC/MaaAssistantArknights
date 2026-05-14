@@ -87,6 +87,7 @@ struct AdbCfg
     std::string call_maatouch;
     std::string event_id;
     std::string back_to_home;
+    std::string scrcpy_server_version;
     json::object extras;
 };
 

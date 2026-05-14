@@ -71,6 +71,7 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
         [
             new() { Display = LocalizationHelper.GetString("General"), Value = "General" },
             new() { Display = LocalizationHelper.GetString("BlueStacks"), Value = "BlueStacks" },
+            new() { Display = LocalizationHelper.GetString("Scrcpy"), Value = "Scrcpy" },
             new() { Display = LocalizationHelper.GetString("MuMuEmulator12"), Value = "MuMuEmulator12" },
             new() { Display = LocalizationHelper.GetString("LDPlayer"), Value = "LDPlayer" },
             new() { Display = LocalizationHelper.GetString("Androws"), Value = "Androws" },
@@ -751,6 +752,133 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
 
     public LdPlayerConnectionExtras LdPlayerExtras { get; set; } = new();
 
+    public class ScrcpyConnectionExtras : PropertyChangedBase
+    {
+        private string _runtimePath = ConfigurationHelper.GetValue(ConfigurationKeys.ScrcpyRuntimePath, string.Empty);
+
+        public string RuntimePath
+        {
+            get => _runtimePath;
+            set {
+                if (!string.IsNullOrEmpty(value) && !Directory.Exists(value))
+                {
+                    MessageBoxHelper.Show(LocalizationHelper.GetString("ScrcpyRuntimePathNotFound"));
+                    return;
+                }
+
+                if (!string.IsNullOrEmpty(value) && !IsRuntimeComplete(value))
+                {
+                    MessageBoxHelper.Show(LocalizationHelper.GetString("ScrcpyRuntimeIncomplete"));
+                    return;
+                }
+
+                Instances.AsstProxy.Connected = false;
+                SetAndNotify(ref _runtimePath, value);
+                ConfigurationHelper.SetValue(ConfigurationKeys.ScrcpyRuntimePath, value);
+
+                if (string.IsNullOrEmpty(_version) && !string.IsNullOrEmpty(value))
+                {
+                    var detected = ParseScrcpyVersion(value);
+                    if (!string.IsNullOrEmpty(detected))
+                        Version = detected;
+                }
+            }
+        }
+
+        private string _version = ConfigurationHelper.GetValue(ConfigurationKeys.ScrcpyVersion, string.Empty);
+
+        public string Version
+        {
+            get => _version;
+            set
+            {
+                Instances.AsstProxy.Connected = false;
+                SetAndNotify(ref _version, value);
+                ConfigurationHelper.SetValue(ConfigurationKeys.ScrcpyVersion, value);
+            }
+        }
+
+        private int _bitrate = int.Parse(ConfigurationHelper.GetValue(ConfigurationKeys.ScrcpyBitrate, "25"));
+
+        public int Bitrate
+        {
+            get => _bitrate;
+            set
+            {
+                Instances.AsstProxy.Connected = false;
+                SetAndNotify(ref _bitrate, value);
+                ConfigurationHelper.SetValue(ConfigurationKeys.ScrcpyBitrate, value.ToString());
+            }
+        }
+
+        public string Config
+        {
+            get {
+                var configObject = new JObject();
+                if (!string.IsNullOrEmpty(RuntimePath))
+                    configObject["path"] = RuntimePath;
+
+                if (!string.IsNullOrEmpty(Version))
+                    configObject["version"] = Version;
+
+                configObject["video_bit_rate"] = Bitrate * 1_000_000;
+
+                return JsonConvert.SerializeObject(configObject);
+            }
+        }
+
+        private static bool IsRuntimeComplete(string path)
+        {
+            return File.Exists(FindRuntimePath(path, "scrcpy-server")) &&
+                   FindRuntimeFile(path, "avcodec-", ".dll") is not null &&
+                   FindRuntimeFile(path, "avutil-", ".dll") is not null;
+        }
+
+        private static string? FindRuntimeFile(string path, string prefix, string extension)
+        {
+            foreach (var dir in RuntimeSearchDirs(path))
+            {
+                if (!Directory.Exists(dir))
+                {
+                    continue;
+                }
+
+                var file = Directory.EnumerateFiles(dir)
+                    .FirstOrDefault(filePath =>
+                        Path.GetFileName(filePath).StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                        Path.GetExtension(filePath).Equals(extension, StringComparison.OrdinalIgnoreCase));
+                if (file is not null)
+                {
+                    return file;
+                }
+            }
+
+            return null;
+        }
+
+        private static string FindRuntimePath(string path, string filename)
+        {
+            return RuntimeSearchDirs(path)
+                .Select(dir => Path.Combine(dir, filename))
+                .FirstOrDefault(File.Exists) ?? Path.Combine(path, filename);
+        }
+
+        private static IEnumerable<string> RuntimeSearchDirs(string path)
+        {
+            yield return path;
+            yield return Path.Combine(path, "common");
+            yield return Path.Combine(path, "win-x64");
+        }
+
+        private static string ParseScrcpyVersion(string path)
+        {
+            var match = Regex.Match(Path.GetFileName(path), @"(?:^|[-_])v?(\d+\.\d+\.\d+)(?:$|[-_])", RegexOptions.IgnoreCase);
+            return match.Success ? match.Groups[1].Value : string.Empty;
+        }
+    }
+
+    public ScrcpyConnectionExtras ScrcpyExtras { get; set; } = new();
+
     private bool _retryOnDisconnected = Convert.ToBoolean(ConfigurationHelper.GetValue(ConfigurationKeys.RetryOnAdbDisconnected, bool.FalseString));
 
     /// <summary>
@@ -1023,6 +1151,17 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
         if (dialog.ShowDialog() == true)
         {
             AdbPath = dialog.FileName;
+        }
+    }
+
+    [UsedImplicitly]
+    public void SelectScrcpyRuntimePath()
+    {
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog();
+        dialog.SelectedPath = string.IsNullOrEmpty(ScrcpyExtras.RuntimePath) ? AppContext.BaseDirectory : ScrcpyExtras.RuntimePath;
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            ScrcpyExtras.RuntimePath = dialog.SelectedPath;
         }
     }
 

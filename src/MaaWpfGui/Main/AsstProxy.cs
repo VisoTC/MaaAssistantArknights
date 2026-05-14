@@ -2623,6 +2623,10 @@ public class AsstProxy
             case "LDPlayer":
                 AsstSetConnectionExtrasLdPlayer(SettingsViewModel.ConnectSettings.LdPlayerExtras.Config);
                 break;
+
+            case "Scrcpy":
+                AsstSetConnectionExtras("Scrcpy", SettingsViewModel.ConnectSettings.ScrcpyExtras.Config);
+                break;
         }
 
         switch (SettingsViewModel.ConnectSettings.ConnectConfig)

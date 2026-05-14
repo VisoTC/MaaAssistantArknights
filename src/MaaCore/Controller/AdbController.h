@@ -12,6 +12,7 @@
 #include "InstHelper.h"
 #include "LDExtras.h"
 #include "MumuExtras.h"
+#include "ScrcpyCapture.h"
 #include "Utils/StringMisc.hpp"
 
 namespace asst
@@ -196,6 +197,7 @@ protected:
             RawByNc,
             RawWithGzip,
             Encode,
+            ScrcpyServer,
 #if ASST_WITH_EMULATOR_EXTRAS
             MumuExtras,
             LDExtras,
@@ -221,5 +223,6 @@ protected:
     MumuExtras m_mumu_extras;
     LDExtras m_ld_extras;
 #endif
+    ScrcpyCapture m_scrcpy_capture;
 };
 } // namespace asst

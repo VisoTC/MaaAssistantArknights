@@ -176,6 +176,12 @@
     <system:String x:Key="CustomizeInfrastSelectionEmpty">{Key=InfrastModeCustom} 설정 선택이 비어 있습니다. 구성을 확인하거나 커스텀 기능을 끄세요.</system:String>
     <system:String x:Key="General">일반 모드</system:String>
     <system:String x:Key="BlueStacks">BlueStacks</system:String>
+    <system:String x:Key="Scrcpy">Scrcpy 캡처 모드</system:String>
+    <system:String x:Key="ScrcpyRuntimePath">Scrcpy 폴더</system:String>
+    <system:String x:Key="ScrcpyVersion">Scrcpy 버전</system:String>
+    <system:String x:Key="ScrcpyBitrate">비트레이트 (Mbps)</system:String>
+    <system:String x:Key="ScrcpyRuntimePathNotFound">Scrcpy 폴더를 찾을 수 없습니다.</system:String>
+    <system:String x:Key="ScrcpyRuntimeIncomplete">Scrcpy 폴더에 scrcpy-server 또는 FFmpeg DLL 파일이 없습니다.</system:String>
     <system:String x:Key="MuMuEmulator12">MuMu Player</system:String>
     <system:String x:Key="LDPlayer">LD Player</system:String>
     <system:String x:Key="AVD">Android Virtual Device (AVD)</system:String>
@@ -887,10 +893,10 @@ C:\\leidian\\LDPlayer9
     <system:String x:Key="ExportToLolicon">Arkntools</system:String>
     <system:String x:Key="ExportToMarkdown">Markdown</system:String>
     <system:String x:Key="ExportToCsv">CSV</system:String>
-    <system:String x:Key="CopiedToClipboard">클립보드에 복사됨</system:String>
     <system:String x:Key="ExportedToFile">파일로 내보내기 완료</system:String>
     <system:String x:Key="ExportTo">내보내기:</system:String>
     <system:String x:Key="Export">내보내기</system:String>
+    <system:String x:Key="CopiedToClipboard">클립보드에 복사됨</system:String>
     <!--  !창고 인식  -->
     <!--  오퍼레이터 인식  -->
     <system:String x:Key="OperBoxRecognition">{key=Operator} 인식</system:String>

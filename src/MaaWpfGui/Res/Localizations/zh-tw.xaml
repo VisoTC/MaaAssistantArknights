@@ -176,6 +176,12 @@
     <system:String x:Key="CustomizeInfrastSelectionEmpty">自定義設施配置選擇為空，請檢查配置或關閉自定義功能。</system:String>
     <system:String x:Key="General">通用模式</system:String>
     <system:String x:Key="BlueStacks">藍疊模擬器</system:String>
+    <system:String x:Key="Scrcpy">Scrcpy 截圖模式</system:String>
+    <system:String x:Key="ScrcpyRuntimePath">Scrcpy 資料夾</system:String>
+    <system:String x:Key="ScrcpyVersion">Scrcpy 版本號</system:String>
+    <system:String x:Key="ScrcpyBitrate">位元速率 (Mbps)</system:String>
+    <system:String x:Key="ScrcpyRuntimePathNotFound">找不到 Scrcpy 資料夾。</system:String>
+    <system:String x:Key="ScrcpyRuntimeIncomplete">Scrcpy 資料夾缺少 scrcpy-server 或 FFmpeg DLL 檔案。</system:String>
     <system:String x:Key="MuMuEmulator12">MuMu 模擬器 12</system:String>
     <system:String x:Key="LDPlayer">雷電模擬器</system:String>
     <system:String x:Key="AVD">Android 虛擬裝置（AVD）</system:String>
@@ -886,10 +892,10 @@ C:\\leidian\\LDPlayer9\n
     <system:String x:Key="ExportToLolicon">明日方舟工具箱</system:String>
     <system:String x:Key="ExportToMarkdown">Markdown</system:String>
     <system:String x:Key="ExportToCsv">CSV</system:String>
-    <system:String x:Key="CopiedToClipboard">已複製到剪貼簿</system:String>
     <system:String x:Key="ExportedToFile">已匯出到檔案</system:String>
     <system:String x:Key="ExportTo">匯出到：</system:String>
     <system:String x:Key="Export">匯出</system:String>
+    <system:String x:Key="CopiedToClipboard">已複製到剪貼簿</system:String>
     <!--  !倉庫辨識  -->
     <!--  日誌  -->
     <system:String x:Key="OperBoxRecognition">{key=Operator}辨識</system:String>
