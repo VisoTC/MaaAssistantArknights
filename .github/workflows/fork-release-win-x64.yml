@@ -74,11 +74,7 @@ jobs:
 
           git tag -d "$tag" >/dev/null 2>&1 || true
           git tag -a "$tag" -m "MAA-fork $tag" HEAD
-          if [[ "$FORCE_RELEASE" == "true" ]]; then
-            git push --force origin "refs/tags/$tag"
-          else
-            git push origin "refs/tags/$tag"
-          fi
+          git push --force origin "refs/tags/$tag"
 
           echo "should_build=true" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
