@@ -23,6 +23,7 @@ env:
 jobs:
   create-tag:
     name: Create OTA Release Tag in MaaRelease
+    if: github.repository_owner == 'MaaAssistantArknights'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout MaaRelease
@@ -89,6 +90,7 @@ jobs:
   make-ota:
     name: Build and Upload OTA for Windows
     needs: create-tag
+    if: github.repository_owner == 'MaaAssistantArknights'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -142,6 +144,7 @@ jobs:
   make-ota-mac:
     name: Build and Upload OTA for macOS
     needs: create-tag
+    if: github.repository_owner == 'MaaAssistantArknights'
     runs-on: macos-14
     steps:
       - name: Fetch release information
@@ -189,6 +192,7 @@ jobs:
       - create-tag
       - make-ota
       - make-ota-mac
+    if: github.repository_owner == 'MaaAssistantArknights'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.MISTEOWORKFLOW }}

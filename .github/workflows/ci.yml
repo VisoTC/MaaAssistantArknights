@@ -2,8 +2,6 @@ name: Release Pipeline
 
 on:
   push:
-    tags:
-      - "v*"
     branches:
       - "dev-v2"
     paths:
