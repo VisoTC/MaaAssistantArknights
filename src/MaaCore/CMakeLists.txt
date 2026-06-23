@@ -1,5 +1,12 @@
 file(GLOB_RECURSE maa_src *.h *.hpp *.cpp)
 
+# Exclude the platform-specific OCR implementation that is not needed on this target
+if(ANDROID)
+    list(FILTER maa_src EXCLUDE REGEX "OcrPack\\.cpp$")
+else()
+    list(FILTER maa_src EXCLUDE REGEX "OcrPackNcnn\\.cpp$")
+endif()
+
 set(ARPS_NATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Controller/ArpsNative")
 
 if(WITH_MAC_SCK)
@@ -31,7 +38,16 @@ target_include_directories(MaaCore PUBLIC ${PROJECT_SOURCE_DIR}/include PRIVATE
                            "${ARPS_NATIVE_DIR}/src"
                            "${ARPS_NATIVE_DIR}/third_party/lz4")
 add_dependencies(MaaCore MaaUtils)
-target_link_libraries(MaaCore HeaderOnlyLibraries MaaUtils ${OpenCV_LIBS} fastdeploy_ppocr ONNXRuntime::ONNXRuntime ZLIB::ZLIB Boost::system)
+if(ANDROID)
+    find_package(ncnn REQUIRED)
+    target_link_libraries(MaaCore
+        HeaderOnlyLibraries MaaUtils ${OpenCV_LIBS}
+        ncnn
+        ONNXRuntime::ONNXRuntime ZLIB::ZLIB Boost::system)
+    set_property(TARGET MaaCore PROPERTY NO_SYSTEM_FROM_IMPORTED TRUE)
+else()
+    target_link_libraries(MaaCore HeaderOnlyLibraries MaaUtils ${OpenCV_LIBS} fastdeploy_ppocr ONNXRuntime::ONNXRuntime ZLIB::ZLIB Boost::system)
+endif()
 target_sources(MaaCore PRIVATE "${ARPS_NATIVE_DIR}/third_party/lz4/lz4.c")
 
 if(WIN32)
@@ -56,7 +72,9 @@ if(MSVC)
 endif()
 
 if(ANDROID)
-    target_link_libraries(MaaCore log dl)
+    # Logger.hpp 直接调用 __android_log_*，需显式链接 liblog；
+    # dl 由 ncnn 的 INTERFACE_LINK_LIBRARIES 传递，无需显式添加
+    target_link_libraries(MaaCore log)
 endif()
 
 file(GLOB_RECURSE MaaCore_PUBLIC_HEADERS ${PROJECT_SOURCE_DIR}/include/*.h)
