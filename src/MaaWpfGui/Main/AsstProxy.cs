@@ -793,6 +793,19 @@ public class AsstProxy
                 _connectedAddress = details["details"]!["address"]!.ToString();
                 SettingsViewModel.ConnectSettings.ConnectAddress = _connectedAddress;
                 _lastConnectionError = string.Empty;
+
+                // 检测 MuMu 后台保活是否开启（异步执行，避免阻塞 UI 线程）
+                if (SettingsViewModel.ConnectSettings.ConnectConfig == "MuMuEmulator12")
+                {
+                    _ = Task.Run(() =>
+                    {
+                        if (EmulatorHelper.CheckMuMuKeepAlive())
+                        {
+                            Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("MuMuEmulator12KeepAliveOn"), UiLogColor.Warning);
+                        }
+                    });
+                }
+
                 break;
 
             case "UnsupportedResolution":
@@ -1016,6 +1029,37 @@ public class AsstProxy
                                 break;
                             }
                     }
+                }
+
+                break;
+
+            case "EmulatorFPS":
+                var fpsValue = details["details"]?["fps"]?.ToString() ?? "???";
+                if (!int.TryParse(fpsValue, out var fpsInt))
+                {
+                    break;
+                }
+
+                if (fpsInt <= 0)
+                {
+                    break;
+                }
+
+                if (fpsInt < 30)
+                {
+                    Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetStringFormat("EmulatorFpsErrorTip", fpsInt), UiLogColor.Error);
+                    Instances.CopilotViewModel.AddLog(LocalizationHelper.GetStringFormat("EmulatorFpsErrorTip", fpsInt), UiLogColor.Error, showTime: false);
+                }
+                else if (fpsInt < 60)
+                {
+                    Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetStringFormat("EmulatorFpsWarningTip", fpsInt), UiLogColor.Warning);
+                    Instances.CopilotViewModel.AddLog(LocalizationHelper.GetStringFormat("EmulatorFpsWarningTip", fpsInt), UiLogColor.Warning, showTime: false);
+                }
+                else if (fpsInt > 60 && !HasPrintedFpsHighTip)
+                {
+                    Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetStringFormat("EmulatorFpsHighTip", fpsInt), UiLogColor.Warning);
+                    Instances.CopilotViewModel.AddLog(LocalizationHelper.GetStringFormat("EmulatorFpsHighTip", fpsInt), UiLogColor.Warning, showTime: false);
+                    HasPrintedFpsHighTip = true;
                 }
 
                 break;
@@ -1333,16 +1377,13 @@ public class AsstProxy
                 if (buyWine)
                 {
                     Instances.SettingsViewModel.LastBuyWineTime = DateTime.UtcNow.ToYjDate().ToFormattedString();
-                    var result = MessageBoxHelper.Show(
-                        LocalizationHelper.GetString("DrunkAndStaggering"),
+
+                    // 非阻塞 Dialog：喝醉提示，用户点确认后再切换到 Pallas 语言
+                    SettingsViewModel.ShowEasterEggDialog(
                         LocalizationHelper.GetString("Burping"),
-                        iconKey: "DrunkAndStaggeringGeometry",
-                        iconBrushKey: "PallasBrush");
-                    if (result == MessageBoxResult.OK)
-                    {
-                        Instances.SettingsViewModel.Cheers = true;
-                        Bootstrapper.ShutdownAndRestartWithoutArgs();
-                    }
+                        LocalizationHelper.GetString("DrunkAndStaggering"),
+                        LocalizationHelper.GetString("Ok"),
+                        () => Instances.SettingsViewModel.GetDrunk());
                 }
 
                 break;

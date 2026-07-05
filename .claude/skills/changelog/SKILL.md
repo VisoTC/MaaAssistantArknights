@@ -1,204 +1,125 @@
 ---
 name: changelog
-description: 根据提交记录、PR、diff、现有 CHANGELOG 与历史 tag 内容，整理符合 MAA 发布规范的 changelog Markdown。用于修正工具自动生成的 changelog、合并同类改动、清理 bot 或 release 噪音，并产出可直接提交的最终版本。
+description: 依据 git 提交、diff、现有 CHANGELOG 与 tag，生成符合 MAA 规范、可直接写入 CHANGELOG.md 的最终 Markdown。
 ---
 
 # MAA Changelog Skill
 
-## Goal
+读取待发布范围内的 commit、diff、现有 CHANGELOG 与 tag，输出可直接写入 `CHANGELOG.md` 的最终 Markdown。**只输出最终 Markdown**，不输出分析过程或代码围栏。
 
-- 读取待发布范围内的 commit、PR、diff、现有 CHANGELOG 与对应 tag 内容，输出可直接写入 CHANGELOG.md 的最终 Markdown 片段。
-- 只输出最终 Markdown，不输出分析过程、分类理由、筛选记录、额外说明或 Markdown 代码围栏。
-- 以“最终用户看得懂、历史版本不断裂、同类改动不重复”为第一目标，不以保留原始 commit 标题为目标。
+**必要输入**：目标版本号、提交范围（由 tag/PR/分支推导）、当前 CHANGELOG 内容。
 
-## Scope
+> ⚠️ **版本号必须从用户/CI 提供的来源获取，禁止从 git tag 自行推测。** 若获取新版本号失败，必须通过 PR URL（如 `https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/17248`）直接访问网页提取标题中的版本号，**不得 fallback 到 git tag 推测**。推测版本号会导致版本号全错（如 v6.14.0-beta.1 被错推为 v6.13.1-alpha.1），进而连锁触发折叠块处理错误。
 
-- 适用于正式版、测试版、补丁版的 changelog 整理与重写。
-- 正式版的补丁版本不应该修改 Highlights 中的内容，除非确实有用户可感知的重要变化。
-- 当工具已经生成初稿时，初稿只可作为原始素材，不能直接信任其分类、版本归属、标题质量、去重结果与排序结果。
-- 如果 commit 标题含糊、口语化、玩梗、只写 review、typo、warning、日志顺序、调整坐标等，必须查看 diff 后改写为专业、完整、可独立理解的用户向描述。
+## 1. 净变更优先
 
-## Required Inputs
+- 同一功能/问题的多条相关 commit **合并为单条**，描述最终效果。
+- commit 标题含糊/口语化/玩梗时**必须查看 diff 后改写**为专业描述。
+- **Revert**：完整撤销则删除；部分保留则合并为一条准确描述最终结果的条目。
+- "review""typo""日志顺序""调整坐标""build warning" 等不单独保留，除非 diff 证明修复了用户可感知问题。
+- **多服合并**：按**单项改动**拆分（而非 commit/PR 整体），每项再跨服合并。服务器名用 `/` 连接（如 `YostarEN/JP/KR`），多位作者依次排列。
+  - 示例：某 PR 为 JP 更新主题+新增章节导航，EN/KR 只更新主题 → 拆为 `YostarEN/JP/KR 更新主题` + `YostarJP 新增章节导航`。
 
-- 目标版本号。
-- 待发布的提交范围，或可推导该范围的 PR、tag、分支信息。
-- 当前 CHANGELOG 内容。
-- 如果目标版本与已有正式版属于同一非 patch 版号，必须先读取对应正式版 tag 下的 changelog 内容，再决定如何合并与追加。
+## 2. 分类
 
-## Non-Negotiable Rules
+| 模块 | 适用场景 |
+|------|----------|
+| **新增 \| New** | 新功能、新支持、新入口、新兼容性 |
+| **改进 \| Improved** | 能力增强、性能/稳定性/体验/识别优化、重构收益 |
+| **修复 \| Fix** | 缺陷修正、兼容性/异常/回归修复 |
+| **文档 \| Docs** | 纯文档变更 |
+| **其他 \| Other** | 仅内部维护、CI、脚本等（不适合省略时） |
+| **MaaMacGui** | 子仓库独立区块，放在 `### 其他 \| Other` 之后，内部复用相同分类，PR 格式 `([#数字](https://github.com/MaaAssistantArknights/MaaMacGui/pull/数字))` |
 
-### 1. 先看净变更，再写条目
+仅保留有内容的模块，空模块省略。
 
-- 对同一功能、同一问题或逻辑相关的多条 commit，应合并为单条 changelog 项。
-- 合并后的描述必须简洁、专业、面向最终用户，避免堆实现细节。
-- 若 commit 标题不足以表达改动价值，必须结合 diff 重写标题。
-- Revert 不是 changelog 项。遇到 Revert 时，必须结合最终 diff 判断净效果：
-- 若原改动被完整撤销，则 Revert 与原始项都删除。
-- 若最终仍保留部分语义，则把原始项与 Revert 合并为一条准确描述最终结果的 changelog 项。
-- 不要把“review”“日志顺序”“调整坐标”“typo”“build warning”这类缺乏用户语义的提交原样保留为条目，除非 diff 证明它确实修复了用户可感知问题。
+## 3. 排序与文案
 
-### 2. 分类按用户价值，不按 commit 前缀
+- **中文在前，纯英文条目排最后**；按重要性排序：功能/接口变更 > 兼容性/优化 > 次要修复/杂项。
+- 列表前缀统一 `*`；中英文与数字间留空格（如"修复 3 个 bug"）。
+- 术语统一大小写：WPF、Json、Markdown、CSV、Info。
+- 保留作者与 PR 引用，格式 `([#12345](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/12345)) @author`；多条合并时引用合并括注。
 
-- 改动必须放入正确模块：Highlights、新增 | New、改进 | Improved、修复 | Fix、文档 | Docs、其他 | Other。
-- 新功能、新支持、新入口、新导出能力、新兼容性，放“新增 | New”。
-- 现有能力增强、性能提升、稳定性提升、体验优化、识别优化、重构后带来的用户收益，放“改进 | Improved”。
-- 缺陷修正、兼容性修复、异常处理、回归修复，放“修复 | Fix”。
-- 纯文档变更放“文档 | Docs”。
-- 仅内部维护、CI、脚本、杂项且不适合省略时，才放“其他 | Other”。
-- 如果自动生成结果分类错误，必须移动到更合适的模块并同步调整描述。
-- 子仓库（如 MaaMacGui）的更新应作为独立的 `### MaaMacGui` 子项，放在主 changelog 的 `### 其他 | Other` 之后。该子项内部使用与主 changelog 相同的分类结构（新增 | New、改进 | Improved、修复 | Fix 等），PR 引用格式为 `([#数字](https://github.com/MaaAssistantArknights/MaaMacGui/pull/数字))`。
+## 4. 版本历史与折叠块
 
-### 3. 模块内排序与文案规范
+**版本类型**：不带 `-beta`/`-alpha` 后缀为正式版（含首个 `X.Y.0` 与 patch `X.Y.1+`）；带后缀为测试版。
 
-- 中文条目放在前面，纯英文条目排在该模块最后。
-- 同一模块内按逻辑相关性或重要性排序：功能与接口变更优先，其次是兼容性或实现优化，最后是次要修复或杂项。
-- 列表统一使用 * 作为项目前缀。
-- 中英文数字混排时，在英文词与数字之间保留空格，例如：修复 3 个 bug、支持 3D 功能。
-- 统一常见术语大小写与写法，例如 WPF、Json、Markdown、CSV、Info。
-- 保留作者、PR、commit reference，例如 (#12345) @author；若多条相关提交被合并，可把相近引用合并到同一项后括注。
+- **跨次版本号**（正式版或新次版本的第一个测试版，如 v6.12.x → v6.13.0、v6.13.0 → v6.14.0-beta.1）：**删除**上一个次版本号的所有历史折叠块。
+- **同次版本号内**（patch、beta 之间）：当前版本用 `<details open>`，历史版本各自 `<details>` 收起，紧跟其后。
+- 当前版本只写增量变化，不得复制更早版本已发布条目。
+- **发布正式版时**：将所有前置测试版条目按模块合并为正式版单一 `<details open>` 区块，跨测试版去重，只保留最终有效版本。其后不再保留 beta 折叠块（除非有更早正式版）。
 
-### 4. 正式版与 patch 版的历史连续性
+### 正式版详细内容：合并已有测试版 changelog，禁止全量重分析
 
-- 正式版严禁只留下单独的 patch 版本内容。
-- 如果目标正式版与已有正式版属于同一非 patch 版号，必须对比对应 tag 下的 changelog，并把当前新增改动追加到原有内容之后，保持版本历史连续。
-- patch 版详细区块只能写“自上一发布版本之后新增的变化”，不能把更早正式版已经出现过的条目整段复制到当前 patch 版本下面。
-- 例如生成 v6.10.4 时，v6.10.4 区块只能写 v6.10.3 之后的新变化；v6.10.0、v6.10.1、v6.10.2、v6.10.3 的既有内容应保留在历史区块，而不是重新抄进 v6.10.4。
-- 若非 patch 版本不同，则直接根据现有内容组织该版本及其历史区块。
+**禁止**在发布正式版时从 git 历史全量重新分析提交/阅读 diff。正式版详细内容**直接合并已发布各测试版 changelog 的条目**：
 
-### 5. 跨次版本号时不保留旧版本内容
+1. 读取同次版本号所有测试版区块（beta.1 … beta.N），按模块汇总去重——同一条目只保留最新表述，被覆盖的保留修正后结果。
+2. **唯一增量**：「最后一个测试版 tag → HEAD」的小段提交，逐一检查后补充（有用户可感知效果才补）。
+3. 合并后统一排序、统一文案。
 
-- 当新版本跨越次版本号（如 v6.12.x → v6.13.x），CHANGELOG 中不保留上一个次版本号（v6.12.x）的任何历史折叠块。
-- 次版本号升级意味着全新的功能周期，旧版本内容对新版本用户没有参考价值。
-- 同次版本号内的 patch 版（如 v6.12.1、v6.12.2）之间仍需保留历史折叠块。
-- 同次版本号内的测试版（如 v6.13.0-beta.1、v6.13.0-beta.2）之间不保留历史折叠块——发布正式版时合并为单一区块（见规则 §6）。
+## 5. Highlights
 
-### 6. 正式版合并测试版内容
+- **中英双语，先中后英**。中文直接展示，英文放入 `<details><summary><b>English</b></summary>` 折叠块。
+- 只总结最值得强调的变化，不要机械搬运所有条目。
+- **复用规则**（适用于 patch 版、测试版、由测试版晋升的正式版）：相对**直接前驱版本**（patch 的父正式版 / 测试版的上一测试版 / 正式版晋升时的最后一个测试版）无用户可感知重大变化 → **直接复用前驱版本 Highlights**，仅改顶部版本号标题，不改写内容。有重大新变化 → 原有内容保留，新段落追加在末尾。
+- **由测试版晋升的正式版**：判定基准是最后一个测试版。若最后一个测试版到正式版之间只有 CI、chore、内部维护等，Highlights 一字不改复用，只更新顶部版本号标题。
 
-- 正式版发布时，应把所有前置测试版（beta.1、beta.2 等）的条目按模块（新增、改进、修复等）合并到正式版的单一详细区块中，去重后统一展示。
-- 不应按测试版小版本分别折叠。正式版用户不关心测试版之间的增量差异，只关心"这个正式版相比上一个正式版有什么变化"。
-- 测试版之间重复或被后续修改覆盖的条目只保留最终有效版本。例如 beta.1 修复了某个问题但 beta.2 又对其做了改进，正式版中只保留合并后的最终描述。
-- 正式版的详细区块使用 `<details open>` 默认展开，其后不再保留 beta 版本的历史折叠块（除非之前还有更早的正式版）。
+## 6. 噪音过滤
 
-### 7. patch / 测试版的 Highlights 复用规则
+**删除**：bot 自动生成（`Auto Update Game Resources`、`Auto Templates Optimization`）、`Release vX.Y.Z`、`Auto Update/Generate Changelog`、`Update CHANGELOG`、`Bump version`、带 `[skip changelog]` 标记的提交。
 
-- patch 版本（例如 v6.10.4 相对于 v6.10.3）和测试版（例如 v6.11.0-beta.2 相对于 v6.11.0-beta.1）如果没有用户可感知的重要新功能或重大变化，必须直接复用其父版本的 Highlights 内容，不得自行重写或另起一套。
-- 复用 Highlights 时，只改顶部版本号标题和发版日期（例如 `## v6.11.0-beta.1 (2026-05-27)` → `## v6.11.0-beta.2 (2026-05-29)`），Highlights 正文原样保留。
-- 当 patch 版本或测试版确实包含用户可感知的重要新变化时（例如新增了重大功能、改变了核心交互），可以为 Highlights 追加新段落，但必须保留原有 Highlights 内容，新段落追加在末尾。
+**不过滤**：chore、perf 或看似内部的提交——只要有用户可感知效果（启动体验、性能、稳定性等），一律保留。
 
-### 8. patch / 测试版编辑的完整结构
+## 7. 翻译判断
 
-- 输出文件的结构必须严格遵循以下层次，不得把 patch 版本或测试版的详细内容插入到父版本的 Highlights 与详细内容之间：
-  1. 顶部：`## vX.Y.Z (YYYY-MM-DD)`（patch / 测试版标题，含发版日期）
-  2. `### Highlights`（复用父版本内容，或在有必要时追加新段落）
-  3. 英文 Highlights 折叠块
-  4. `----`
-  5. `以下是详细内容：`
-  6. `<details open><summary><b>vX.Y.Z (YYYY-MM-DD)</b></summary>`（当前版本详细内容，默认展开）
-  7. `<details><summary><b>vX.Y.Z-1 (YYYY-MM-DD)</b></summary>`（上一 patch 版本，默认收起）
-  8. 更早版本各自独立折叠块...
-  9. `<details><summary><b>vX.Y.0 (YYYY-MM-DD)</b></summary>`（正式版，默认收起）
-- 每个版本的详细内容各自放入独立的 `<details>` 折叠块，`<summary>` 内格式为 `<b>vX.Y.Z (YYYY-MM-DD)</b>`（版本号 + 发版日期），当前目标版本使用 `<details open>` 默认展开，其余默认收起。
-- 折叠块内只保留详细内容（改进、修复等），不重复 Highlights，不写 `## vX.Y.Z` 子标题（`<summary>` 已提供版本标识）。
+判断依据是「该条目的目标读者是谁」。
 
-### 9. Highlights 必须中英双语且先中后英
+**用中文（默认）**：国服（CN）、繁中服（txwy）、跨服/全服通用改动、行为描述（`add support for X` → 「新增支持 X」）、含糊/玩梗的英文 commit 标题改写。
 
-- 输出顶部必须包含当前目标版本和发版日期，例如 `## vX.Y.Z (2026-05-29)`。
-- 必须包含 ### Highlights。
-- 中文 Highlights 直接展示，不折叠。
-- 英文 Highlights 放入折叠块：`<details><summary><b>English</b></summary>` ... `</details>`。
-- 中文与英文都应按主题分段，标题简洁明确，正文面向最终用户，不是 commit 列表翻译。
-- Highlights 只总结本次版本中最值得强调的变化，不要把所有条目机械搬进去。
+**整条保留英文**——仅针对 YostarEN/JP/KR 等外服且不涉及国服的改动。整条描述（含动词）均保留英文，**不要**只保留专有名词而把描述译成中文。原因：外服条目目标读者是玩该外服的用户，能看懂英文；外服关卡/活动/主题名（如 `lone trail`、`JieGarden`）在中服可能不存在或译名不同，翻译会误导。
+- ✅ `YostarEN preload lone trail + fix JieGarden themes`
+- ❌ `YostarEN/JP/KR 更新落叶逐火与界园主题`（整条译成中文，且「落叶逐火」是中服译名）
 
-### 10. 必须过滤的噪音项
+**混合**：同一 commit/PR 同时含国服与外服改动 → 按 §1 拆为多条，国服用中文，外服保留英文。
 
-- 删除或忽略纯 bot 自动生成的 changelog、update、release 条目（如 github-actions[bot] 的 Auto Update Game Resources）。
-- 删除显式的 Release 发布记录，例如 Release vX.Y.Z。
-- 删除或忽略 Generate、Auto Update、Auto Generate、Update CHANGELOG、Bump version 之类自动维护条目。
-- 删除带有 `[skip changelog]` 标记的提交。
-- 删除 commit 消息仅为 "Update CHANGELOG" "docs: Update CHANGELOG for vX.Y.Z release" 之类纯 changelog 内容维护的提交。
-- 除此之外的提交都不应过滤，即使标题是 chore、perf 或看起来像内部优化——只要有用户可感知的效果（包括启动体验、操作窗口、性能、稳定性等），都应保留并放入合适的模块。
+**代码/技术标识始终保留原文**（不分中外服）：任务名（`Stage`、`Roguelike`、`Depot`）、配置项、接口名、文件名，以及 WPF、Json、Markdown、CSV、onnx、ADB、minitouch 等（大小写见 §3）。
 
-### 11. 查询 git 历史时的编码处理
+## 8. git 历史编码（Windows PowerShell）
 
-- 在 Windows PowerShell 环境下，git log 输出的中文默认会乱码。查询 git 历史时必须指定编码参数：
-  ```
-  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; git -c core.quotepath=false -c i18n.logoutputencoding=utf-8 -c i18n.commitencoding=utf-8 log --encoding=utf-8 --format="%H %s" RANGE | ForEach-Object { [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::Default.GetBytes($_)) }
-  ```
-- 简化写法（仅在当前终端已执行过 `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8` 后有效）：`git -c core.quotepath=false log --encoding=utf-8 --format="..." | ForEach-Object { [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::Default.GetBytes($_)) }`
-- 如果输出仍然乱码，可将结果写入临时文件（`| Out-File -Encoding utf8 -FilePath "$env:TEMP\commits.txt"`）再用 read_file 工具读取。
-
-## Workflow
-
-1. 先确定本次发布边界：目标版本、上一版本、对应 tag、待发布 commit 范围。
-2. 读取现有 CHANGELOG 与目标范围内的 diff，不要只根据 commit 标题下结论。
-3. 先过滤 bot、release、generate、update changelog、revert、重复历史条目等噪音。
-4. 按“净变更”合并同类提交，必要时从 diff 改写标题。
-5. 按用户价值重新分类到正确模块，而不是沿用自动生成结果。
-6. 在每个模块内完成排序、术语统一与中英文条目整理。
-7. 编写中英双语 Highlights，先中文，后英文，中间用 ---- 分隔。
-8. 输出完整 Markdown 片段，包含顶部版本、Highlights、以下是详细内容：、当前版本区块与历史版本区块。
-
-## Common Failure Patterns To Correct
-
-- 把旧版本已有条目整段复制到当前 patch 版本。
-- 把 Revert 原样保留成单独 changelog 项。
-- 把 Release vX.Y.Z、Auto Update Changelogs、Update CHANGELOG、Bump version 之类自动提交写进文档或其他模块。
-- 把同一功能拆成多条重复表述，例如同一个生息演算功能拆成多个相近新增或改进条目。
-- 保留玩梗、口语化、半成品标题，例如不会现在还有人选沙中遗火吧、特意删的 PNS 怎么又给加回来了。
-- 机械沿用 commit type 导致分类错误，例如把用户能感知的修复放进其他，把兼容性提升放进新增。
-- patch 版本或测试版没有用户可感知的重要新变化，却自行重写了独立的 Highlights，而非复用父版本内容。
-- 把 patch 版本的详细内容插入到父版本的 Highlights 与详细内容之间，破坏了文件结构。
-- patch / 测试版的历史区块中重复保留了 Highlights 和"以下是详细内容："引导语，这些应只在顶部出现一次。
-- 正式版不应保留各 beta 版本的独立折叠块，应将所有测试版条目按模块合并到正式版的单一详细区块中。
-- 查询 git 历史时未指定编码，导致中文 commit 消息乱码，无法正确理解变更内容。
-- 把 chore/perf 标题的提交默认当作噪音过滤，而不是判断其是否有用户可感知的效果。
-- 跨次版本号时仍保留旧版本的历史折叠块，导致 CHANGELOG 累积大量不相关内容。
-
-## Output Requirements
-
-- 输出完整 Markdown 文件片段。
-- 顶部必须包含当前版本标题，例如 ## vX.Y.Z。
-- 顶部必须包含 ### Highlights，并满足先中文、后英文、用 ---- 分隔的格式。
-- 英文 Highlights 折叠块结束后，接“----”分隔线，然后接“以下是详细内容：”引导语。
-- 每个版本的详细内容各自放入独立的折叠块：`<details><summary><b>vX.Y.Z</b></summary>` ... `</details>`。
-- 当前目标版本的折叠块使用 `<details open>` 默认展开，历史版本使用 `<details>` 默认收起。
-- 详细内容中的模块标题统一使用以下格式：
-- ### 新增 | New
-- ### 改进 | Improved
-- ### 修复 | Fix
-- ### 文档 | Docs
-- ### 其他 | Other
-- ### MaaMacGui（子仓库独立区块，放在 `### 其他 | Other` 之后，内部再按相同分类结构组织）
-- 列表项统一使用 *。
-- 仅保留有内容的模块；空模块省略。
-
-## Output Template
-
-### 正式版模板（合并测试版内容）
-
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; git -c core.quotepath=false -c i18n.logoutputencoding=utf-8 -c i18n.commitencoding=utf-8 log --encoding=utf-8 --format="%H %s" RANGE | ForEach-Object { [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::Default.GetBytes($_)) }
 ```
+
+如仍乱码：`| Out-File -Encoding utf8 -FilePath "$env:TEMP\commits.txt"` 后用 read_file 读取。
+
+## 文件结构（自上而下）
+
+1. `## vX.Y.Z` — 顶部版本标题（**不带日期**）
+2. `### Highlights`（中文）→ 英文 Highlights `<details>` 折叠块
+3. `----` 分隔线 → `以下是详细内容：`
+4. `<details open><summary><b>vX.Y.Z (YYYY-MM-DD)</b></summary>` — 当前版本（展开）
+5. `<details><summary><b>vX.Y.Z-1 (YYYY-MM-DD)</b></summary>` — 历史版本（收起）
+6. 更早版本各自独立折叠块…
+
+折叠块内只保留详细内容，不重复 Highlights、不写 `## vX.Y.Z` 子标题。历史区块不重复 Highlights 和引导语。
+
+## 输出模板
+
+```markdown
 ## vX.Y.Z
 
 ### Highlights
 
-#### 中文小结标题 A
+#### 中文标题
 
-中文小结正文。
-
-#### 中文小结标题 B
-
-中文小结正文。
+中文正文。
 
 <details>
 <summary><b>English</b></summary>
 
-#### English Summary Title A
+#### English Title
 
-English summary paragraph.
-
-#### English Summary Title B
-
-English summary paragraph.
+English paragraph.
 
 </details>
 
@@ -211,144 +132,64 @@ English summary paragraph.
 
 ### 新增 | New
 
-* 条目 A @author
-
-### 改进 | Improved
-
-* 条目 B (#12345) @author
-
-### 修复 | Fix
-
-* 条目 C @author
-
-### 文档 | Docs
-
-* 条目 D @author
+* 条目 ([#12345](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/12345)) @author
 
 ### MaaMacGui
 
 #### 新增 | New
 
-* 子仓库新增条目 ([#85](https://github.com/MaaAssistantArknights/MaaMacGui/pull/85)) @author
-
-#### 修复 | Fix
-
-* 子仓库修复条目 ([#88](https://github.com/MaaAssistantArknights/MaaMacGui/pull/88)) @author
+* 子仓库条目 ([#85](https://github.com/MaaAssistantArknights/MaaMacGui/pull/85)) @author
 
 </details>
 
 <details>
-<summary><b>vX.Y-1.Z (YYYY-MM-DD)</b></summary>
-
-### 修复 | Fix
-
-* 上一个正式版的条目 @author
-
-</details>
-```
-
-### patch / 测试版模板
-
-### Highlights
-
-#### 中文小结标题 A
-
-中文小结正文。
-
-#### 中文小结标题 B
-
-中文小结正文。
-
-<details>
-<summary><b>English</b></summary>
-
-#### English Summary Title A
-
-English summary paragraph.
-
-#### English Summary Title B
-
-English summary paragraph.
-
-</details>
-
-----
-
-以下是详细内容：
-
-<details open>
-<summary><b>vX.Y.Z (YYYY-MM-DD)</b></summary>
-
-### 改进 | Improved
-
-* 条目 A (#12345) @author
-
-### 修复 | Fix
-
-* 条目 B @author
-
-### 文档 | Docs
-
-* 条目 C @author
-
-### MaaMacGui
-
-#### 新增 | New
-
-* 子仓库新增条目 ([#85](https://github.com/MaaAssistantArknights/MaaMacGui/pull/85)) @author
-
-#### 修复 | Fix
-
-* 子仓库修复条目 ([#88](https://github.com/MaaAssistantArknights/MaaMacGui/pull/88)) @author
-
-</details>
-
-<details>
-<summary><b>vX.Y.1 (YYYY-MM-DD)</b></summary>
+<summary><b>vX.Y.Z-1 (YYYY-MM-DD)</b></summary>
 
 ### 改进 | Improved
 
 * 历史版本条目 @author
 
-### 修复 | Fix
-
-* 历史版本条目 @author
-
-</details>
-
-<details>
-<summary><b>vX.Y.0 (YYYY-MM-DD)</b></summary>
-
-### 新增 | New
-
-* 正式版条目 @author
-
-### 改进 | Improved
-
-* 正式版条目 @author
-
-### 修复 | Fix
-
-* 正式版条目 @author
-
 </details>
 ```
 
-## Final Checklist
+- **正式版**（跨次版本号 X.Y.0）：不保留任何历史折叠块，仅 `<details open>` 单一区块。
+- **patch 正式版 / 测试版**：保留历史折叠块，如上所示。
 
-- 是否只保留最终有效的净变更，而不是机械罗列 commit？
-- 是否已经删除 bot、Release、Generate、Update CHANGELOG、Revert 等噪音项？
-- 是否避免把旧版本已发布内容重复抄进当前 patch 版本？
-- 是否所有条目都能被最终用户独立理解？
-- 是否已经按模块正确分类、排序，并保持中文在前、英文在后？
-- 是否已经输出完整 Markdown，而不是说明文字或代码块？
-- 如果是 patch 版本且没有用户可感知的重要新变化，是否复用了父版本的 Highlights 而非自行重写？
-- patch / 测试版的详细内容是否紧跟在"以下是详细内容："之后，而非插入到父版本的 Highlights 下方？
-- 历史版本区块中是否只保留详细内容，没有重复 Highlights 和引导语？
-- 英文 Highlights 是否放入 `<details>` 折叠块（中文不折叠）？
-- 每个版本的详细内容是否各自放入独立的 `<details>` 折叠块？
-- 当前版本是否使用 `<details open>` 默认展开，历史版本是否默认收起？
-- 如果有子仓库（如 MaaMacGui）更新，是否作为 `### MaaMacGui` 独立子项放在 `### 其他 | Other` 之后，且内部使用与主 changelog 相同的分类结构？
-- 正式版是否已将所有测试版条目合并到单一详细区块中，而非按 beta 小版本分别折叠？
-- 查询 git 历史时是否已正确指定编码参数，避免中文 commit 消息乱码？
-- 跨次版本号时是否已移除旧版本的历史折叠块？
+## 工作流程
+
+### patch / 测试版
+
+确定发布边界 → 读 CHANGELOG 与 diff → 过滤噪音 → 合并同类提交（必要时从 diff 改写）→ 分类 → 排序/术语/中英文整理 → 编写双语 Highlights → 输出完整 Markdown。
+
+### 正式版（由测试版晋升）
+
+不做全量重分析，而是「合并已有测试版 changelog + 补少量增量 + 复用 Highlights」：
+1. 读取同次版本号所有测试版区块。
+2. 判定「最后一个测试版 tag → HEAD」是否有用户可感知变化（一般仅 CI/chore → 增量为空）。
+3. **Highlights**：复用最后一个测试版的（仅改版本号标题）。
+4. **详细内容**：各测试版条目按模块汇总去重，补入增量，排序。
+5. 跨次版本号不保留历史折叠块；patch 正式版保留。
+
+## 常见错误
+
+- ❌ 旧版本条目整段复制到当前版本 / Revert 原样保留
+- ❌ bot/release/auto generate/update changelog 写入文档
+- ❌ 同一功能拆成多条重复 / 保留玩梗或半成品标题 / 机械沿用 commit type
+- ❌ 无重大变化却重写 Highlights / 正式版全量重分析而非合并测试版
+- ❌ 详细内容插入到 Highlights 与历史区块之间，破坏结构 / 历史区块重复 Highlights 或引导语
+- ❌ chore/perf 默认当噪音过滤（应判断用户可感知效果）
+- ❌ 从 git tag 自行推测版本号（应从 PR 标题/用户输入获取；`gh` 失败时用 URL 访问 PR 页面）
+- ❌ 外服专有条目整条译成中文 / git 历史未指定编码导致乱码
+
+## 最终检查
+
+- [ ] 净变更合并，非机械罗列 commit？噪音已删除？
+- [ ] 未重复旧版本内容？条目用户可独立理解？分类/排序/文案正确？
+- [ ] 顶部标题 `## vX.Y.Z` 不带日期，折叠块 summary 带日期？
+- [ ] Highlights 复用规则正确？英文 Highlights 在 `<details>` 内？
+- [ ] 当前版本 `<details open>`，历史版本收起？历史区块无重复 Highlights/引导语？
+- [ ] 正式版合并所有测试版为单一区块，未全量重分析？
+- [ ] 跨次版本号已移除旧版本折叠块（含新次版本第一个测试版）？
+- [ ] 子仓库 MaaMacGui 放在 `### 其他 | Other` 之后？
+- [ ] 版本号从 PR 标题/用户输入获取，未从 git tag 推测？
+- [ ] 外服专有条目保留英文原文？git 历史已指定编码？
