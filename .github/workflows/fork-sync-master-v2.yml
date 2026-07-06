@@ -1,4 +1,4 @@
-name: Fork Sync master-v2
+name: Fork ARPS Sync
 
 on:
   workflow_dispatch:
@@ -7,34 +7,29 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
-  group: fork-sync-master-v2
+  group: fork-arps-sync
   cancel-in-progress: false
 
 jobs:
   sync:
-    name: Merge upstream master-v2
+    name: Merge upstream into ARPS branch
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout fork master-v2
+      - name: Checkout ARPS branch
         uses: actions/checkout@v6
         with:
-          ref: master-v2
+          ref: arps/master-v2
           fetch-depth: 0
           show-progress: false
 
-      - name: Merge upstream
+      - name: Sync upstream
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPEN_PR: "true"
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add upstream https://github.com/MaaAssistantArknights/MaaAssistantArknights.git
-          git fetch upstream master-v2
-          before="$(git rev-parse HEAD)"
-          git merge --no-edit upstream/master-v2
-          after="$(git rev-parse HEAD)"
-          if [[ "$before" != "$after" ]]; then
-            git push origin HEAD:master-v2
-          fi
+          bash tools/fork/sync-arps-master-v2.sh
