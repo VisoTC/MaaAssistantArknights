@@ -39,6 +39,7 @@ description: 依据 git 提交、diff、现有 CHANGELOG 与 tag，生成符合 
 - 列表前缀统一 `*`；中英文与数字间留空格（如"修复 3 个 bug"）。
 - 术语统一大小写：WPF、Json、Markdown、CSV、Info。
 - 保留作者与 PR 引用，格式 `([#12345](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/12345)) @author`；多条合并时引用合并括注。
+- **作者归属**：从 commit 的 `%an`（author）字段获取，**不要**用 `%cn`（committer）——squash merge 的 committer 通常是 GitHub 或执行合并的人，而非贡献者。对于多贡献者 PR（squash 后协作者信息丢失），需访问 PR 页面确认发起人与协作者，全部列出（用空格分隔，如 `@author1 @author2`）。
 
 ## 4. 版本历史与折叠块
 
@@ -60,8 +61,16 @@ description: 依据 git 提交、diff、现有 CHANGELOG 与 tag，生成符合 
 ## 5. Highlights
 
 - **中英双语，先中后英**。中文直接展示，英文放入 `<details><summary><b>English</b></summary>` 折叠块。
-- 只总结最值得强调的变化，不要机械搬运所有条目。
-- **复用规则**（适用于 patch 版、测试版、由测试版晋升的正式版）：相对**直接前驱版本**（patch 的父正式版 / 测试版的上一测试版 / 正式版晋升时的最后一个测试版）无用户可感知重大变化 → **直接复用前驱版本 Highlights**，仅改顶部版本号标题，不改写内容。有重大新变化 → 原有内容保留，新段落追加在末尾。
+- **累计性质**：同一次版本号（X.Y.0）下，顶层 `### Highlights` 是整个次版本号至今的**累计亮点**——应涵盖所有已发布测试版的亮点 + 当前增量，**而非仅当前测试版的增量亮点**。
+- **精简原则**：只保留最值得强调的变化（通常 3-4 条），不要机械搬运所有条目。宁可少不可多——同时出现 4 条以上说明没有做好筛选，需要合并同类项或删减次要条目。
+- **新次版本的第一个测试版**（如 v6.14.0-beta.1，跨次版本号）：前驱版本属于旧次版本号，所有旧历史折叠块已被删除，**Highlights 从零编写**（总结本提交范围内最值得强调的变化）。此时不存在可复用的前驱版本 Highlights。
+- **同次版本号后续版本**（patch、beta.2+、由测试版晋升的正式版）：相对**直接前驱版本**（patch 的父正式版 / 测试版的上一测试版 / 正式版晋升时的最后一个测试版）：
+  - 无用户可感知重大变化 → **直接复用前驱版本 Highlights**，仅改顶部版本号标题，不改写内容。
+  - 有重大新变化 → **以前驱版本 Highlights 为基础，补充新亮点后重新审视、合并或替换**。具体规则：
+    1. 先完整保留前驱版本的所有段落。
+    2. 判断新增内容是否值得进入 Highlights；值得的在末尾追加新段落。
+    3. 追加后若总数偏多（通常 >4 条），逐条审视：可合并同类项，也可**将前驱版本中相对凑数/次要的条目直接替换为更重要新亮点**（替换 ≠ 整体丢弃，而是逐条权衡）。
+    4. **绝对禁止**整体丢弃前驱版本 curation——即不可仅保留当前版本增量亮点、删除全部前驱亮点。但逐条替换凑数条目是允许的。
 - **由测试版晋升的正式版**：判定基准是最后一个测试版。若最后一个测试版到正式版之间只有 CI、chore、内部维护等，Highlights 一字不改复用，只更新顶部版本号标题。
 
 ## 6. 噪音过滤
@@ -91,6 +100,14 @@ description: 依据 git 提交、diff、现有 CHANGELOG 与 tag，生成符合 
 ```
 
 如仍乱码：`| Out-File -Encoding utf8 -FilePath "$env:TEMP\commits.txt"` 后用 read_file 读取。
+
+## 9. Squash PR 作者归属
+
+仓库默认使用 squash merge，squash 后的 commit 会丢失原始分支上的多提交者信息：
+
+- **`%an`（author）= PR 发起人**，是默认归属依据。**不要**用 `%cn`（committer），squash 的 committer 通常是 GitHub 或执行合并维护者。
+- **多贡献者 PR**：如果 PR 有其他协作者（Co-authored-by、分支上有他人 commit），squash 后这些信息可能被压缩或仅保留在 PR 页面的 contributor 列表中。对无法确认的 PR，**必须访问 PR 页面**（如 `https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/12345`）核对发起人与 contributor 列表。
+- 作者格式：单作者 `@author`；多作者用空格分隔 `@author1 @author2`。
 
 ## 文件结构（自上而下）
 
@@ -159,7 +176,7 @@ English paragraph.
 
 ### patch / 测试版
 
-确定发布边界 → 读 CHANGELOG 与 diff → 过滤噪音 → 合并同类提交（必要时从 diff 改写）→ 分类 → 排序/术语/中英文整理 → 编写双语 Highlights → 输出完整 Markdown。
+确定发布边界 → 读 CHANGELOG 与 diff → 过滤噪音 → 合并同类提交（必要时从 diff 改写）→ 分类 → 排序/术语/中英文整理 → 处理 Highlights：**新次版本第一个测试版从零编写；后续测试版以前驱版本为基础，无重大变化直接复用、有重大变化补充新亮点后合并精简（禁止丢弃已有 curation 仅保留当前增量）** → 输出完整 Markdown。
 
 ### 正式版（由测试版晋升）
 
@@ -175,21 +192,23 @@ English paragraph.
 - ❌ 旧版本条目整段复制到当前版本 / Revert 原样保留
 - ❌ bot/release/auto generate/update changelog 写入文档
 - ❌ 同一功能拆成多条重复 / 保留玩梗或半成品标题 / 机械沿用 commit type
-- ❌ 无重大变化却重写 Highlights / 正式版全量重分析而非合并测试版
+- ❌ 无重大变化却重写 Highlights / 有重大变化时整体丢弃前驱版本 curation 仅保留当前增量 / 正式版全量重分析而非合并测试版
 - ❌ 详细内容插入到 Highlights 与历史区块之间，破坏结构 / 历史区块重复 Highlights 或引导语
 - ❌ chore/perf 默认当噪音过滤（应判断用户可感知效果）
 - ❌ 从 git tag 自行推测版本号（应从 PR 标题/用户输入获取；`gh` 失败时用 URL 访问 PR 页面）
 - ❌ 外服专有条目整条译成中文 / git 历史未指定编码导致乱码
+- ❌ squash PR 作者取 `%cn`（committer/合并者）而非 `%an`（author/发起人）；多贡献者 PR 未访问 PR 页面核对 contributor
 
 ## 最终检查
 
 - [ ] 净变更合并，非机械罗列 commit？噪音已删除？
 - [ ] 未重复旧版本内容？条目用户可独立理解？分类/排序/文案正确？
 - [ ] 顶部标题 `## vX.Y.Z` 不带日期，折叠块 summary 带日期？
-- [ ] Highlights 复用规则正确？英文 Highlights 在 `<details>` 内？
+- [ ] Highlights 处理正确（新次版本第一个测试版从零编写；后续测试版以前驱为基础补充新亮点后合并精简，未丢弃已有 curation；总条数通常 3-4 条）？英文 Highlights 在 `<details>` 内？
 - [ ] 当前版本 `<details open>`，历史版本收起？历史区块无重复 Highlights/引导语？
 - [ ] 正式版合并所有测试版为单一区块，未全量重分析？
 - [ ] 跨次版本号已移除旧版本折叠块（含新次版本第一个测试版）？
 - [ ] 子仓库 MaaMacGui 放在 `### 其他 | Other` 之后？
 - [ ] 版本号从 PR 标题/用户输入获取，未从 git tag 推测？
+- [ ] squash PR 作者取 `%an`（发起人），非 `%cn`（合并者）？多贡献者 PR 已核对 contributor 列表？
 - [ ] 外服专有条目保留英文原文？git 历史已指定编码？
