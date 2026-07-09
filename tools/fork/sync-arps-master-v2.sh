@@ -25,6 +25,28 @@ write_multiline_output() {
     fi
 }
 
+preserve_fork_workflows() {
+    local base_ref="$1"
+
+    # GITHUB_TOKEN cannot push commits that update workflow files. Keep the
+    # fork-owned workflow tree while still merging upstream source/resource changes.
+    git rm -r -f --quiet --ignore-unmatch .github/workflows
+    if git cat-file -e "$base_ref:.github/workflows" 2>/dev/null; then
+        git checkout "$base_ref" -- .github/workflows
+    fi
+}
+
+commit_pending_merge() {
+    local base_ref="$1"
+
+    preserve_fork_workflows "$base_ref"
+    if git diff-index --cached --quiet HEAD -- && git diff-files --quiet --; then
+        git commit --allow-empty --no-edit
+    else
+        git commit --no-edit
+    fi
+}
+
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -32,7 +54,7 @@ if ! git remote get-url "$UPSTREAM_REMOTE" >/dev/null 2>&1; then
     git remote add "$UPSTREAM_REMOTE" "$UPSTREAM_URL"
 fi
 
-git fetch --force --tags "$UPSTREAM_REMOTE" "$UPSTREAM_BRANCH"
+git fetch --force --no-tags "$UPSTREAM_REMOTE" "$UPSTREAM_BRANCH"
 git fetch origin "$TARGET_BRANCH"
 git switch -C "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
 
@@ -43,11 +65,14 @@ upstream_short="${upstream_sha:0:12}"
 write_output upstream_sha "$upstream_sha"
 
 set +e
-git merge --no-edit "$upstream_ref"
+git merge --no-commit --no-ff "$upstream_ref"
 merge_status=$?
 set -e
 
 if [[ "$merge_status" -eq 0 ]]; then
+    if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+        commit_pending_merge "$before"
+    fi
     after="$(git rev-parse HEAD)"
     if [[ "$before" != "$after" ]]; then
         git push origin "HEAD:$TARGET_BRANCH"
@@ -63,7 +88,7 @@ conflict_files="$(git diff --name-only --diff-filter=U || true)"
 
 if bash "$RESOLVER"; then
     if [[ -z "$(git diff --name-only --diff-filter=U || true)" ]]; then
-        git commit --no-edit
+        commit_pending_merge "$before"
         git push origin "HEAD:$TARGET_BRANCH"
         write_output conflict false
         write_output pushed true
