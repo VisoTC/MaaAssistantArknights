@@ -11,6 +11,8 @@ upstream_repo="$test_root/upstream"
 origin_repo="$test_root/origin.git"
 fork_worktree="$test_root/fork-worktree"
 runner_worktree="$test_root/runner-worktree"
+fake_bin="$test_root/fake-bin"
+gh_log="$test_root/gh.log"
 
 write_fixture() {
     local path="$1"
@@ -30,6 +32,14 @@ assert_equal() {
         exit 1
     fi
 }
+
+mkdir -p "$fake_bin"
+write_fixture "$fake_bin/gh" '#!/usr/bin/env bash
+printf "%s\n" "$*" >> "$GH_TEST_LOG"
+if [[ "$1 $2" == "pr create" ]]; then
+    printf "%s\n" "https://github.com/example/fork/pull/1"
+fi'
+chmod +x "$fake_bin/gh"
 
 git init -q -b master-v2 "$upstream_repo"
 git -C "$upstream_repo" config user.name "Test Upstream"
@@ -72,11 +82,13 @@ git -C "$runner_worktree" switch -q -c arps/master-v2 --track origin/arps/master
 set +e
 (
     cd "$runner_worktree"
-    TARGET_BRANCH="arps/master-v2" \
+    PATH="$fake_bin:$PATH" \
+        GH_TEST_LOG="$gh_log" \
+        TARGET_BRANCH="arps/master-v2" \
         UPSTREAM_BRANCH="master-v2" \
         UPSTREAM_URL="$upstream_repo" \
         SYNC_BRANCH_PREFIX="sync/upstream-master-v2" \
-        OPEN_PR="false" \
+        OPEN_PR="true" \
         RESOLVER="$resolver_script" \
         bash "$sync_script"
 )
@@ -84,6 +96,12 @@ sync_status=$?
 set -e
 
 assert_equal "2" "$sync_status" "a conflict handoff should use the documented exit status"
+
+create_args="$(sed -n '/^pr create /p' "$gh_log")"
+if [[ "$create_args" != *" --no-maintainer-edit "* ]]; then
+    printf 'FAIL: pull request creation should disable maintainer edits for the fork token\n' >&2
+    exit 1
+fi
 
 git -C "$runner_worktree" fetch -q origin \
     "refs/heads/$sync_branch:refs/remotes/origin/$sync_branch"

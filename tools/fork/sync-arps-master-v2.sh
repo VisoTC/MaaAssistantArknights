@@ -240,7 +240,7 @@ if [[ "$OPEN_PR" == "true" ]]; then
         gh pr edit "$existing_pr" --title "$title" --body-file "$body_file"
         write_output pr_url "$existing_pr"
     else
-        pr_url="$(gh pr create --draft --base "$TARGET_BRANCH" --head "$sync_branch" --title "$title" --body-file "$body_file")"
+        pr_url="$(gh pr create --draft --no-maintainer-edit --base "$TARGET_BRANCH" --head "$sync_branch" --title "$title" --body-file "$body_file")"
         write_output pr_url "$pr_url"
     fi
 fi
