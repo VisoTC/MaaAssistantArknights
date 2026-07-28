@@ -84,6 +84,7 @@ set +e
     cd "$runner_worktree"
     PATH="$fake_bin:$PATH" \
         GH_TEST_LOG="$gh_log" \
+        GITHUB_REPOSITORY="example/fork" \
         TARGET_BRANCH="arps/master-v2" \
         UPSTREAM_BRANCH="master-v2" \
         UPSTREAM_URL="$upstream_repo" \
@@ -100,6 +101,17 @@ assert_equal "2" "$sync_status" "a conflict handoff should use the documented ex
 create_args="$(sed -n '/^pr create /p' "$gh_log")"
 if [[ "$create_args" != *" --no-maintainer-edit "* ]]; then
     printf 'FAIL: pull request creation should disable maintainer edits for the fork token\n' >&2
+    exit 1
+fi
+
+if [[ "$create_args" != *" --repo example/fork "* ]]; then
+    printf 'FAIL: pull request creation should explicitly target the workflow repository\n' >&2
+    exit 1
+fi
+
+list_args="$(sed -n '/^pr list /p' "$gh_log")"
+if [[ "$list_args" != *" --repo example/fork "* ]]; then
+    printf 'FAIL: pull request lookup should explicitly target the workflow repository\n' >&2
     exit 1
 fi
 

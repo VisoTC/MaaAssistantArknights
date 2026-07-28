@@ -7,6 +7,7 @@ UPSTREAM_REMOTE="${UPSTREAM_REMOTE:-upstream}"
 UPSTREAM_URL="${UPSTREAM_URL:-https://github.com/MaaAssistantArknights/MaaAssistantArknights.git}"
 SYNC_BRANCH_PREFIX="${SYNC_BRANCH_PREFIX:-sync/upstream-master-v2}"
 OPEN_PR="${OPEN_PR:-false}"
+PR_REPOSITORY="${PR_REPOSITORY:-${GITHUB_REPOSITORY:-}}"
 RESOLVER="${RESOLVER:-tools/fork/resolve-upstream-merge.sh}"
 FORK_OWNED_PATHS=(
     .github/workflows
@@ -191,6 +192,11 @@ write_output sync_branch "$sync_branch"
 restore_target_branch "$before"
 
 if [[ "$OPEN_PR" == "true" ]]; then
+    if [[ -z "$PR_REPOSITORY" ]]; then
+        echo "PR_REPOSITORY or GITHUB_REPOSITORY must be set when OPEN_PR=true."
+        exit 1
+    fi
+
     body_file="$(mktemp)"
     {
         echo "Automated upstream sync could not be merged into \`$TARGET_BRANCH\`."
@@ -235,12 +241,13 @@ if [[ "$OPEN_PR" == "true" ]]; then
     } > "$body_file"
 
     title="Sync upstream master-v2 into ARPS branch (${upstream_short})"
-    existing_pr="$(gh pr list --base "$TARGET_BRANCH" --head "$sync_branch" --state open --json url --jq '.[0].url' 2>/dev/null || true)"
+    echo "Opening conflict handoff pull request in $PR_REPOSITORY."
+    existing_pr="$(gh pr list --repo "$PR_REPOSITORY" --base "$TARGET_BRANCH" --head "$sync_branch" --state open --json url --jq '.[0].url' 2>/dev/null || true)"
     if [[ -n "$existing_pr" ]]; then
-        gh pr edit "$existing_pr" --title "$title" --body-file "$body_file"
+        gh pr edit "$existing_pr" --repo "$PR_REPOSITORY" --title "$title" --body-file "$body_file"
         write_output pr_url "$existing_pr"
     else
-        pr_url="$(gh pr create --draft --no-maintainer-edit --base "$TARGET_BRANCH" --head "$sync_branch" --title "$title" --body-file "$body_file")"
+        pr_url="$(gh pr create --repo "$PR_REPOSITORY" --draft --no-maintainer-edit --base "$TARGET_BRANCH" --head "$sync_branch" --title "$title" --body-file "$body_file")"
         write_output pr_url "$pr_url"
     fi
 fi
