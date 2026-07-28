@@ -106,6 +106,13 @@ if ! git -C "$runner_worktree" diff --quiet \
     exit 1
 fi
 
+if ! git -C "$runner_worktree" diff --quiet \
+    "refs/remotes/origin/arps/master-v2...$sync_ref" -- \
+    .github/workflows; then
+    printf 'FAIL: the pull request comparison contains workflow changes\n' >&2
+    exit 1
+fi
+
 assert_equal \
     "fork-owned Codex guidance" \
     "$(git -C "$runner_worktree" show "$sync_ref:AGENTS.md")" \
@@ -127,13 +134,121 @@ assert_equal \
     "the conflict handoff should not update the target branch"
 
 if ! git -C "$runner_worktree" merge-base --is-ancestor "$upstream_sha" "$sync_ref"; then
-    printf 'FAIL: the sync branch should descend from the requested upstream commit\n' >&2
+    printf 'FAIL: the sync branch should contain the requested upstream commit\n' >&2
+    exit 1
+fi
+
+if ! git -C "$runner_worktree" merge-base --is-ancestor "$fork_sha" "$sync_ref"; then
+    printf 'FAIL: the sync branch should descend from the target branch\n' >&2
     exit 1
 fi
 
 assert_equal \
-    "chore: 保留 fork 维护文件" \
-    "$(git -C "$runner_worktree" log -1 --format=%s "$sync_ref")" \
-    "the maintenance-preservation commit should be explicit"
+    "$fork_sha" \
+    "$(git -C "$runner_worktree" rev-parse "$sync_ref^1")" \
+    "the target branch should be the first merge parent"
 
-printf 'PASS: conflict sync branch preserves fork workflows and upstream source changes\n'
+assert_equal \
+    "$upstream_sha" \
+    "$(git -C "$runner_worktree" rev-parse "$sync_ref^2")" \
+    "the upstream branch should be the second merge parent"
+
+shared_content="$(git -C "$runner_worktree" show "$sync_ref:src/shared.txt")"
+if [[ "$shared_content" != *"<<<<<<< HEAD"* ]] || \
+    [[ "$shared_content" != *"ARPS implementation"* ]] || \
+    [[ "$shared_content" != *"upstream implementation"* ]] || \
+    [[ "$shared_content" != *">>>>>>>"* ]]; then
+    printf 'FAIL: the sync branch should commit both sides as conflict markers\n' >&2
+    exit 1
+fi
+
+assert_equal \
+    "chore: 暂存上游合并冲突" \
+    "$(git -C "$runner_worktree" log -1 --format=%s "$sync_ref")" \
+    "the conflict handoff merge commit should be explicit"
+
+assert_equal \
+    "arps/master-v2" \
+    "$(git -C "$runner_worktree" branch --show-current)" \
+    "the runner worktree should return to the target branch"
+
+clean_upstream_repo="$test_root/clean-upstream"
+clean_origin_repo="$test_root/clean-origin.git"
+clean_fork_worktree="$test_root/clean-fork-worktree"
+clean_runner_worktree="$test_root/clean-runner-worktree"
+
+git init -q -b master-v2 "$clean_upstream_repo"
+git -C "$clean_upstream_repo" config user.name "Test Upstream"
+git -C "$clean_upstream_repo" config user.email "upstream@example.test"
+
+write_fixture "$clean_upstream_repo/.github/workflows/fork.yml" "base workflow"
+write_fixture "$clean_upstream_repo/src/base.txt" "base implementation"
+git -C "$clean_upstream_repo" add .
+git -C "$clean_upstream_repo" commit -qm "chore: create clean base"
+
+git clone -q --bare "$clean_upstream_repo" "$clean_origin_repo"
+git clone -q "$clean_origin_repo" "$clean_fork_worktree"
+git -C "$clean_fork_worktree" config user.name "Test Fork"
+git -C "$clean_fork_worktree" config user.email "fork@example.test"
+git -C "$clean_fork_worktree" switch -q -c arps/master-v2
+
+write_fixture "$clean_fork_worktree/.github/workflows/fork.yml" "fork-owned workflow"
+write_fixture "$clean_fork_worktree/AGENTS.md" "fork-owned Codex guidance"
+write_fixture "$clean_fork_worktree/tools/fork/guide.txt" "fork-owned maintenance tool"
+git -C "$clean_fork_worktree" add .
+git -C "$clean_fork_worktree" commit -qm "feat: add clean fork changes"
+git -C "$clean_fork_worktree" push -q origin arps/master-v2
+
+write_fixture "$clean_upstream_repo/src/upstream-only.txt" "upstream feature"
+git -C "$clean_upstream_repo" add .
+git -C "$clean_upstream_repo" commit -qm "feat: add clean upstream change"
+clean_upstream_sha="$(git -C "$clean_upstream_repo" rev-parse HEAD)"
+clean_upstream_short="${clean_upstream_sha:0:12}"
+clean_sync_branch="sync/upstream-master-v2-$clean_upstream_short"
+
+git clone -q "$clean_origin_repo" "$clean_runner_worktree"
+git -C "$clean_runner_worktree" switch -q -c arps/master-v2 --track origin/arps/master-v2
+
+(
+    cd "$clean_runner_worktree"
+    TARGET_BRANCH="arps/master-v2" \
+        UPSTREAM_BRANCH="master-v2" \
+        UPSTREAM_URL="$clean_upstream_repo" \
+        SYNC_BRANCH_PREFIX="sync/upstream-master-v2" \
+        OPEN_PR="false" \
+        RESOLVER="$resolver_script" \
+        bash "$sync_script"
+)
+
+git -C "$clean_runner_worktree" fetch -q origin \
+    "refs/heads/arps/master-v2:refs/remotes/origin/arps/master-v2"
+clean_target_ref="refs/remotes/origin/arps/master-v2"
+
+if ! git -C "$clean_runner_worktree" merge-base --is-ancestor \
+    "$clean_upstream_sha" "$clean_target_ref"; then
+    printf 'FAIL: a clean sync should update the target branch to include upstream\n' >&2
+    exit 1
+fi
+
+assert_equal \
+    "fork-owned workflow" \
+    "$(git -C "$clean_runner_worktree" show "$clean_target_ref:.github/workflows/fork.yml")" \
+    "a clean sync should retain the fork workflow"
+
+assert_equal \
+    "chore: 同步上游 master-v2" \
+    "$(git -C "$clean_runner_worktree" log -1 --format=%s "$clean_target_ref")" \
+    "a clean sync merge commit should describe the target operation"
+
+assert_equal \
+    "arps/master-v2" \
+    "$(git -C "$clean_runner_worktree" branch --show-current)" \
+    "a clean sync should return to the target branch"
+
+if git -C "$clean_runner_worktree" ls-remote --exit-code --heads origin \
+    "$clean_sync_branch" >/dev/null 2>&1; then
+    printf 'FAIL: a clean sync should not publish a conflict branch\n' >&2
+    exit 1
+fi
+
+printf 'PASS: conflict and clean sync paths preserve fork workflows safely\n'

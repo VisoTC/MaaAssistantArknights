@@ -11,7 +11,8 @@
 - Preserve the fork-owned `.github/workflows` tree. Do not replace it with the upstream workflow tree.
 - Preserve ARPS capture behavior while incorporating compatible upstream changes.
 - Resolve overlapping WPF changes semantically. Do not choose `ours` or `theirs` for an entire file without inspecting both sides.
-- On a sync pull request, merge `origin/arps/master-v2` into the current sync branch, resolve the conflicts, and push only to that pull-request branch.
+- A sync pull request already contains a merge commit whose first parent is the fork branch and whose second parent is upstream. Do not merge the base branch again.
+- Resolve the committed conflict markers by comparing both merge parents, then push only to that pull-request branch.
 - Do not merge the pull request. Leave the final review and merge to the maintainer.
 - Do not use SSH or access unrelated remote servers.
 

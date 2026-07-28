@@ -34,8 +34,9 @@ preserve_fork_maintenance() {
     local base_ref="$1"
     local path
 
-    # GITHUB_TOKEN cannot push commits that update workflow files. Keep the
-    # fork-owned maintenance files while still merging upstream changes.
+    # GITHUB_TOKEN cannot create a pull request whose comparison updates
+    # workflow files. Keep the fork-owned maintenance files while still
+    # merging upstream changes.
     for path in "${FORK_OWNED_PATHS[@]}"; do
         git rm -r -f --quiet --ignore-unmatch "$path"
         if git cat-file -e "$base_ref:$path" 2>/dev/null; then
@@ -55,20 +56,60 @@ commit_pending_merge() {
     fi
 }
 
-prepare_sync_branch() {
+restore_target_branch() {
+    local target_ref="$1"
+
+    git switch -C "$TARGET_BRANCH" "$target_ref"
+    if git show-ref --verify --quiet "refs/remotes/origin/$TARGET_BRANCH"; then
+        git branch --set-upstream-to="origin/$TARGET_BRANCH" "$TARGET_BRANCH" >/dev/null
+    fi
+}
+
+commit_conflict_handoff() {
     local base_ref="$1"
     local upstream_ref="$2"
-    local sync_branch="$3"
+    local conflicts="$3"
+    local path
+    local unresolved
 
-    git switch -C "$sync_branch" "$upstream_ref"
-    preserve_fork_maintenance "$base_ref"
+    while IFS= read -r path; do
+        if [[ -z "$path" ]]; then
+            continue
+        fi
 
-    if ! git diff-index --cached --quiet HEAD -- || ! git diff-files --quiet --; then
-        git commit -m "chore: 保留 fork 维护文件"
+        if [[ -e "$path" || -L "$path" ]]; then
+            git add -- "$path"
+        else
+            git rm -f --quiet --ignore-unmatch -- "$path"
+        fi
+    done <<< "$conflicts"
+
+    unresolved="$(git diff --name-only --diff-filter=U || true)"
+    if [[ -n "$unresolved" ]]; then
+        echo "Unable to stage the conflict handoff:"
+        echo "$unresolved"
+        return 1
+    fi
+
+    git commit -m "chore: 暂存上游合并冲突"
+
+    if ! git merge-base --is-ancestor "$base_ref" HEAD; then
+        echo "Refusing to push a sync branch that does not descend from the target branch."
+        return 1
+    fi
+
+    if ! git merge-base --is-ancestor "$upstream_ref" HEAD; then
+        echo "Refusing to push a sync branch that does not contain the upstream commit."
+        return 1
     fi
 
     if ! git diff --quiet "$base_ref" HEAD -- "${FORK_OWNED_PATHS[@]}"; then
         echo "Refusing to push a sync branch that changes fork-owned maintenance files."
+        return 1
+    fi
+
+    if ! git diff --quiet "$base_ref...HEAD" -- .github/workflows; then
+        echo "Refusing to create a pull request whose comparison changes workflow files."
         return 1
     fi
 }
@@ -82,16 +123,20 @@ fi
 
 git fetch --force --no-tags "$UPSTREAM_REMOTE" "$UPSTREAM_BRANCH"
 git fetch origin "$TARGET_BRANCH"
-git switch -C "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
 
-before="$(git rev-parse HEAD)"
+before="$(git rev-parse "origin/$TARGET_BRANCH")"
 upstream_ref="$UPSTREAM_REMOTE/$UPSTREAM_BRANCH"
 upstream_sha="$(git rev-parse "$upstream_ref")"
 upstream_short="${upstream_sha:0:12}"
+sync_branch="${SYNC_BRANCH_PREFIX}-${upstream_short}"
 write_output upstream_sha "$upstream_sha"
 
+git switch -C "$sync_branch" "$before"
+
 set +e
-git merge --no-commit --no-ff "$upstream_ref"
+git merge --no-commit --no-ff \
+    -m "chore: 同步上游 $UPSTREAM_BRANCH" \
+    "$upstream_ref"
 merge_status=$?
 set -e
 
@@ -106,16 +151,17 @@ if [[ "$merge_status" -eq 0 ]]; then
     else
         write_output pushed false
     fi
+    restore_target_branch "$after"
     write_output conflict false
     exit 0
 fi
-
-conflict_files="$(git diff --name-only --diff-filter=U || true)"
 
 if bash "$RESOLVER"; then
     if [[ -z "$(git diff --name-only --diff-filter=U || true)" ]]; then
         commit_pending_merge "$before"
         git push origin "HEAD:$TARGET_BRANCH"
+        after="$(git rev-parse HEAD)"
+        restore_target_branch "$after"
         write_output conflict false
         write_output pushed true
         write_output resolved_by fork-resolver
@@ -123,20 +169,26 @@ if bash "$RESOLVER"; then
     fi
 fi
 
+preserve_fork_maintenance "$before"
 remaining="$(git diff --name-only --diff-filter=U || true)"
 if [[ -z "$remaining" ]]; then
-    remaining="$conflict_files"
+    commit_pending_merge "$before"
+    git push origin "HEAD:$TARGET_BRANCH"
+    after="$(git rev-parse HEAD)"
+    restore_target_branch "$after"
+    write_output conflict false
+    write_output pushed true
+    write_output resolved_by fork-maintenance
+    exit 0
 fi
 
 write_output conflict true
 write_multiline_output conflict_files "$remaining"
 
-git merge --abort || true
-
-sync_branch="${SYNC_BRANCH_PREFIX}-${upstream_short}"
-prepare_sync_branch "$before" "$upstream_ref" "$sync_branch"
+commit_conflict_handoff "$before" "$upstream_ref" "$remaining"
 git push --force origin "HEAD:$sync_branch"
 write_output sync_branch "$sync_branch"
+restore_target_branch "$before"
 
 if [[ "$OPEN_PR" == "true" ]]; then
     body_file="$(mktemp)"
@@ -157,15 +209,20 @@ if [[ "$OPEN_PR" == "true" ]]; then
         echo "  refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH \\"
         echo "  refs/heads/$sync_branch:refs/remotes/origin/$sync_branch"
         echo "git switch -C $sync_branch origin/$sync_branch"
-        echo "git merge origin/$TARGET_BRANCH"
-        echo "# resolve conflicts, commit, then push HEAD:$sync_branch"
+        echo "# This branch already contains a merge commit:"
+        echo "#   HEAD^1 = $TARGET_BRANCH before the sync"
+        echo "#   HEAD^2 = upstream/$UPSTREAM_BRANCH"
+        echo "# Resolve the committed conflict markers listed above."
+        echo "git diff HEAD^1 HEAD^2 -- <conflict-file>"
+        echo "git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- <conflict-files>"
+        echo "# Edit, test, commit, then push HEAD:$sync_branch"
         echo '```'
         echo
         echo "To delegate the resolution to Codex Cloud, post this as a new pull request comment:"
         echo '```text'
-        echo "@codex resolve this upstream synchronization pull request."
+        echo "@codex resolve the committed conflict markers in this upstream synchronization pull request."
         echo
-        echo "Merge $TARGET_BRANCH into this sync branch and resolve every conflict semantically."
+        echo "This branch already contains a merge commit. HEAD^1 is the fork branch before the sync, and HEAD^2 is upstream $UPSTREAM_BRANCH. Do not merge the base branch again. Resolve every committed conflict marker semantically by comparing both parents."
         echo
         echo "Requirements:"
         echo "- Preserve ARPS capture behavior."

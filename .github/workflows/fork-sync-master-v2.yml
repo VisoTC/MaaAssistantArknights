@@ -32,4 +32,14 @@ jobs:
           OPEN_PR: "true"
         run: |
           set -euo pipefail
+          set +e
           bash tools/fork/sync-arps-master-v2.sh
+          sync_status=$?
+          set -e
+
+          if [[ "$sync_status" -eq 2 ]]; then
+            echo "Upstream conflicts were handed off to a draft pull request."
+            exit 0
+          fi
+
+          exit "$sync_status"
