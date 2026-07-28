@@ -8,6 +8,11 @@ UPSTREAM_URL="${UPSTREAM_URL:-https://github.com/MaaAssistantArknights/MaaAssist
 SYNC_BRANCH_PREFIX="${SYNC_BRANCH_PREFIX:-sync/upstream-master-v2}"
 OPEN_PR="${OPEN_PR:-false}"
 RESOLVER="${RESOLVER:-tools/fork/resolve-upstream-merge.sh}"
+FORK_OWNED_PATHS=(
+    .github/workflows
+    AGENTS.md
+    tools/fork
+)
 
 write_output() {
     if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -25,25 +30,46 @@ write_multiline_output() {
     fi
 }
 
-preserve_fork_workflows() {
+preserve_fork_maintenance() {
     local base_ref="$1"
+    local path
 
     # GITHUB_TOKEN cannot push commits that update workflow files. Keep the
-    # fork-owned workflow tree while still merging upstream source/resource changes.
-    git rm -r -f --quiet --ignore-unmatch .github/workflows
-    if git cat-file -e "$base_ref:.github/workflows" 2>/dev/null; then
-        git checkout "$base_ref" -- .github/workflows
-    fi
+    # fork-owned maintenance files while still merging upstream changes.
+    for path in "${FORK_OWNED_PATHS[@]}"; do
+        git rm -r -f --quiet --ignore-unmatch "$path"
+        if git cat-file -e "$base_ref:$path" 2>/dev/null; then
+            git checkout "$base_ref" -- "$path"
+        fi
+    done
 }
 
 commit_pending_merge() {
     local base_ref="$1"
 
-    preserve_fork_workflows "$base_ref"
+    preserve_fork_maintenance "$base_ref"
     if git diff-index --cached --quiet HEAD -- && git diff-files --quiet --; then
         git commit --allow-empty --no-edit
     else
         git commit --no-edit
+    fi
+}
+
+prepare_sync_branch() {
+    local base_ref="$1"
+    local upstream_ref="$2"
+    local sync_branch="$3"
+
+    git switch -C "$sync_branch" "$upstream_ref"
+    preserve_fork_maintenance "$base_ref"
+
+    if ! git diff-index --cached --quiet HEAD -- || ! git diff-files --quiet --; then
+        git commit -m "chore: 保留 fork 维护文件"
+    fi
+
+    if ! git diff --quiet "$base_ref" HEAD -- "${FORK_OWNED_PATHS[@]}"; then
+        echo "Refusing to push a sync branch that changes fork-owned maintenance files."
+        return 1
     fi
 }
 
@@ -108,7 +134,7 @@ write_multiline_output conflict_files "$remaining"
 git merge --abort || true
 
 sync_branch="${SYNC_BRANCH_PREFIX}-${upstream_short}"
-git switch -C "$sync_branch" "$upstream_ref"
+prepare_sync_branch "$before" "$upstream_ref" "$sync_branch"
 git push --force origin "HEAD:$sync_branch"
 write_output sync_branch "$sync_branch"
 
@@ -125,12 +151,29 @@ if [[ "$OPEN_PR" == "true" ]]; then
         echo "$remaining"
         echo '```'
         echo
-        echo "Resolve locally:"
+        echo "Resolve on the sync branch so this pull request receives the fix:"
         echo '```bash'
-        echo "git fetch origin $TARGET_BRANCH $sync_branch"
-        echo "git switch $TARGET_BRANCH"
-        echo "git merge origin/$sync_branch"
-        echo "# resolve conflicts, commit, push"
+        echo "git fetch origin \\"
+        echo "  refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH \\"
+        echo "  refs/heads/$sync_branch:refs/remotes/origin/$sync_branch"
+        echo "git switch -C $sync_branch origin/$sync_branch"
+        echo "git merge origin/$TARGET_BRANCH"
+        echo "# resolve conflicts, commit, then push HEAD:$sync_branch"
+        echo '```'
+        echo
+        echo "To delegate the resolution to Codex Cloud, post this as a new pull request comment:"
+        echo '```text'
+        echo "@codex resolve this upstream synchronization pull request."
+        echo
+        echo "Merge $TARGET_BRANCH into this sync branch and resolve every conflict semantically."
+        echo
+        echo "Requirements:"
+        echo "- Preserve ARPS capture behavior."
+        echo "- Preserve fork-owned .github/workflows."
+        echo "- Do not blindly choose ours or theirs for WPF conflicts."
+        echo "- Run the relevant checks and report anything that cannot run in the cloud environment."
+        echo "- Push only to this pull request branch."
+        echo "- Do not merge the pull request."
         echo '```'
     } > "$body_file"
 
@@ -140,7 +183,7 @@ if [[ "$OPEN_PR" == "true" ]]; then
         gh pr edit "$existing_pr" --title "$title" --body-file "$body_file"
         write_output pr_url "$existing_pr"
     else
-        pr_url="$(gh pr create --base "$TARGET_BRANCH" --head "$sync_branch" --title "$title" --body-file "$body_file")"
+        pr_url="$(gh pr create --draft --base "$TARGET_BRANCH" --head "$sync_branch" --title "$title" --body-file "$body_file")"
         write_output pr_url "$pr_url"
     fi
 fi
