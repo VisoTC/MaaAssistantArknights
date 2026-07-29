@@ -1,15 +1,13 @@
 file(GLOB_RECURSE maa_src *.h *.hpp *.cpp)
 
-<<<<<<< HEAD
 # Exclude the platform-specific OCR implementation that is not needed on this target
 if(ANDROID)
     list(FILTER maa_src EXCLUDE REGEX "OcrPack\\.cpp$")
 else()
     list(FILTER maa_src EXCLUDE REGEX "OcrPackNcnn\\.cpp$")
 endif()
-=======
+
 set(ARPS_NATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Controller/ArpsNative")
->>>>>>> 9c4144e4d (feat(arps): 重建 v6.12.2 单提交覆盖层)
 
 if(WITH_MAC_SCK)
     if(APPLE)
@@ -40,7 +38,6 @@ target_include_directories(MaaCore PUBLIC ${PROJECT_SOURCE_DIR}/include PRIVATE
                            "${ARPS_NATIVE_DIR}/src"
                            "${ARPS_NATIVE_DIR}/third_party/lz4")
 add_dependencies(MaaCore MaaUtils)
-<<<<<<< HEAD
 if(ANDROID)
     find_package(ncnn REQUIRED)
     find_package(polyclipping CONFIG REQUIRED)
@@ -53,10 +50,7 @@ if(ANDROID)
 else()
     target_link_libraries(MaaCore HeaderOnlyLibraries MaaUtils ${OpenCV_LIBS} fastdeploy_ppocr ONNXRuntime::ONNXRuntime ZLIB::ZLIB Boost::system)
 endif()
-=======
-target_link_libraries(MaaCore HeaderOnlyLibraries MaaUtils ${OpenCV_LIBS} fastdeploy_ppocr ONNXRuntime::ONNXRuntime ZLIB::ZLIB Boost::system)
 target_sources(MaaCore PRIVATE "${ARPS_NATIVE_DIR}/third_party/lz4/lz4.c")
->>>>>>> 9c4144e4d (feat(arps): 重建 v6.12.2 单提交覆盖层)
 
 if(WIN32)
     target_link_libraries(MaaCore ws2_32)

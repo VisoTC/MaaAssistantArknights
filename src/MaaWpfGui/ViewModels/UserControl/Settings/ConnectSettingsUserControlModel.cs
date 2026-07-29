@@ -68,7 +68,6 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
     /// <summary>
     /// Gets the list of the configuration of connection.
     /// </summary>
-<<<<<<< HEAD
     public LocalizedObservableList<string> ConnectConfigList { get; } = new(
         ("General", "General"),
         ("BlueStacks", "BlueStacks"),
@@ -82,26 +81,8 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
         ("WSA", "WSA"),
         ("Compatible", "Compatible"),
         ("SecondResolution", "SecondResolution"),
-        ("GeneralWithoutScreencapErr", "GeneralWithoutScreencapErr"));
-=======
-    public List<CombinedData> ConnectConfigList { get; } =
-        [
-            new() { Display = LocalizationHelper.GetString("General"), Value = "General" },
-            new() { Display = LocalizationHelper.GetString("BlueStacks"), Value = "BlueStacks" },
-            new() { Display = LocalizationHelper.GetString("MuMuEmulator12"), Value = "MuMuEmulator12" },
-            new() { Display = LocalizationHelper.GetString("LDPlayer"), Value = "LDPlayer" },
-            new() { Display = LocalizationHelper.GetString("Androws"), Value = "Androws" },
-            new() { Display = LocalizationHelper.GetString("AVD"), Value = "AVD" },
-            new() { Display = LocalizationHelper.GetString("Nox"), Value = "Nox" },
-            new() { Display = LocalizationHelper.GetString("XYAZ"), Value = "XYAZ" },
-            new() { Display = LocalizationHelper.GetString("PC"), Value = "PC" },
-            new() { Display = LocalizationHelper.GetString("WSA"), Value = "WSA" },
-            new() { Display = LocalizationHelper.GetString("Compatible"), Value = "Compatible" },
-            new() { Display = LocalizationHelper.GetString("SecondResolution"), Value = "SecondResolution" },
-            new() { Display = LocalizationHelper.GetString("GeneralWithoutScreencapErr"), Value = "GeneralWithoutScreencapErr" },
-            new() { Display = LocalizationHelper.GetString("ARPS"), Value = "ARPS" },
-        ];
->>>>>>> 9c4144e4d (feat(arps): 重建 v6.12.2 单提交覆盖层)
+        ("GeneralWithoutScreencapErr", "GeneralWithoutScreencapErr"),
+        ("ARPS", "ARPS"));
 
     public static string TouchModeVideoPath => Path.Combine(PathsHelper.BaseDir, "Res", "Video", "TouchMode.mp4");
 
