@@ -48,7 +48,7 @@ jobs:
           echo "Concurrency Group: $CONCURRENCY_GROUP"
 
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           show-progress: false
@@ -107,7 +107,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           show-progress: false
 
@@ -117,7 +117,7 @@ jobs:
 
       - name: Cache MaaDeps
         id: cache-maadeps
-        uses: actions/cache@v6
+        uses: actions/cache@v5
         continue-on-error: true
         with:
           path: |
@@ -164,7 +164,7 @@ jobs:
 
       - name: Cache .nuke/temp, ~/.nuget/packages
         id: cache-nuget
-        uses: actions/cache@v6
+        uses: actions/cache@v5
         continue-on-error: true
         with:
           path: |
@@ -245,7 +245,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           show-progress: false
 
@@ -255,7 +255,7 @@ jobs:
 
       - name: Cache MaaDeps
         id: cache-maadeps
-        uses: actions/cache@v6
+        uses: actions/cache@v5
         continue-on-error: true
         with:
           path: ./src/MaaUtils/MaaDeps
@@ -365,7 +365,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           show-progress: false
 
@@ -375,7 +375,7 @@ jobs:
 
       - name: Cache MaaDeps
         id: cache-maadeps
-        uses: actions/cache@v6
+        uses: actions/cache@v5
         continue-on-error: true
         with:
           path: ./src/MaaUtils/MaaDeps
@@ -437,7 +437,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           show-progress: false
 
@@ -452,7 +452,7 @@ jobs:
 
       - name: Cache MaaDeps
         id: cache-maadeps
-        uses: actions/cache@v6
+        uses: actions/cache@v5
         continue-on-error: true
         with:
           path: ./src/MaaUtils/MaaDeps
@@ -495,7 +495,7 @@ jobs:
     runs-on: macos-26
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           show-progress: false
 
@@ -671,7 +671,7 @@ jobs:
           find . -type f | while read f; do mv -fvt . $f; done
 
       - name: Publish release to GitHub
-        uses: softprops/action-gh-release@v3.0.1
+        uses: softprops/action-gh-release@v3.0.0
         with:
           body_path: CHANGELOG.md
           files: |

@@ -165,6 +165,11 @@ public class AsstProxy
         AsstSetConnectionExtras("LDPlayer", extras);
     }
 
+    private static void AsstSetConnectionExtrasArps(string extras)
+    {
+        AsstSetConnectionExtras("ARPS", extras);
+    }
+
     private static unsafe AsstTaskId AsstAppendTask(AsstHandle handle, string type, string taskParams)
     {
         fixed (byte* ptr1 = EncodeNullTerminatedUtf8(type),
@@ -927,6 +932,16 @@ public class AsstProxy
                             else if (timeCost < 100)
                             {
                                 color = UiLogColor.LdSpecialScreenshot;
+                            }
+
+                            break;
+
+                        case "ARPS":
+                            if (method != "ARPS")
+                            {
+                                Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("ArpsNotEnabledMessage"), UiLogColor.Error);
+                                Instances.CopilotViewModel.AddLog(LocalizationHelper.GetString("ArpsNotEnabledMessage"), UiLogColor.Error, showTime: false);
+                                needToStop = true;
                             }
 
                             break;
@@ -2615,6 +2630,10 @@ public class AsstProxy
             case "LDPlayer":
                 AsstSetConnectionExtrasLdPlayer(SettingsViewModel.ConnectSettings.LdPlayerExtras.Config);
                 break;
+
+            case "ARPS":
+                AsstSetConnectionExtrasArps(SettingsViewModel.ConnectSettings.ArpsExtras.Config);
+                break;
         }
 
         switch (SettingsViewModel.ConnectSettings.ConnectConfig)
@@ -3065,7 +3084,14 @@ public class AsstProxy
     /// </summary>
     public void AsstDestroy()
     {
+        if (_handle == AsstHandle.Zero)
+        {
+            return;
+        }
+
         MaaService.AsstDestroy(_handle);
+        _handle = AsstHandle.Zero;
+        Connected = false;
     }
 }
 

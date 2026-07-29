@@ -142,7 +142,7 @@ public class RootViewModel : Conductor<Screen>.Collection.OneActive
         ActiveItem = Instances.TaskQueueViewModel;
     }
 
-    private string _windowTitle = "MAA";
+    private string _windowTitle = "MAA-fork";
 
     /// <summary>
     /// Gets or sets the window title.

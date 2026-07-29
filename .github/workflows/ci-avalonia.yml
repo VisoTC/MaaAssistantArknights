@@ -4,34 +4,28 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - ".github/workflows/ci-avalonia.yml"
-      - "3rdparty/include/**"
-      - "cmake/**"
       - "src/MAAUnified"
       - "src/MAAUnified/**"
       - "src/MaaCore/**"
       - "src/MaaUtils/**"
       - "include/**"
+      - "resource/**"
       - "tools/maadeps-download.py"
       - "CMakeLists.txt"
       - "CMakePresets.json"
-      - "!**/*.md"
   push:
     branches:
-      - dev-v2
+      - dev
     paths:
-      - ".github/workflows/ci-avalonia.yml"
-      - "3rdparty/include/**"
-      - "cmake/**"
       - "src/MAAUnified"
       - "src/MAAUnified/**"
       - "src/MaaCore/**"
       - "src/MaaUtils/**"
       - "include/**"
+      - "resource/**"
       - "tools/maadeps-download.py"
       - "CMakeLists.txt"
       - "CMakePresets.json"
-      - "!**/*.md"
 
 jobs:
   meta:
@@ -39,17 +33,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.out.outputs.tag }}
-      checkout_sha: ${{ steps.out.outputs.checkout_sha }}
     steps:
       - id: out
-        env:
-          CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          echo "checkout_sha=${CHECKOUT_SHA}" >> "$GITHUB_OUTPUT"
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=preview-${CHECKOUT_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "tag=preview-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
 
   build:
@@ -80,9 +70,7 @@ jobs:
             maadeps_triplet: x64-osx
 
     steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.meta.outputs.checkout_sha }}
+      - uses: actions/checkout@v6
 
       - name: Fetch required submodules
         shell: bash
