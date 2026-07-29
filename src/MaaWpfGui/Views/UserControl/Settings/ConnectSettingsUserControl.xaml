@@ -163,6 +163,7 @@
 
         <StackPanel Grid.Row="2" IsEnabled="{c:Binding !AutoDetectConnection}">
             <StackPanel>
+<<<<<<< HEAD
                 <ContentControl d:Content="{d:DesignInstance Type={x:Type extra:MuMu12Extra}}" Content="{Binding ExtraConfig}">
                     <ContentControl.Resources>
                         <DataTemplate DataType="{x:Type extra:MuMu12Extra}">
@@ -296,6 +297,139 @@
                         </DataTemplate>
                     </ContentControl.Resources>
                 </ContentControl>
+=======
+                <StackPanel Visibility="{c:Binding 'ConnectConfig==&quot;MuMuEmulator12&quot;'}">
+                    <CheckBox
+                        Margin="10"
+                        HorizontalAlignment="Center"
+                        Content="{DynamicResource MuMu12ExtrasEnabled}"
+                        IsChecked="{Binding MuMuEmulatorExtras.Enable}" />
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Orientation="Vertical"
+                        Visibility="{c:Binding MuMuEmulatorExtras.Enable}">
+                        <hc:TextBox
+                            Width="420"
+                            Height="30"
+                            Margin="10"
+                            hc:InfoElement.Placeholder="Example: C:\Program Files\Netease\MuMuPlayer"
+                            hc:TitleElement.Title="{DynamicResource MuMu12EmulatorPath}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            Text="{Binding MuMuEmulatorExtras.EmulatorPath}" />
+                        <StackPanel HorizontalAlignment="Center" Orientation="Vertical">
+                            <CheckBox
+                                Margin="10"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Content="{DynamicResource MuMuBridgeConnection}"
+                                IsChecked="{Binding MuMuEmulatorExtras.MuMuBridgeConnection}" />
+                            <hc:TextBox
+                                Height="30"
+                                Margin="10"
+                                HorizontalContentAlignment="Center"
+                                hc:TitleElement.Title="{DynamicResource MuMu12Index}"
+                                hc:TitleElement.TitlePlacement="Left"
+                                Text="{Binding MuMuEmulatorExtras.Index}"
+                                Visibility="{c:Binding MuMuEmulatorExtras.MuMuBridgeConnection}" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Visibility="{c:Binding 'ConnectConfig==&quot;LDPlayer&quot;'}">
+                    <CheckBox
+                        Margin="10"
+                        HorizontalAlignment="Center"
+                        Content="{DynamicResource LdExtrasEnabled}"
+                        IsChecked="{Binding LdPlayerExtras.Enable}" />
+                    <StackPanel Visibility="{c:Binding LdPlayerExtras.Enable}">
+                        <hc:TextBox
+                            Width="420"
+                            Height="30"
+                            Margin="10"
+                            hc:InfoElement.Placeholder="Example: C:\leidian\LDPlayer9"
+                            hc:TitleElement.Title="{DynamicResource LdEmulatorPath}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            Text="{Binding LdPlayerExtras.EmulatorPath}" />
+                        <StackPanel>
+                            <CheckBox
+                                HorizontalAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                Content="{DynamicResource LdManualSetIndex}"
+                                IsChecked="{Binding LdPlayerExtras.ManualSetIndex}" />
+                            <hc:TextBox
+                                Width="130"
+                                Height="30"
+                                Margin="10"
+                                hc:InfoElement.Placeholder="0"
+                                hc:TitleElement.Title="{DynamicResource LdIndex}"
+                                hc:TitleElement.TitlePlacement="Left"
+                                Text="{Binding LdPlayerExtras.Index}"
+                                Visibility="{c:Binding LdPlayerExtras.ManualSetIndex}" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    Visibility="{c:Binding 'ConnectConfig==&quot;ARPS&quot;'}">
+                    <StackPanel Margin="10,5" Orientation="Horizontal">
+                        <hc:ComboBox
+                            Width="190"
+                            Height="30"
+                            hc:TitleElement.Title="{DynamicResource ArpsCompression}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            DisplayMemberPath="Display"
+                            ItemsSource="{Binding ArpsExtras.CompressionOptions}"
+                            SelectedValue="{Binding ArpsExtras.Compression}"
+                            SelectedValuePath="Value" />
+                        <hc:NumericUpDown
+                            Width="160"
+                            Height="30"
+                            Margin="10,0,0,0"
+                            hc:InfoElement.Title="{DynamicResource ArpsMaxFps}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            Maximum="240"
+                            Minimum="0"
+                            Value="{Binding ArpsExtras.MaxFps}" />
+                    </StackPanel>
+                    <StackPanel Margin="10,5" Orientation="Horizontal">
+                        <hc:ComboBox
+                            Width="190"
+                            Height="30"
+                            hc:TitleElement.Title="{DynamicResource ArpsCaptureMode}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            DisplayMemberPath="Display"
+                            ItemsSource="{Binding ArpsExtras.CaptureModeOptions}"
+                            SelectedValue="{Binding ArpsExtras.CaptureMode}"
+                            SelectedValuePath="Value" />
+                        <hc:ComboBox
+                            Width="220"
+                            Height="30"
+                            Margin="10,0,0,0"
+                            hc:TitleElement.Title="{DynamicResource ArpsExitPowerMode}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            DisplayMemberPath="Display"
+                            ItemsSource="{Binding ArpsExtras.ExitPowerModeOptions}"
+                            SelectedValue="{Binding ArpsExtras.ExitPowerMode}"
+                            SelectedValuePath="Value" />
+                    </StackPanel>
+                    <WrapPanel
+                        Margin="10,5"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal">
+                        <CheckBox
+                            Margin="10,5"
+                            Content="{DynamicResource ArpsPowerOnIfScreenOff}"
+                            IsChecked="{Binding ArpsExtras.PowerOnIfScreenOff}" />
+                        <CheckBox
+                            Margin="10,5"
+                            Content="{DynamicResource ArpsTurnScreenOff}"
+                            IsChecked="{Binding ArpsExtras.TurnScreenOff}" />
+                        <CheckBox
+                            Margin="10,5"
+                            Content="{DynamicResource ArpsKeepScreenOn}"
+                            IsChecked="{Binding ArpsExtras.KeepScreenOn}" />
+                    </WrapPanel>
+                </StackPanel>
+>>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)
             </StackPanel>
         </StackPanel>
 
