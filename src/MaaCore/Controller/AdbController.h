@@ -13,6 +13,7 @@
 #include "Common/AsstMsg.h"
 #include "Config/GeneralConfig.h"
 #include "InstHelper.h"
+#include "ArpsCapture.h"
 #include "LDExtras.h"
 #include "MumuExtras.h"
 #include "Utils/StringMisc.hpp"
@@ -144,7 +145,12 @@ protected:
     void init_mumu_extras(const AdbCfg& adb_cfg, const std::string& address);
     void set_mumu_package(const std::string& client_type);
     void init_ld_extras(const AdbCfg& adb_cfg, const std::string& address);
+<<<<<<< HEAD
     static std::optional<int> get_ld_index(const std::string& address);
+=======
+    static int get_ld_index(const std::string& address);
+    void init_arps(const AdbCfg& adb_cfg);
+>>>>>>> 9c4144e4d (feat(arps): 重建 v6.12.2 单提交覆盖层)
 
     // 转换 data 中的 CRLF 为 LF：有些模拟器自带的 adb，exec-out 输出的 \n 会被替换成 \r\n，
     // 导致解码错误，所以这里转一下回来（点名批评 mumu 和雷电）
@@ -208,6 +214,7 @@ protected:
             MumuExtras,
             LDExtras,
 #endif
+            ARPS,
         } screencap_method = ScreencapMethod::UnknownYet;
     } m_adb;
 
@@ -231,5 +238,6 @@ protected:
     MumuExtras m_mumu_extras;
     LDExtras m_ld_extras;
 #endif
+    ArpsCapture m_arps;
 };
 } // namespace asst
