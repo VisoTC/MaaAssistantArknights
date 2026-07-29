@@ -52,6 +52,7 @@
     <system:String x:Key="ExternalNotificationSendSuccess">正常に送信</system:String>
     <system:String x:Key="ExternalNotificationSendFail">送信に失敗しました</system:String>
     <system:String x:Key="ExternalNotificationSendTest">テストを送信する</system:String>
+    <system:String x:Key="ExternalNotificationAddConfig">通知を追加</system:String>
     <system:String x:Key="ExternalNotificationSendTestTitle">MAA 外部通知テスト</system:String>
     <system:String x:Key="ExternalNotificationSendTestContent">これは MAA 外部通知テスト情報です。 このコンテンツが表示された場合、通知は正常に送信されました！</system:String>
     <system:String x:Key="ExternalNotificationServerChanSendKey">ServerChan Send Key</system:String>
@@ -358,7 +359,7 @@
 • {key=Quantity}: この理性作戦タスク中で、その素材のドロップ数が設定値に達するまで周回します。
 • {key=TargetInventory}: ｢{key=Toolbox}-{key=DepotRecognition}｣ に保存された在庫データを参照し、設定した在庫数になるまで補充します。
   • 在庫データはキャッシュのため、手動周回や素材の使用後は実際とずれる場合があります。｢{key=UserDataUpdate}｣ または ｢{key=Toolbox}-{key=DepotRecognition}｣ で同期してください。
-  • {key=TargetInventory} を有効にすると、実行中は素材や数量を変更できません。</system:String>
+  • 実行中はドロップに応じて在庫がリアルタイム更新され、前のタスクでドロップした素材が後続タスクの不足数に反映されます。</system:String>
     <system:String x:Key="StartupUpdateCheck">起動時の更新チェック</system:String>
     <system:String x:Key="UpdateAutoCheck">定期的な更新チェック</system:String>
     <system:String x:Key="UpdateAutoCheckTip">ゲーム内 00:00 / 18:00（サーバー現地時間 04:00 / 22:00）</system:String>
@@ -530,6 +531,7 @@ MAA は非インストール型のアプリケーションであり、レジス�
     <system:String x:Key="MaaTouchMode">MaaTouch (実験機能)</system:String>
     <system:String x:Key="AdbTouchMode">ADB Input (非推奨)</system:String>
     <system:String x:Key="MaaFwAdbTouchMode">MaaFramework (実験機能)</system:String>
+    <system:String x:Key="MumuExtrasTouchMode">MuMu タッチ (実験機能)</system:String>
     <system:String x:Key="TouchModeTip" xml:space="preserve">ADB Input は、OS バージョンが古く Minitouch や MaaTouch を使用できない物理デバイス用です。他の2モードが使える場合は、ADB Input を選択しないでください。&#10;ADB Input のスワイプはズレやすいため、スワイプ速度が非常に遅く設定され、スワイプ距離も他の2モードと異なります。正確な座標制御が必要な場面では使用できません。</system:String>
     <system:String x:Key="AdditionCommand">追加コマンド</system:String>
     <system:String x:Key="AdditionCommandTip" xml:space="preserve">エミュレーター起動パラメータの追加コマンド（例： ｢--instance 1｣ は 1 番インスタンス）。&#10;コマンド形式はエミュレーターにより異なり、通常はインスタンス番号やウィンドウモードなどを含みます。</system:String>
@@ -705,6 +707,7 @@ HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Notifications\Settin
     <system:String x:Key="ConnectionPreset">接続構成</system:String>
     <system:String x:Key="ScreenshotTest">スクリーンショットテスト</system:String>
     <system:String x:Key="MuMu12ExtrasEnabled">MuMu のスクリーンショット拡張モードを有効にする</system:String>
+    <system:String x:Key="MuMuExtrasTouchEnabled">MuMu タッチ強化を有効化（実験的、MuMu エミュレータ 6.3.2+、バックグラウンド常駐対応）</system:String>
     <system:String x:Key="MuMuEmulatorPathNotFound">MuMu エミュレータのパスが見つかりません。</system:String>
     <system:String x:Key="MuMuExternalRendererMissing" xml:space="preserve">external_renderer_ipc.dll が選択した MuMu インストール内に見つかりませんでした。\n
 想定される相対パス：
@@ -730,7 +733,8 @@ C:\\Program Files\\Netease\\MuMuPlayer を入力してください。\n
     <system:String x:Key="MuMu12Index">インスタンス番号</system:String>
     <system:String x:Key="MuMu12Display">表示番号</system:String>
     <system:String x:Key="MuMuExtrasNotEnabledMessage">MuMu スクリーンショットの強化 が有効になっていません。関連する設定を確認してください</system:String>
-    <system:String x:Key="MuMuEmulator12KeepAliveOn">MuMu エミュレータのバックグラウンド常駐が有効になっています。スクリーンショットの失敗や操作異常が発生する可能性があります。MuMuの設定で ｢バックグラウンド常駐｣ （または ｢アプリ常駐｣ など）をオフにしてください</system:String>
+    <system:String x:Key="MuMuEmulator12KeepAliveOn">MuMu のバックグラウンド常駐が有効ですが、MuMu タッチ強化が機能していません。バックグラウンド常駐下では操作できません。｢{key=MuMuExtrasTouchEnabled}｣ を有効にするか、MuMu 設定で ｢バックグラウンド常駐｣ を無効にしてください。</system:String>
+    <system:String x:Key="MuMuEmulator12FullExtrasReady">完全 MuMu 強化が起動——スクリーンショットとタッチの双核直結が貫通、バックグラウンド常駐も我らが掌中に！</system:String>
     <system:String x:Key="LdExtrasEnabled">LD のスクリーンショット拡張モードを有効にする</system:String>
     <system:String x:Key="LdPlayerEmulatorPathNotFound">LDPlayer のインストールパスが見つかりません。</system:String>
     <system:String x:Key="LdPlayerOpenglMissing">選択した LDPlayer パスに ldopengl64.dll が見つかりません。インストールディレクトリを確認してください。</system:String>
@@ -775,6 +779,7 @@ C:\\leidian\\LDPlayer9
     <system:String x:Key="Roguelike">{key=AutoRoguelike}</system:String>
     <system:String x:Key="Reclamation">生息演算</system:String>
     <system:String x:Key="UserDataUpdate">ユーザーデータ更新</system:String>
+    <system:String x:Key="DepotMaintain">在庫維持</system:String>
     <system:String x:Key="MiniGame">便利機能</system:String>
     <system:String x:Key="MiniGameCategoryPermanent">常設</system:String>
     <system:String x:Key="MiniGameCategoryCurrentEvent">現在のイベント</system:String>
@@ -832,10 +837,11 @@ C:\\leidian\\LDPlayer9
     <system:String x:Key="KeepInventory">在庫を維持</system:String>
     <system:String x:Key="TargetInventory">目標在庫</system:String>
     <system:String x:Key="Series">連戦回数</system:String>
+    <system:String x:Key="SeriesLockedTip">ゲーム更新後の適応が未完了です。ゲーム内で手動で代理乗数を設定してください。</system:String>
     <system:String x:Key="SeriesTip" xml:space="preserve">• 自動:
 レベルの最大代理乗数を自動で判別し、最大代理乗数を維持し、正気ポーション使用後に正気度オーバーフローが発生しないようにします。
 
-• 値 (1～6):
+• 値 (1～10):
 設定された乗数に従って代理を実行します。
 現在の正気度が設定された乗数を満たしていない場合（例えば、5回分しか残っていないのに6回に設定している場合）、バトルに参加できません。
 または
@@ -861,6 +867,23 @@ C:\\leidian\\LDPlayer9
     <system:String x:Key="Inventory">在庫</system:String>
     <system:String x:Key="InventoryUpdateTip">在庫データは ｢{key=Toolbox}-{key=DepotRecognition}｣ で更新できます</system:String>
     <system:String x:Key="SpecifiedDropsInventoryUnavailable">タスク ｢{0}｣ では {key=TargetInventory} が有効ですが、利用可能な在庫データがないためスキップされました。｢{key=Toolbox}-{key=DepotRecognition}｣ で在庫を更新してください。</system:String>
+    <!--  在庫維持  -->
+    <system:String x:Key="DepotUpdateBeforeStart">タスク開始前に在庫データを更新</system:String>
+    <system:String x:Key="AddPlan">追加</system:String>
+    <system:String x:Key="CollapseAll">折りたたむ</system:String>
+    <system:String x:Key="DepotPlanInvalidDropItem">プラン {0}：ドロップアイテム未指定。</system:String>
+    <system:String x:Key="DepotPlanZeroDropCount">プラン {0}：目標在庫が 0。</system:String>
+    <system:String x:Key="DepotPlanNoStage">プラン {0}：ステージ未指定または ｢現在/前回｣。</system:String>
+    <system:String x:Key="DepotPlanInventoryEnough">プラン {0}：{1} 在庫十分（現在 {2} / 目標 {3}）。</system:String>
+    <system:String x:Key="DepotPlanStageNotOpen">プラン {0}：ステージ ｢{1}｣ は公開されていません。</system:String>
+    <system:String x:Key="DepotPlanAddTaskFailed">プラン {0}：タスクの追加に失敗しました。</system:String>
+    <system:String x:Key="DepotSkipDuringActivity">イベント期間中はスキップ</system:String>
+    <system:String x:Key="DepotSkipDuringResourceCollection">資源收集限時全日開放期間中はスキップ</system:String>
+    <system:String x:Key="DepotPlanSkippedActivity">イベント開催中のため、在庫維持をスキップしました。</system:String>
+    <system:String x:Key="DepotPlanSkippedResourceCollection">資源收集限時全日開放期間中のため、在庫維持をスキップしました。</system:String>
+    <system:String x:Key="DepotPlanUpdateDepotFailed">在庫データの更新に失敗しました。</system:String>
+    <system:String x:Key="DepotUseAutoSeries">AUTO 代理倍率</system:String>
+    <system:String x:Key="DepotUseAutoSeriesTip" xml:space="preserve">未チェック時は 1 倍で代理；チェック後は現在の理性で可能な最大倍率で代理し、1回の周回で目標在庫上限を超える場合があります。</system:String>
     <system:String x:Key="LessThanOneDay">1日以内</system:String>
     <system:String x:Key="1-7">1-7</system:String>
     <system:String x:Key="CE-6">龍門幣-6(CE-6)</system:String>
@@ -1077,8 +1100,6 @@ C:\\leidian\\LDPlayer9
     <system:String x:Key="SelectTheFile">ファイル選択</system:String>
     <system:String x:Key="SelectTheFileTip">攻略ファイルはマウスで直接ドラッグして取り込むことがきます(oﾟvﾟ)ノ</system:String>
     <system:String x:Key="PasteClipboardTip">クリップボードを読み取り、作業/作業セットを自動識別</system:String>
-    <!-- TODO: 作业站迁移完成后删除 PasteClipboardCopilotSetTip -->
-    <system:String x:Key="PasteClipboardCopilotSetTip">クリップボードを読み取り、ジョブセットとして追加します</system:String>
     <system:String x:Key="ImportFilesTip">バッチインポート</system:String>
     <system:String x:Key="DoYouLikeThisWebJson">この攻略ファイルは好きですか？評価してください！</system:String>
     <system:String x:Key="FailedToLikeWebJson">エラーが発生しました、いいねに失敗しました。 : &lt;</system:String>
@@ -1154,8 +1175,7 @@ C:\\leidian\\LDPlayer9
         4. {key=ParadoxSimulation}: スキルを選択した後、スキル選択画面に ｢演算開始｣ ボタンが表示され、1/2 星{key=Operator}（スキルなし）が右下に ｢演算開始｣ ボタンを表示されて開始します。 ｢{key=UseCopilotList}｣ を使用する場合、{key=Operator}リストの｢レベル/レアリティ｣タブから開始してください。\n\n
         5.  ｢戦術要員｣ 機能を有効にすると、 ｢{key=AutoSquad}｣ の{key=Operator}選択に影響を与える可能性があります。 ｢{key=AutoSquad}｣ を 使用する際は ｢戦術要員｣ をオフにするか、不足している{key=Operator}を手動で補充して編成を完成させることをお勧めします。\n\n
         6. ZOOT 作業ステーションでは、入力欄の右側にある貼り付けボタンをクリックして、コードを貼り付けることができます。形式は自動的に識別されます：\n
-        • prts://s = 割り当てセット prts:// = 個別の割り当て\n
-        3番目のボタンは旧形式の割り当てセット用で、後で削除されます。\n\n
+        • prts://s = 割り当てセット prts:// = 個別の割り当て\n\n
         7. {key=UseCopilotList}:\n
         • 攻略ファイルを選択した後、リストの下のステージ名が正しいことを確認してください（例: CV-EX-1）。 \n
         • 追加: 左クリックして通常難易度を追加し、右クリックして強襲難易度を追加します。\n
