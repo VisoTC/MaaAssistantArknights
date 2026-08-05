@@ -77,6 +77,7 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
     /// <summary>
     /// Gets the list of the configuration of connection.
     /// </summary>
+<<<<<<< HEAD
     public LocalizedObservableList<ConnectConfig> ConnectConfigList { get; } = new(
         (ConnectConfig.General, "General"),
         (ConnectConfig.BlueStacks, "BlueStacks"),
@@ -91,6 +92,23 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
         (ConnectConfig.Compatible, "Compatible"),
         (ConnectConfig.SecondResolution, "SecondResolution"),
         (ConnectConfig.GeneralWithoutScreencapErr, "GeneralWithoutScreencapErr"));
+=======
+    public LocalizedObservableList<string> ConnectConfigList { get; } = new(
+        ("General", "General"),
+        ("BlueStacks", "BlueStacks"),
+        ("MuMuEmulator12", "MuMuEmulator12"),
+        ("LDPlayer", "LDPlayer"),
+        ("Androws", "Androws"),
+        ("AVD", "AVD"),
+        ("Nox", "Nox"),
+        ("XYAZ", "XYAZ"),
+        ("PC", "PC"),
+        ("WSA", "WSA"),
+        ("Compatible", "Compatible"),
+        ("SecondResolution", "SecondResolution"),
+        ("GeneralWithoutScreencapErr", "GeneralWithoutScreencapErr"),
+        ("ARPS", "ARPS"));
+>>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)
 
     public static string TouchModeVideoPath => Path.Combine(PathsHelper.BaseDir, "Res", "Video", "TouchMode.mp4");
 
@@ -258,6 +276,654 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
         set => SetAndNotify(ref _screencapCost, value);
     }
 
+<<<<<<< HEAD
+=======
+    public class MuMuEmulatorConnectionExtras : PropertyChangedBase
+    {
+        private bool _enable = ConfigurationHelper.GetValue(ConfigurationKeys.MuMu12ExtrasEnabled, false);
+
+        public bool Enable
+        {
+            get => _enable;
+            set {
+                if (!SetAndNotify(ref _enable, value))
+                {
+                    return;
+                }
+
+                if (value)
+                {
+                    AutoDetectEmulatorPath();
+                }
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.MuMu12ExtrasEnabled, value.ToString());
+            }
+        }
+
+        private void AutoDetectEmulatorPath()
+        {
+            MessageBoxHelper.Show(LocalizationHelper.GetString("MuMu12ExtrasEnabledTip"));
+
+            // 读取mumu注册表地址 并填充GUI
+            if (!string.IsNullOrEmpty(EmulatorPath))
+            {
+                return;
+            }
+
+            try
+            {
+                // 按版本从新到旧排列，新增版本只需追加一项
+                string[] possibleUninstallKeys =
+                [
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayer-15.0",
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayer-12.0",
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayer",
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayerGlobal-15.0",
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayerGlobal-12.0",
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\YXArkNights-12.0",
+                ];
+
+                const string UninstallExeName = @"\uninstall.exe";
+                var detectedPaths = new List<string>();
+
+                foreach (var keyPath in possibleUninstallKeys)
+                {
+                    using var driverKey = Registry.LocalMachine.OpenSubKey(keyPath);
+                    if (driverKey == null)
+                    {
+                        continue;
+                    }
+
+                    var uninstallString = driverKey.GetValue("UninstallString") as string;
+                    if (string.IsNullOrEmpty(uninstallString) || !uninstallString.Contains(UninstallExeName))
+                    {
+                        continue;
+                    }
+
+                    var match = Regex.Match(uninstallString,
+                        $"""
+                         ^"(.*?){Regex.Escape(UninstallExeName)}
+                         """,
+                        RegexOptions.IgnoreCase);
+
+                    if (match.Success && Directory.Exists(match.Groups[1].Value))
+                    {
+                        var path = match.Groups[1].Value;
+                        if (!detectedPaths.Contains(path))
+                        {
+                            detectedPaths.Add(path);
+                        }
+                    }
+                }
+
+                if (detectedPaths.Count == 0)
+                {
+                    EmulatorPath = string.Empty;
+                    return;
+                }
+
+                if (detectedPaths.Count == 1)
+                {
+                    EmulatorPath = detectedPaths[0];
+                    return;
+                }
+
+                var selectedPath = ShowItemSelectionDialog(
+                    detectedPaths,
+                    LocalizationHelper.GetString("SelectEmulatorPath"),
+                    LocalizationHelper.GetString("MultipleEmulatorsDetected"));
+                if (!string.IsNullOrEmpty(selectedPath))
+                {
+                    EmulatorPath = selectedPath;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.Warning("An error occurred: {EMessage}", e.Message);
+                EmulatorPath = string.Empty;
+            }
+        }
+
+        private static readonly string _configuredPath = ConfigurationHelper.GetValue(ConfigurationKeys.MuMu12EmulatorPath, string.Empty);
+        private string _emulatorPath = Directory.Exists(_configuredPath) ? _configuredPath : string.Empty;
+
+        /// <summary>
+        /// Gets or sets a value indicating the path of the emulator.
+        /// </summary>
+        public string EmulatorPath
+        {
+            get => _emulatorPath;
+            set {
+                if (_enable && !string.IsNullOrEmpty(value) && !Directory.Exists(value))
+                {
+                    MessageBoxHelper.Show(LocalizationHelper.GetString("MuMuEmulatorPathNotFound"));
+                    MessageBoxHelper.Show(LocalizationHelper.GetString("MuMu12ExtrasEnabledTip"));
+                    return;
+                }
+
+                // 当路径存在时，检查 external_renderer_ipc.dll 是否可用（兼容多个 MuMu 版本路径）
+                // 新增版本只需在此列表追加一项
+                if (!string.IsNullOrEmpty(value) && Directory.Exists(value))
+                {
+                    string[] candidateRelativePaths =
+                    [
+                        Path.Combine("nx_device", "15.0", "shell", "sdk", "external_renderer_ipc.dll"),  // MuMu 6.0
+                        Path.Combine("nx_device", "12.0", "shell", "sdk", "external_renderer_ipc.dll"),  // MuMu 5.0 / MuMu 12
+                        Path.Combine("shell", "sdk", "external_renderer_ipc.dll"),                          // MuMu 旧版本
+                    ];
+
+                    if (!candidateRelativePaths.Any(relPath => File.Exists(Path.Combine(value, relPath))))
+                    {
+                        MessageBoxHelper.Show(LocalizationHelper.GetString("MuMuExternalRendererMissing"));
+                        MessageBoxHelper.Show(LocalizationHelper.GetString("MuMu12ExtrasEnabledTip"));
+                        return;
+                    }
+                }
+
+                Instances.AsstProxy.Connected = false;
+                SetAndNotify(ref _emulatorPath, value);
+                ConfigurationHelper.SetValue(ConfigurationKeys.MuMu12EmulatorPath, value);
+            }
+        }
+
+        private bool _mumuBridgeConnection = ConfigurationHelper.GetValue(ConfigurationKeys.MumuBridgeConnection, false);
+
+        public bool MuMuBridgeConnection
+        {
+            get => _mumuBridgeConnection;
+            set {
+                if (_mumuBridgeConnection == value)
+                {
+                    return;
+                }
+
+                if (value)
+                {
+                    var result = MessageBoxHelper.Show(
+                        LocalizationHelper.GetString("MuMuBridgeConnectionTip"),
+                        icon: MessageBoxImage.Warning,
+                        buttons: MessageBoxButton.YesNo,
+                        no: LocalizationHelper.GetString("Confirm"),
+                        yes: LocalizationHelper.GetString("Cancel"));
+                    if (result != MessageBoxResult.No)
+                    {
+                        return;
+                    }
+                }
+
+                SetAndNotify(ref _mumuBridgeConnection, value);
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.MumuBridgeConnection, value.ToString());
+            }
+        }
+
+        private string _index = ConfigurationHelper.GetValue(ConfigurationKeys.MuMu12Index, "0");
+
+        /// <summary>
+        /// Gets or sets the index of the emulator.
+        /// </summary>
+        public string Index
+        {
+            get => _index;
+            set {
+                Instances.AsstProxy.Connected = false;
+                SetAndNotify(ref _index, value);
+                ConfigurationHelper.SetValue(ConfigurationKeys.MuMu12Index, value);
+            }
+        }
+
+        public string Config
+        {
+            get {
+                if (!Enable)
+                {
+                    return JsonConvert.SerializeObject(new JObject());
+                }
+
+                var configObject = new JObject {
+                    ["path"] = EmulatorPath,
+                };
+
+                if (MuMuBridgeConnection)
+                {
+                    configObject["index"] = int.TryParse(Index, out var indexParse) ? indexParse : 0;
+                }
+
+                return JsonConvert.SerializeObject(configObject);
+            }
+        }
+    }
+
+    public MuMuEmulatorConnectionExtras MuMuEmulatorExtras { get; set; } = new();
+
+    public class LdPlayerConnectionExtras : PropertyChangedBase
+    {
+        private bool _enable = ConfigurationHelper.GetValue(ConfigurationKeys.LdPlayerExtrasEnabled, false);
+
+        public bool Enable
+        {
+            get => _enable;
+            set {
+                if (!SetAndNotify(ref _enable, value))
+                {
+                    return;
+                }
+
+                if (value)
+                {
+                    AutoDetectEmulatorPath();
+                }
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.LdPlayerExtrasEnabled, value.ToString());
+            }
+        }
+
+        private void AutoDetectEmulatorPath()
+        {
+            MessageBoxHelper.Show(LocalizationHelper.GetString("LdExtrasEnabledTip"));
+
+            // 读取 LD 注册表地址 并填充GUI
+            if (!string.IsNullOrEmpty(EmulatorPath))
+            {
+                return;
+            }
+
+            try
+            {
+                // 原版路径优先
+                string[] possiblePaths =
+                [
+                    @"Software\leidian\ldplayer14",
+                    @"Software\leidian\ldplayer9",
+                    @"Software\mrfz\mrfz"
+                ];
+
+                const string InstallDirValueName = "InstallDir";
+                var detectedPaths = new List<string>();
+
+                foreach (var regPath in possiblePaths)
+                {
+                    using var driverKey = Registry.CurrentUser.OpenSubKey(regPath);
+                    if (driverKey == null)
+                    {
+                        continue;
+                    }
+
+                    var installDir = driverKey.GetValue(InstallDirValueName) as string;
+                    if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+                    {
+                        if (!detectedPaths.Contains(installDir))
+                        {
+                            detectedPaths.Add(installDir);
+                        }
+                    }
+                }
+
+                if (detectedPaths.Count == 0)
+                {
+                    EmulatorPath = string.Empty;
+                    return;
+                }
+
+                if (detectedPaths.Count == 1)
+                {
+                    EmulatorPath = detectedPaths[0];
+                    return;
+                }
+
+                var selectedPath = ShowItemSelectionDialog(
+                    detectedPaths,
+                    LocalizationHelper.GetString("SelectEmulatorPath"),
+                    LocalizationHelper.GetString("MultipleEmulatorsDetected"));
+                if (!string.IsNullOrEmpty(selectedPath))
+                {
+                    EmulatorPath = selectedPath;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.Warning("An error occurred: {EMessage}", e.Message);
+                EmulatorPath = string.Empty;
+            }
+        }
+
+        private static readonly string _configuredPath = ConfigurationHelper.GetValue(ConfigurationKeys.LdPlayerEmulatorPath, string.Empty);
+        private string _emulatorPath = Directory.Exists(_configuredPath) ? _configuredPath : string.Empty;
+
+        /// <summary>
+        /// Gets or sets a value indicating the path of the emulator.
+        /// </summary>
+        public string EmulatorPath
+        {
+            get => _emulatorPath;
+            set {
+                if (_enable && !string.IsNullOrEmpty(value) && !Directory.Exists(value))
+                {
+                    MessageBoxHelper.Show(LocalizationHelper.GetString("LdPlayerEmulatorPathNotFound"));
+                    MessageBoxHelper.Show(LocalizationHelper.GetString("LdExtrasEnabledTip"));
+                    return;
+                }
+
+                // 当路径存在时，检查 ldopengl64.dll 是否存在
+                if (!string.IsNullOrEmpty(value) && Directory.Exists(value))
+                {
+                    var libPath = Path.Combine(value, "ldopengl64.dll");
+                    if (!File.Exists(libPath))
+                    {
+                        MessageBoxHelper.Show(LocalizationHelper.GetString("LdPlayerOpenglMissing"));
+                        MessageBoxHelper.Show(LocalizationHelper.GetString("LdExtrasEnabledTip"));
+                        return;
+                    }
+                }
+
+                Instances.AsstProxy.Connected = false;
+                SetAndNotify(ref _emulatorPath, value);
+                ConfigurationHelper.SetValue(ConfigurationKeys.LdPlayerEmulatorPath, value);
+            }
+        }
+
+        private bool _manualSetIndex = ConfigurationHelper.GetValue(ConfigurationKeys.LdPlayerManualSetIndex, false);
+
+        public bool ManualSetIndex
+        {
+            get => _manualSetIndex;
+            set {
+                if (_manualSetIndex == value)
+                {
+                    return;
+                }
+
+                if (value)
+                {
+                    Index = GetEmulatorIndex(SettingsViewModel.ConnectSettings.ConnectAddress).ToString();
+                }
+
+                SetAndNotify(ref _manualSetIndex, value);
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.LdPlayerManualSetIndex, value.ToString());
+            }
+        }
+
+        private string _index = ConfigurationHelper.GetValue(ConfigurationKeys.LdPlayerIndex, "0");
+
+        /// <summary>
+        /// Gets or sets the index of the emulator.
+        /// </summary>
+        public string Index
+        {
+            get => _index;
+            set {
+                Instances.AsstProxy.Connected = false;
+                SetAndNotify(ref _index, value);
+                ConfigurationHelper.SetValue(ConfigurationKeys.LdPlayerIndex, value);
+            }
+        }
+
+        private int GetEmulatorPid(int index)
+        {
+            var emulatorPath = $@"{EmulatorPath}\ldconsole.exe";
+            if (!File.Exists(emulatorPath))
+            {
+                return 0;
+            }
+
+            var startInfo = new ProcessStartInfo {
+                FileName = emulatorPath,
+                Arguments = "list2",
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            using var process = Process.Start(startInfo);
+            if (process == null)
+            {
+                _logger.Warning("Failed to start ldconsole list2");
+                return 0;
+            }
+
+            using var reader = process.StandardOutput;
+            var result = reader.ReadToEnd();
+            var lines = result.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries);
+
+            if (lines.Length <= 0)
+            {
+                _logger.Warning("Failed to get emulator PID.");
+                return 0;
+            }
+
+            foreach (var line in lines)
+            {
+                var parts = line.Split(',');
+                if (parts.Length < 6 || !int.TryParse(parts[0], out var currentIndex) || currentIndex != index)
+                {
+                    continue;
+                }
+
+                if (int.TryParse(parts[5], out var pid))
+                {
+                    return pid;
+                }
+            }
+
+            _logger.Warning("Failed to get emulator PID.");
+            return 0;
+        }
+
+        private static int GetEmulatorIndex(string address)
+        {
+            int index = 0;
+            if (string.IsNullOrEmpty(address))
+            {
+                return index;
+            }
+
+            const int BaseEmulatorPort = 5554;
+            const int BaseAdbPort = 5555;
+
+            if (address.StartsWith("emulator-") && int.TryParse(address[9..], out int port))
+            {
+                index = (port - BaseEmulatorPort) / 2;
+            }
+            else if (address.StartsWith("127.0.0.1:") && int.TryParse(address[10..], out int port2))
+            {
+                index = (port2 - BaseAdbPort) / 2;
+            }
+
+            return index;
+        }
+
+        public string Config
+        {
+            get {
+                if (!Enable)
+                {
+                    return JsonConvert.SerializeObject(new JObject());
+                }
+
+                int index;
+                if (ManualSetIndex)
+                {
+                    index = int.TryParse(Index, out var indexParse) ? indexParse : 0;
+                }
+                else
+                {
+                    index = GetEmulatorIndex(SettingsViewModel.ConnectSettings.ConnectAddress);
+                }
+
+                var configObject = new JObject {
+                    ["path"] = EmulatorPath,
+                    ["index"] = index,
+                    ["pid"] = GetEmulatorPid(index),
+                };
+
+                return JsonConvert.SerializeObject(configObject);
+            }
+        }
+    }
+
+    public LdPlayerConnectionExtras LdPlayerExtras { get; set; } = new();
+
+    public class ArpsConnectionExtras : PropertyChangedBase
+    {
+        public List<CombinedData> CompressionOptions { get; } =
+            [
+                new() { Display = "lz4_block", Value = "lz4_block" },
+                new() { Display = "raw", Value = "raw" },
+            ];
+
+        public List<CombinedData> CaptureModeOptions { get; } =
+            [
+                new() { Display = "auto", Value = "auto" },
+                new() { Display = "hardware", Value = "hardware" },
+                new() { Display = "bitmap", Value = "bitmap" },
+            ];
+
+        public List<CombinedData> ExitPowerModeOptions { get; } =
+            [
+                new() { Display = "restore_previous", Value = "restore_previous" },
+                new() { Display = "keep_on", Value = "keep_on" },
+                new() { Display = "turn_off", Value = "turn_off" },
+            ];
+
+        private string _compression = ConfigurationHelper.GetValue(ConfigurationKeys.ArpsCompression, "lz4_block");
+
+        public string Compression
+        {
+            get => _compression;
+            set {
+                if (!SetAndNotify(ref _compression, value))
+                {
+                    return;
+                }
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.ArpsCompression, value);
+            }
+        }
+
+        private int _maxFps = ConfigurationHelper.GetValue(ConfigurationKeys.ArpsMaxFps, 30);
+
+        public int MaxFps
+        {
+            get => _maxFps;
+            set {
+                value = Math.Clamp(value, 0, 240);
+                if (!SetAndNotify(ref _maxFps, value))
+                {
+                    return;
+                }
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.ArpsMaxFps, value.ToString());
+            }
+        }
+
+        private static string NormalizeCaptureMode(string value) => value == "surface" ? "hardware" : value;
+
+        private string _captureMode =
+            NormalizeCaptureMode(ConfigurationHelper.GetValue(ConfigurationKeys.ArpsCaptureMode, "auto"));
+
+        public string CaptureMode
+        {
+            get => _captureMode;
+            set {
+                value = NormalizeCaptureMode(value);
+                if (!SetAndNotify(ref _captureMode, value))
+                {
+                    return;
+                }
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.ArpsCaptureMode, value);
+            }
+        }
+
+        private bool _powerOnIfScreenOff = ConfigurationHelper.GetValue(ConfigurationKeys.ArpsPowerOnIfScreenOff, true);
+
+        public bool PowerOnIfScreenOff
+        {
+            get => _powerOnIfScreenOff;
+            set {
+                if (!SetAndNotify(ref _powerOnIfScreenOff, value))
+                {
+                    return;
+                }
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.ArpsPowerOnIfScreenOff, value.ToString());
+            }
+        }
+
+        private bool _turnScreenOff = ConfigurationHelper.GetValue(ConfigurationKeys.ArpsTurnScreenOff, false);
+
+        public bool TurnScreenOff
+        {
+            get => _turnScreenOff;
+            set {
+                if (!SetAndNotify(ref _turnScreenOff, value))
+                {
+                    return;
+                }
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.ArpsTurnScreenOff, value.ToString());
+            }
+        }
+
+        private bool _keepScreenOn = ConfigurationHelper.GetValue(ConfigurationKeys.ArpsKeepScreenOn, true);
+
+        public bool KeepScreenOn
+        {
+            get => _keepScreenOn;
+            set {
+                if (!SetAndNotify(ref _keepScreenOn, value))
+                {
+                    return;
+                }
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.ArpsKeepScreenOn, value.ToString());
+            }
+        }
+
+        private string _exitPowerMode = ConfigurationHelper.GetValue(ConfigurationKeys.ArpsExitPowerMode, "restore_previous");
+
+        public string ExitPowerMode
+        {
+            get => _exitPowerMode;
+            set {
+                if (!SetAndNotify(ref _exitPowerMode, value))
+                {
+                    return;
+                }
+
+                Instances.AsstProxy.Connected = false;
+                ConfigurationHelper.SetValue(ConfigurationKeys.ArpsExitPowerMode, value);
+            }
+        }
+
+        public string Config => JsonConvert.SerializeObject(new JObject
+        {
+            ["type"] = "ARPS",
+            ["compression"] = Compression,
+            ["max_fps"] = MaxFps,
+            ["capture_mode"] = CaptureMode,
+            ["power_on_if_screen_off"] = PowerOnIfScreenOff,
+            ["turn_screen_off"] = TurnScreenOff,
+            ["keep_screen_on"] = KeepScreenOn,
+            ["exit_power_mode"] = ExitPowerMode,
+        });
+    }
+
+    public ArpsConnectionExtras ArpsExtras { get; set; } = new();
+
+    private bool _retryOnDisconnected = ConfigurationHelper.GetValue(ConfigurationKeys.RetryOnAdbDisconnected, false);
+
+>>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)
     /// <summary>
     /// Gets or sets a value indicating whether to retry task after ADB disconnected.
     /// </summary>
@@ -569,6 +1235,15 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
                 if (ExtraConfig is LDPlayerExtra ldPlayerExtra && ldPlayerExtra.Enable && ScreencapMethod != "LDExtras")
                 {
                     TestLinkInfo = $"{LocalizationHelper.GetString("LdExtrasNotEnabledMessage")}\n{ScreencapTestCost}";
+                    return;
+                }
+
+                break;
+
+            case "ARPS":
+                if (ScreencapMethod != "ARPS")
+                {
+                    TestLinkInfo = $"{LocalizationHelper.GetString("ArpsNotEnabledMessage")}\n{ScreencapTestCost}";
                     return;
                 }
 
