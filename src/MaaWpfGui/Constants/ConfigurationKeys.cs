@@ -63,6 +63,7 @@ public static class ConfigurationKeys
     public const string BackgroundOpacity = "GUI.Background.Opacity"; // √
     public const string BackgroundBlurEffectRadius = "GUI.Background.BlurEffectRadius"; // √
 
+<<<<<<< HEAD
     public const string AddressHistory = "Connect.AddressHistory"; // √
     public const string AutoDetect = "Connect.AutoDetect"; // √
     public const string AlwaysAutoDetect = "Connect.AlwaysAutoDetect"; // √
@@ -86,6 +87,37 @@ public static class ConfigurationKeys
     public const string KillAdbOnExit = "Connect.KillAdbOnExit"; // √
     public const string TouchMode = "Connect.TouchMode"; // √
     public const string AdbReplaced = "Connect.AdbReplaced"; // √
+=======
+    public const string AddressHistory = "Connect.AddressHistory";
+    public const string AutoDetect = "Connect.AutoDetect";
+    public const string AlwaysAutoDetect = "Connect.AlwaysAutoDetect";
+    public const string MumuBridgeConnection = "Connect.MumuBridgeConnection";
+    public const string ConnectAddress = "Connect.Address";
+    public const string AdbPath = "Connect.AdbPath";
+    public const string ConnectConfig = "Connect.ConnectConfig";
+    public const string MuMu12ExtrasEnabled = "Connect.MuMu12Extras.Enabled";
+    public const string MuMu12EmulatorPath = "Connect.MuMu12EmulatorPath";
+    public const string MuMu12Index = "Connect.MuMu12Index";
+    public const string MuMu12Display = "Connect.MuMu12Display";
+    public const string LdPlayerExtrasEnabled = "Connect.LdPlayerExtras.Enabled";
+    public const string LdPlayerEmulatorPath = "Connect.LdPlayerEmulatorPath";
+    public const string LdPlayerManualSetIndex = "Connect.LdPlayerManualSetIndex";
+    public const string LdPlayerIndex = "Connect.LdPlayerIndex";
+    public const string ArpsCompression = "Connect.ARPS.Compression";
+    public const string ArpsMaxFps = "Connect.ARPS.MaxFps";
+    public const string ArpsCaptureMode = "Connect.ARPS.CaptureMode";
+    public const string ArpsPowerOnIfScreenOff = "Connect.ARPS.PowerOnIfScreenOff";
+    public const string ArpsTurnScreenOff = "Connect.ARPS.TurnScreenOff";
+    public const string ArpsKeepScreenOn = "Connect.ARPS.KeepScreenOn";
+    public const string ArpsExitPowerMode = "Connect.ARPS.ExitPowerMode";
+    public const string RetryOnAdbDisconnected = "Connect.RetryOnDisconnected";
+    public const string AllowAdbRestart = "Connect.AllowADBRestart";
+    public const string AllowAdbHardRestart = "Connect.AllowADBHardRestart";
+    public const string AdbLiteEnabled = "Connect.AdbLiteEnabled";
+    public const string KillAdbOnExit = "Connect.KillAdbOnExit";
+    public const string TouchMode = "Connect.TouchMode";
+    public const string AdbReplaced = "Connect.AdbReplaced";
+>>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)
 
     // AttachWindow (Win32窗口绑定) 配置
     public const string UseAttachWindow = "Connect.UseAttachWindow"; // 废弃

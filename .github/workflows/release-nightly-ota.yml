@@ -40,15 +40,12 @@ jobs:
       changelog: ${{ steps.read_changelog.outputs.content }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           # repository: 'MaaAssistantArknights/MaaAssistantArknights'
           #ref: ${{ inputs.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 250
-
-      - name: Check stub localization
-        run: python3 tools/CheckStubLocalization.py
 
       - name: Fetch tags
         run: |
@@ -173,7 +170,7 @@ jobs:
 
       - name: Cache MaaDeps
         id: cache-maadeps
-        uses: actions/cache@v6
+        uses: actions/cache@v5
         continue-on-error: true
         with:
           path: |
@@ -195,32 +192,33 @@ jobs:
           cmake --install build --config RelWithDebInfo
 
       - name: Download MaaFramework
+        if: matrix.arch == 'x64'
         uses: robinraju/release-downloader@v1
         with:
           repository: MaaXYZ/MaaFramework
           tag: v5.9.2
-          fileName: ${{ matrix.arch == 'arm64' && '*win-aarch64*.zip' || '*win-x86_64*.zip' }}
+          fileName: "*win-x86_64*.zip"
           extract: true
           out-file-path: MaaFramework-temp
 
-      - name: Copy ControlUnits
+      - name: Copy MaaWin32ControlUnit
+        if: matrix.arch == 'x64'
         run: |
           cp MaaFramework-temp/bin/*Win32ControlUnit* install/
-          cp MaaFramework-temp/bin/*AdbControlUnit* install/
 
       - name: Generate global.json
         shell: bash
         run: |
-          echo '{"sdk":{"version":"10.0.302","rollForward":"disable"}}' > global.json
+          echo '{"sdk":{"version":"10.0.203","rollForward":"disable"}}' > global.json
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
       - name: Cache .nuke/temp, ~/.nuget/packages
         id: cache-nuget
-        uses: actions/cache@v6
+        uses: actions/cache@v5
         continue-on-error: true
         with:
           path: |
@@ -273,22 +271,8 @@ jobs:
           rm -rf install/*.pdb
           rm -rf install/msvc-debug
           rm -rf install/*.h
-          rm -rf install/*.bak
-
-          # 用原生启动器替换 SDK apphost：MAA.exe 被单独拖出文件夹时给出错误提示
-          # MAA.dll 缺失可能来自 continue-on-error 的 publish，静默保留 apphost；stub 缺失属于构建异常，直接失败
-          if [ ! -f build/bin/RelWithDebInfo/MaaAppHostStub.exe ]; then
-              echo "::error::MaaAppHostStub.exe missing from build output"
-              exit 1
-          fi
-          if [ -f install/MAA.dll ]; then
-              cp build/bin/RelWithDebInfo/MaaAppHostStub.exe install/MAA.exe
-          fi
 
           cp tools/DependencySetup_依赖库安装.bat install
-
-      - name: Generate file list
-        run: pwsh tools/GenerateFileList.ps1 -InstallDir install
 
       - name: Upload MAA to GitHub
         uses: actions/upload-artifact@v7
@@ -314,7 +298,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout MaaRelease
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           repository: ${{ format('{0}/{1}', github.repository_owner, 'MaaRelease') }}
           fetch-depth: 0
@@ -345,7 +329,7 @@ jobs:
           echo ${{ needs.build-win-nightly.outputs.tag }}
 
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           path: MaaAssistantArknights
           token: ${{ secrets.MAARELEASE_RELEASE }}
