@@ -13,7 +13,7 @@ on:
         type: number
 
 jobs:
-  ai-analysis:
+  codex-analysis:
     if: |
       (github.event_name == 'issues' && github.event.action == 'opened') ||
       github.event_name == 'workflow_dispatch' ||
@@ -27,36 +27,38 @@ jobs:
       contents: read
       issues: write
     steps:
-      # 分析质量仍依赖配套的 issue/log analysis skill。
+      # 这个 action 只负责编排，分析质量仍依赖配套的 issue/log analysis skill。
       # 详细使用文档：https://github.com/MistEO/ai-issue-analysis
-      - name: Analyze issue with AI
-        id: analysis
+      # 最佳实践参考：
+      # - https://github.com/MaaEnd/MaaEnd/blob/v2/.claude/skills/maaend-issue-log-analysis/SKILL.md
+      # - https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/.claude/skills/maa-issue-log-analysis/SKILL.md
+      - name: Analyze issue with Codex
+        id: codex
         continue-on-error: true
-        uses: MistEO/ai-issue-analysis@main
+        uses: MistEO/ai-issue-analysis@codex
         with:
-          agent: ${{ secrets.BOT_AI_AGENT }}
-          api-key: ${{ secrets.BOT_AI_API_KEY }}
-          api-base-url: ${{ secrets.BOT_AI_API_BASE_URL }}
-          model: ${{ secrets.BOT_AI_MODEL }}
           github-token: ${{ secrets.MAA_BOT_TOKEN }}
+          codex-api-key: ${{ secrets.CODEX_API_KEY }}
+          codex-base-url: ${{ secrets.CODEX_BASE_URL }}
+          codex-model: ${{ secrets.CODEX_MODEL }}
           bot-name: '@MaaArknightsBot'
           initial-comment-body: |
             🤖 **MaaBot 正在分析该 Issue...**  
             
             感谢您的反馈！AI 正在自动分析该问题，预计耗时约 10 分钟。
           prompt-template: |
-            严格按照 .agents/skills/maa-issue-log-analysis/SKILL.md 中的规则，分析 GitHub Issue {{issue_number}}。把最终结论写到 {{answer_file}}。
+            分析 GitHub Issue {{issue_number}}。把最终结论写到 {{answer_file}}。
           extra-comment-content: |
             <!-- Skip all labels -->
 
       - name: 查看完整输入输出
         if: always()
         env:
-          ISSUE_NUMBER: ${{ steps.analysis.outputs.issue-number }}
-          COMMENT_ID: ${{ steps.analysis.outputs.comment-id }}
-          COMMENT_URL: ${{ steps.analysis.outputs.comment-url }}
+          ISSUE_NUMBER: ${{ steps.codex.outputs.issue-number }}
+          COMMENT_ID: ${{ steps.codex.outputs.comment-id }}
+          COMMENT_URL: ${{ steps.codex.outputs.comment-url }}
         run: |
           echo "issue_number=$ISSUE_NUMBER"
           echo "comment_id=$COMMENT_ID"
           echo "comment_url=$COMMENT_URL"
-          echo "(Full agent-output and final-conclusion are available in the uploaded artifacts)"
+          echo "(Full codex-output and final-conclusion are available in the uploaded artifacts)"
