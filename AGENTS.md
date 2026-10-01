@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # MAA 开发约定
 
 格式由 `.pre-commit-config.yaml` 钩子机器强制，各钩子有 files 范围；本地不处理好的话 GitHub CI 会定时代跑并生成额外的机器修复 commit，为避免此副作用，改完文件后须本地跑对应格式化（如 C++ 的 clang-formatter）。
@@ -58,7 +57,7 @@
 - MaaCore 本地测试一律 Debug 构建：加载期检查整体在 `ASST_DEBUG` 内，Release 下零错误是假象。
 - MSB3026/MSB3021 构建复制失败时，挡构建的是占用仓库构建版 `build\bin\Debug\MAA.exe` 的进程（与安装版无关），临时验证程序引用 MaaWpfGui 时同理。
 - 文档站在主仓库 `docs/` 下直接跑，日常验证改完文件看 `pnpm dev` 热重载即可，无必要不跑 build；非交互 install 加 `CI=true`。
-=======
+
 # Fork maintenance guidance
 
 ## Branch topology
@@ -88,4 +87,3 @@
 
 - Use Conventional Commits with an English type and a Chinese description after the colon.
 - Do not add `Co-Authored-By` trailers.
->>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)

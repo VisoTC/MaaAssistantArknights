@@ -1169,7 +1169,7 @@ public class AsstProxy
 
                             break;
 
-                        case "ARPS":
+                        case ConnectConfig.ARPS:
                             if (method != "ARPS")
                             {
                                 Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("ArpsNotEnabledMessage"), UiLogColor.Error);
@@ -3239,25 +3239,15 @@ public class AsstProxy
 
         if (ConnectSettingsUserControlModel.Instance.ExtraConfig is MuMu12Extra mumu12)
         {
-<<<<<<< HEAD
             AsstSetConnectionExtrasMuMu(mumu12.Config);
         }
         else if (ConnectSettingsUserControlModel.Instance.ExtraConfig is LDPlayerExtra ldPlayer)
         {
             AsstSetConnectionExtrasLdPlayer(ldPlayer.Config);
-=======
-            case "MuMuEmulator12":
-                AsstSetConnectionExtrasMuMu(SettingsViewModel.ConnectSettings.MuMuEmulatorExtras.Config);
-                break;
-
-            case "LDPlayer":
-                AsstSetConnectionExtrasLdPlayer(SettingsViewModel.ConnectSettings.LdPlayerExtras.Config);
-                break;
-
-            case "ARPS":
-                AsstSetConnectionExtrasArps(SettingsViewModel.ConnectSettings.ArpsExtras.Config);
-                break;
->>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)
+        }
+        else if (ConnectSettingsUserControlModel.Instance.ExtraConfig is ArpsExtra arps)
+        {
+            AsstSetConnectionExtrasArps(arps.Config);
         }
 
         switch (SettingsViewModel.ConnectSettings.ConnectConfig)
@@ -3828,7 +3818,6 @@ public class AsstProxy
     /// </summary>
     public void AsstDestroy()
     {
-<<<<<<< HEAD
         AsstHandle handle;
         lock (_handleLock)
         {
@@ -3845,16 +3834,6 @@ public class AsstProxy
 
         MaaService.AsstDestroy(handle);
         GameAudioMuteManager.Restore();
-=======
-        if (_handle == AsstHandle.Zero)
-        {
-            return;
-        }
-
-        MaaService.AsstDestroy(_handle);
-        _handle = AsstHandle.Zero;
-        Connected = false;
->>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)
     }
 }
 

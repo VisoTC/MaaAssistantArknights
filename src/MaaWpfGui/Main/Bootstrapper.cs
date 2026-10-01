@@ -1028,13 +1028,9 @@ public class Bootstrapper : Bootstrapper<RootViewModel>
     {
         try
         {
-<<<<<<< HEAD
             // Core 销毁会 join 全部工作线程，任务运行中在 UI 线程同步销毁可能与回调互等挂死，
             // 故移至后台线程限时等待，超时放弃销毁，由进程退出兜底
             Task.Run(() => Instances.AsstProxy?.AsstDestroy()).Wait(TimeSpan.FromSeconds(3));
-=======
-            Instances.AsstProxy.AsstDestroy();
->>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)
         }
         catch (Exception e)
         {

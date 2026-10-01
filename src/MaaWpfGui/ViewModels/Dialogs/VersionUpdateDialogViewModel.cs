@@ -526,12 +526,9 @@ public class VersionUpdateDialogViewModel : Screen
     private const string InfoRequestUrl = "repos/MaaAssistantArknights/MaaAssistantArknights/releases/tags/";
     */
 
-<<<<<<< HEAD
     private const string MaaUpdateApi = "version/summary.json";
     private const int UpdatePackageDownloadMaxAttempts = 3;
-=======
     private const string ForkReleasesApi = "https://api.github.com/repos/VisoTC/MaaAssistantArknights/releases";
->>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)
 
     private JObject? _latestJson;
     private JObject? _assetsObject;
@@ -1549,13 +1546,6 @@ public class VersionUpdateDialogViewModel : Screen
     {
         var body = await Instances.HttpService.GetStringAsync(new Uri(ForkReleasesApi), new Dictionary<string, string>
         {
-<<<<<<< HEAD
-            _logger.Error("Failed to get update info from MAA API.");
-            return CheckUpdateRetT.FailedToGetInfo;
-        }
-
-        string versionType = GetUpdateChannel();
-=======
             ["Accept"] = "application/vnd.github+json",
             ["X-GitHub-Api-Version"] = "2022-11-28",
         });
@@ -1571,7 +1561,6 @@ public class VersionUpdateDialogViewModel : Screen
         {
             return CheckUpdateRetT.FailedToGetInfo;
         }
->>>>>>> 33d4eb7aa (feat(arps): 应用 v6.14.2 单提交覆盖层)
 
         JObject? json = null;
         foreach (var release in releases.OfType<JObject>())
