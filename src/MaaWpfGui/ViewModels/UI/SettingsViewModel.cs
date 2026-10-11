@@ -1431,10 +1431,14 @@ public class SettingsViewModel : Screen
             ? demoUiVersion
             : LocalizationHelper.FormatVersion(uiVersion, VersionUpdateSettingsUserControlModel.BuildDateTime);
         string adminTag = Bootstrapper.IsAdministratorWithUac() ? $" ({LocalizationHelper.GetString("Administrator")})" : string.Empty;
+<<<<<<< HEAD
 
         // 常驻预览标记：防止带参数预览后忘记本进程未加载 Core
         string previewTag = Bootstrapper.IsCoreInitSkipped ? $" ({LocalizationHelper.GetString("UiPreviewMode")})" : string.Empty;
         rvm.WindowTitle = $"{prefix}MAA{adminTag}{currentConfiguration} - {uiVersionDisplay}{resourceVersionDisplay}{connectConfigName}{connectAddress}{clientName}{previewTag}";
+=======
+        rvm.WindowTitle = $"{prefix}MAA-fork{adminTag}{currentConfiguration} - {uiVersionDisplay}{resourceVersionDisplay}{connectConfigName}{connectAddress}{clientName}";
+>>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
     }
 
     /// <summary>
