@@ -94,6 +94,7 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
     /// Gets the list of the configuration of connection.
     /// </summary>
     public LocalizedObservableList<ConnectConfig> ConnectConfigList { get; } = new(
+        (ConnectConfig.ARPS, "ARPS"),
         (ConnectConfig.General, "Connection.Config.General"),
         (ConnectConfig.BlueStacks, "Connection.Config.BlueStacks"),
         (ConnectConfig.MuMuEmulator12, "Connection.Config.MuMu"),
@@ -261,6 +262,7 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
         ConnectConfig.LDPlayer => _extras.LdPlayer,
         ConnectConfig.MuMuEmulator12 => _extras.Mumu12,
         ConnectConfig.PC => _extras.Win32,
+        ConnectConfig.ARPS => _extras.Arps,
         _ => null,
     };
 
@@ -273,6 +275,8 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
         public MuMu12Extra Mumu12 { get; set; } = new();
 
         public Models.EmulatorConnectionExtra.Win32Extra Win32 { get; set; } = new();
+
+        public ArpsExtra Arps { get; set; } = new();
 
         public Bluestacks BluestacksExtra { get; set; } = new();
 
@@ -688,6 +692,15 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
                         ? LocalizationHelper.GetString("Connection.LdPlayer.EmulatorPathEmptyError")
                         : LocalizationHelper.GetString("Connection.LdPlayer.ExtrasNotEnabledMessage");
                     TestLinkInfo = $"{ldExtrasMsg}\n{ScreencapTestCost}";
+                    return;
+                }
+
+                break;
+
+            case ConnectConfig.ARPS:
+                if (ScreencapMethod != "ARPS")
+                {
+                    TestLinkInfo = $"{LocalizationHelper.GetString("ArpsNotEnabledMessage")}\n{ScreencapTestCost}";
                     return;
                 }
 
