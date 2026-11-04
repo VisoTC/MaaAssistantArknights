@@ -1,6 +1,6 @@
 // <copyright file="RecruitTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -59,7 +59,7 @@ public class RecruitTask : BaseTask, IJsonOnDeserialized
     /// <summary>
     /// Gets or sets 需要保留并跳过的Tag。
     /// </summary>
-    public List<string> PreserveTagList { get; set; } = [RecruitSettingsUserControlModel.LegacyRobotTag];
+    public List<string> PreserveTagList { get; set; } = [RecruitTaskUserControlModel.LegacyRobotTag];
 
     /// <summary>
     /// Gets or sets a value indicating whether 是否启用保留指定Tag。
@@ -83,14 +83,31 @@ public class RecruitTask : BaseTask, IJsonOnDeserialized
     public bool Level3Choose { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether 自动确认 3 星时保留招聘许可。
+    /// </summary>
+    public bool Level3RecruitmentPermitReserveEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets 自动确认 3 星时保留的招聘许可数量。
+    /// </summary>
+    public int Level3RecruitmentPermitReserve { get; set; } = 8;
+
+    /// <summary>
     /// Gets or sets a value indicating whether 自动确认4星
     /// </summary>
     public bool Level4Choose { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether 自动确认5星
+    /// 招募时间固定为 9:00（540 分钟）。
     /// </summary>
     public bool Level5Choose { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 自动确认6星。
+    /// 仅作为配置文件可修改项，界面不可修改，招募时间固定为 9:00（540 分钟）。
+    /// </summary>
+    public bool Level6Choose { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether 3星时间
@@ -101,11 +118,6 @@ public class RecruitTask : BaseTask, IJsonOnDeserialized
     /// Gets or sets 4星时间
     /// </summary>
     public int Level4Time { get; set; } = 540;
-
-    /// <summary>
-    /// Gets or sets 5星时间
-    /// </summary>
-    public int Level5Time { get; set; } = 540;
 
     public void OnDeserialized()
     {

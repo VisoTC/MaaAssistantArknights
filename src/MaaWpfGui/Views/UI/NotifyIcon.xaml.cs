@@ -1,6 +1,6 @@
 // <copyright file="NotifyIcon.xaml.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -16,7 +16,7 @@ using System.Runtime.InteropServices;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
-using MaaWpfGui.Constants;
+using MaaWpfGui.Configuration.Factory;
 using MaaWpfGui.Helper;
 using MaaWpfGui.Main;
 using MaaWpfGui.ViewModels.UI;
@@ -42,11 +42,14 @@ public partial class NotifyIcon
         InitializeComponent();
 
         uint doubleClickTime = GetDoubleClickTime();
+        if (doubleClickTime == 0)
+        {
+            doubleClickTime = 500;
+        }
         _clickTimer = new(doubleClickTime) {
             AutoReset = false,
         };
-        _clickTimer.Elapsed += (s, e) =>
-        {
+        _clickTimer.Elapsed += (s, e) => {
             _canClick = true;
         };
 
@@ -60,7 +63,7 @@ public partial class NotifyIcon
     private void InitIcon()
     {
         notifyIcon.Icon = AppIcon.GetIcon();
-        notifyIcon.Visibility = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.UseTray, true) ? Visibility.Visible : Visibility.Collapsed;
+        notifyIcon.Visibility = ConfigFactory.Root.Gui.UseTray ? Visibility.Visible : Visibility.Collapsed;
 
         notifyIcon.Click += NotifyIcon_MouseClick;
         notifyIcon.MouseDoubleClick += NotifyIcon_MouseClick;
@@ -81,17 +84,33 @@ public partial class NotifyIcon
             }
 
             var langMenu = new MenuItem() { Header = lang.Value };
-            langMenu.Click += (_, _) =>
-            {
+            langMenu.Click += (_, _) => {
                 SettingsViewModel.GuiSettings.Language = lang.Key;
             };
 
             switchLangMenu.Items.Add(langMenu);
         }
+
+        LocalizationHelper.LanguageChanged += RefreshMenuLocalization;
+        Unloaded += (_, _) => LocalizationHelper.LanguageChanged -= RefreshMenuLocalization;
+    }
+
+    /// <summary>
+    /// 刷新托盘图标的右键菜单文本。
+    /// </summary>
+    private void RefreshMenuLocalization()
+    {
+        startMenu.SetResourceReference(MenuItem.HeaderProperty, "TaskQueue.Farming");
+        stopMenu.SetResourceReference(MenuItem.HeaderProperty, "Common.Stop");
+        switchLangMenu.SetResourceReference(MenuItem.HeaderProperty, "Tray.SwitchLanguage");
+        forceShowMenu.SetResourceReference(MenuItem.HeaderProperty, "Tray.ForceShow");
+        hideTrayMenu.SetResourceReference(MenuItem.HeaderProperty, "Tray.Hide");
+        toggleOverlayMenu.SetResourceReference(MenuItem.HeaderProperty, "Logging.Overlay.Toggle");
+        restartMenu.SetResourceReference(MenuItem.HeaderProperty, "Tray.Restart");
+        exitMenu.SetResourceReference(MenuItem.HeaderProperty, "Tray.Exit");
     }
 
     // 不知道是干嘛的，先留着
-    // ReSharper disable once UnusedMember.Local
     private void AddMenuItemOnFirst(string text, Action action)
     {
         var menuItem = new MenuItem { Header = text };

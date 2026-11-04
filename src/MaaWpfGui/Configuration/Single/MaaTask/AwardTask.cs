@@ -1,6 +1,6 @@
 // <copyright file="AwardTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -49,4 +49,9 @@ public class AwardTask : BaseTask
     /// Gets or sets a value indicating whether 5周年特殊月卡
     /// </summary>
     public bool SpecialAccess { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 限时签到活动领取
+    /// </summary>
+    public bool SignInEvent { get; set; }
 }

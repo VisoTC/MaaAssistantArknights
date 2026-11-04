@@ -116,7 +116,24 @@ std::optional<int> asst::Win32IO::call_command(
     bool socket_eof = false;
 
     OVERLAPPED pipeov { .hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr) };
-    (void)ReadFile(pipe_parent_read, pipe_buffer.get(), (DWORD)pipe_buffer.size(), nullptr, &pipeov);
+    // 与 PlatformWin32.cpp 的 arm_pipe_read 保持一致：ReadFile 可能同步完成或同步失败，
+    // 必须正确处理三种情况，否则 (void) 忽略返回值后 event 可能永远不会 signal。
+    auto arm_pipe_read = [&]() {
+        if (pipe_eof) {
+            return;
+        }
+        if (ReadFile(pipe_parent_read, pipe_buffer.get(), (DWORD)pipe_buffer.size(), nullptr, &pipeov)) {
+            // 同步完成：手动置位 event，走统一的 GetOverlappedResult 路径
+            SetEvent(pipeov.hEvent);
+            return;
+        }
+        DWORD err = GetLastError();
+        if (err != ERROR_IO_PENDING) {
+            // 典型场景：子进程已退出且写端关闭，ReadFile 同步返回 ERROR_BROKEN_PIPE
+            pipe_eof = true;
+        }
+    };
+    arm_pipe_read();
 
     OVERLAPPED sockov {};
     SOCKET client_socket = INVALID_SOCKET;
@@ -165,8 +182,16 @@ std::optional<int> asst::Win32IO::call_command(
         auto elapsed = steady_clock::now() - start_time;
         // TODO: 这里目前是隔 5000ms 判断一次，应该可以加一个 wait_handle 来判断外部中断（need_exit）
         auto wait_time = (std::min)(timeout - duration_cast<milliseconds>(elapsed).count(), 5LL * 1000);
-        if (wait_time < 0 || !process_running) {
+        if (wait_time < 0) {
             wait_time = 0;
+        }
+        // 子进程退出后不能再无限等 pipe：若末次 ReadFile 同步失败且 event 未置位，会卡死。
+        // 给一个短 drain 窗口把残余输出收完即可（对齐 PlatformWin32.cpp 的 kPostExitDrainMs）。
+        if (!process_running) {
+            constexpr int64_t kPostExitDrainMs = 1000;
+            if (wait_time > kPostExitDrainMs) {
+                wait_time = kPostExitDrainMs;
+            }
         }
         auto wait_result =
             WaitForMultipleObjectsEx((DWORD)wait_handles.size(), wait_handles.data(), FALSE, (DWORD)wait_time, TRUE);
@@ -175,6 +200,10 @@ std::optional<int> asst::Win32IO::call_command(
             signaled_object = wait_handles[(size_t)wait_result - WAIT_OBJECT_0];
         }
         else if (wait_result == WAIT_TIMEOUT) {
+            // 进程已退出后的 drain 超时：pipe 数据应已收完（或无法再收），正常返回 exit code
+            if (!process_running) {
+                break;
+            }
             if (wait_time == 0) {
                 std::vector<std::string> handle_string {};
                 for (auto handle : wait_handles) {
@@ -195,16 +224,27 @@ std::optional<int> asst::Win32IO::call_command(
                 if (process_running) {
                     TerminateProcess(process_info.hProcess, 0);
                 }
+                // 取消挂起的 pipe 读并同步等待取消完成，避免内核在 OVERLAPPED/缓冲区失效后写入
+                if (!pipe_eof && CancelIoEx(pipe_parent_read, &pipeov)) {
+                    DWORD cancelled_len = 0;
+                    GetOverlappedResult(pipe_parent_read, &pipeov, &cancelled_len, TRUE);
+                }
                 // 处理超时后返回 std::nullopt
                 CloseHandle(pipe_parent_read);
                 CloseHandle(pipeov.hEvent);
                 CloseHandle(process_info.hProcess);
                 CloseHandle(process_info.hThread);
                 if (recv_by_socket) {
-                    CloseHandle(sockov.hEvent);
+                    if (accept_pending) {
+                        CancelIoEx(reinterpret_cast<HANDLE>(m_server_sock), &sockov);
+                    }
+                    else if (!socket_eof) {
+                        CancelIoEx(reinterpret_cast<HANDLE>(client_socket), &sockov);
+                    }
                     if (client_socket != INVALID_SOCKET) {
                         closesocket(client_socket);
                     }
+                    CloseHandle(sockov.hEvent);
                 }
                 return std::nullopt;
                 // break;
@@ -226,12 +266,21 @@ std::optional<int> asst::Win32IO::call_command(
             // pipe read
             DWORD len = 0;
             if (GetOverlappedResult(pipe_parent_read, &pipeov, &len, FALSE)) {
-                pipe_data.insert(pipe_data.end(), pipe_buffer.get(), pipe_buffer.get() + len);
-                (void)ReadFile(pipe_parent_read, pipe_buffer.get(), (DWORD)pipe_buffer.size(), nullptr, &pipeov);
+                if (len == 0) {
+                    pipe_eof = true;
+                }
+                else {
+                    pipe_data.insert(pipe_data.end(), pipe_buffer.get(), pipe_buffer.get() + len);
+                    arm_pipe_read();
+                }
             }
             else {
                 DWORD err = GetLastError();
-                if (err == ERROR_HANDLE_EOF || err == ERROR_BROKEN_PIPE) {
+                if (err == ERROR_HANDLE_EOF || err == ERROR_BROKEN_PIPE || err == ERROR_OPERATION_ABORTED) {
+                    pipe_eof = true;
+                }
+                else {
+                    Log.error(__FUNCTION__, "GetOverlappedResult failed", err);
                     pipe_eof = true;
                 }
             }
@@ -316,6 +365,11 @@ std::optional<int> asst::Win32IO::call_command(
     GetExitCodeProcess(process_info.hProcess, &exit_ret);
     CloseHandle(process_info.hProcess);
     CloseHandle(process_info.hThread);
+    // 取消挂起的 pipe 读并同步等待取消完成，避免内核在 OVERLAPPED/缓冲区失效后写入
+    if (!pipe_eof && CancelIoEx(pipe_parent_read, &pipeov)) {
+        DWORD cancelled_len = 0;
+        GetOverlappedResult(pipe_parent_read, &pipeov, &cancelled_len, TRUE);
+    }
     CloseHandle(pipe_parent_read);
     CloseHandle(pipeov.hEvent);
     return static_cast<int>(exit_ret);
@@ -347,30 +401,48 @@ std::optional<unsigned short> asst::Win32IO::init_socket(const std::string& loca
     if (err == SOCKET_ERROR) {
         err = WSAGetLastError();
         Log.error("failed to resolve AcceptEx, err:", err);
-        ::closesocket(m_server_sock);
+        close_socket();
         return std::nullopt;
     }
-    m_server_sock_addr.sin_family = PF_INET;
-    ::inet_pton(AF_INET, local_address.c_str(), &m_server_sock_addr.sin_addr);
 
-    bool server_start = false;
-    uint16_t port_result = 0;
+    m_server_sock_addr = {};
+    m_server_sock_addr.sin_family = PF_INET;
+    if (::inet_pton(AF_INET, local_address.c_str(), &m_server_sock_addr.sin_addr) != 1) {
+        m_server_sock_addr.sin_addr.s_addr = ::htonl(INADDR_ANY);
+    }
+
+    // capture the error right after the failed call, before logging may overwrite it
+    auto socket_failed = [&](const char* step) -> std::optional<unsigned short> {
+        int last_err = WSAGetLastError();
+        Log.info("not supports socket,", step, "failed, err:", last_err);
+        close_socket();
+        return std::nullopt;
+    };
 
     m_server_sock_addr.sin_port = ::htons(0);
-    int bind_ret = ::bind(m_server_sock, reinterpret_cast<SOCKADDR*>(&m_server_sock_addr), sizeof(SOCKADDR));
+    if (::bind(m_server_sock, reinterpret_cast<SOCKADDR*>(&m_server_sock_addr), sizeof(SOCKADDR)) != 0) {
+        if (m_server_sock_addr.sin_addr.s_addr == ::htonl(INADDR_ANY)) {
+            return socket_failed("bind");
+        }
+        // local_address is not on this machine (e.g. a device connected over LAN), listen on all interfaces instead
+        err = WSAGetLastError();
+        Log.warn("failed to bind", local_address, ", err:", err, ", fallback to INADDR_ANY");
+        close_socket();
+        return init_socket("0.0.0.0");
+    }
     int addrlen = sizeof(m_server_sock_addr);
-    int getname_ret = ::getsockname(m_server_sock, reinterpret_cast<sockaddr*>(&m_server_sock_addr), &addrlen);
-    int listen_ret = ::listen(m_server_sock, 3);
-    server_start = bind_ret == 0 && getname_ret == 0 && listen_ret == 0;
-
-    if (!server_start) {
-        Log.info("not supports socket");
-        return std::nullopt;
+    if (::getsockname(m_server_sock, reinterpret_cast<sockaddr*>(&m_server_sock_addr), &addrlen) != 0) {
+        return socket_failed("getsockname");
+    }
+    if (::listen(m_server_sock, 3) != 0) {
+        return socket_failed("listen");
     }
 
-    port_result = ::ntohs(m_server_sock_addr.sin_port);
+    uint16_t port_result = ::ntohs(m_server_sock_addr.sin_port);
 
-    Log.info("command server start", local_address, port_result);
+    char bound_address[INET_ADDRSTRLEN] = {};
+    ::inet_ntop(AF_INET, &m_server_sock_addr.sin_addr, bound_address, sizeof(bound_address));
+    Log.info("command server start", bound_address, port_result);
     return port_result;
 }
 

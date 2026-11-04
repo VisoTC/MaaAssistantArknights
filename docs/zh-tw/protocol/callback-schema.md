@@ -5,20 +5,22 @@ icon: material-symbols:u-turn-left
 
 # 回呼訊息協定
 
-::: info 注意
-回呼訊息 (Callback) 隨版本更新快速迭代中，本文件可能過時。如需獲取最新內容可參考 [C# 整合原始碼](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/src/MaaWpfGui/Main/AsstProxy.cs)
+::: info 注意  
+回呼訊息 (Callback) 隨版本更新快速迭代中，本文件可能過時。如需獲取最新內容可參考 [C# 整合原始碼](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/src/MaaWpfGui/Main/AsstProxy.cs)  
 :::
 
 ## 回呼函式原型
 
 ```cpp
-typedef void(ASST_CALL* AsstCallback)(int msg, const char* details, void* custom_arg);
+typedef void(ASST_CALL* AsstApiCallback)(AsstMsgId msg, const char* details_json, void* custom_arg);
 ```
+
+其中 `AsstMsgId` 為 `int32_t` 的別名。
 
 ## 參數總覽
 
-- `int msg`  
-   消息類型
+- `AsstMsgId msg`  
+  消息類型
 
   ```cpp
   enum class AsstMsg
@@ -28,7 +30,7 @@ typedef void(ASST_CALL* AsstCallback)(int msg, const char* details, void* custom
    InitFailed        = 1,           // 初始化失敗
    ConnectionInfo    = 2,           // 連線相關資訊
    AllTasksCompleted = 3,           // 全部任務完成
-   AsyncCallInfo     = 4,           // 外部非同步調用資訊
+   AsyncCallInfo     = 4,           // 外部非同步呼叫資訊
    Destroyed         = 5,           // 執行個體已銷毀
 
    /* TaskChain Info */
@@ -51,9 +53,9 @@ typedef void(ASST_CALL* AsstCallback)(int msg, const char* details, void* custom
   ```
 
 - `const char* details`  
-   消息詳情，json 字串，詳見 [欄位解釋](#欄位解釋)
+  消息詳情，json 字串，詳見 [欄位解釋](#欄位解釋)
 - `void* custom_arg`  
-   調用端自定義參數。會原樣傳出 `AsstCreateEx` 介面中的 `custom_arg` 參數，C 系語言可利用此參數傳出 `this` 指標。
+  呼叫端自訂參數。會原樣傳出 `AsstCreateEx` 介面中的 `custom_arg` 參數，C 系語言可利用此參數傳出 `this` 指標。
 
 ## 欄位解釋
 
@@ -63,269 +65,384 @@ typedef void(ASST_CALL* AsstCallback)(int msg, const char* details, void* custom
 
 ### InitFailed
 
-:::: field-group
-::: field name="what" type="string" required
-錯誤類型。
+:::: field-group  
+::: field what  
+@type string  
+@required  
+錯誤類型。  
 :::  
-::: field name="why" type="string" required
-錯誤原因。
+::: field why  
+@type string  
+@required  
+錯誤原因。  
 :::  
-::: field name="details" type="object" required
-錯誤詳情。
+::: field details  
+@type object  
+@required  
+錯誤詳情。  
 :::  
 ::::
 
 ### ConnectionInfo
 
-:::: field-group
-::: field name="what" type="string" required
-資訊類型。
-:::
-::: field name="why" type="string" required
-資訊原因。
-:::
-::: field name="uuid" type="string"
-設備唯一碼（連線失敗時為空）。
-:::
-::: field name="details" type="object" required
+:::: field-group  
+::: field what  
+@type string  
+@required  
+資訊類型。  
+:::  
+::: field why  
+@type string  
+@required  
+資訊原因。  
+:::  
+::: field uuid  
+@type string  
+設備唯一碼（連線失敗時為空）。  
+:::  
+::: field details  
+@type object  
+@required  
 連線詳情。其結構如下：
 
 - `adb` (string, required): `AsstConnect` 介面 `adb_path` 參數。
 - `address` (string, required): `AsstConnect` 介面 `address` 參數。
 - `config` (string, required): `AsstConnect` 介面 `config` 參數。
 
-:::
+:::  
 ::::
 
 ### 常見 `What` 欄位
 
 - `ConnectFailed`  
-   連線失敗
+  連線失敗
 - `Connected`  
-   已連接，注意此時的 `uuid` 欄位值為空（下一步才是獲取）
+  已連接，注意此時的 `uuid` 欄位值為空（下一步才是獲取）
 - `UuidGot`  
-   已獲取到設備唯一碼
+  已獲取到設備唯一碼
 - `UnsupportedResolution`  
-   解析度不被支援
+  解析度不被支援
 - `ResolutionError`  
-   解析度獲取錯誤
+  解析度獲取錯誤
 - `Reconnecting`  
-   連線中斷（adb / 模擬器 炸了），正在重連
+  連線中斷（adb / 模擬器 炸了），正在重連
 - `Reconnected`  
-   連線中斷（adb / 模擬器 炸了），重連成功
+  連線中斷（adb / 模擬器 炸了），重連成功
 - `Disconnect`  
-   連線中斷（adb / 模擬器 炸了），並重試失敗
+  連線中斷（adb / 模擬器 炸了），並重試失敗
 - `ScreencapFailed`  
-   截圖失敗（adb / 模擬器 炸了），並重試失敗
+  截圖失敗（adb / 模擬器 炸了），並重試失敗
 - `TouchModeNotAvailable`  
-   不支援的觸控模式
+  不支援的觸控模式
+- `MuMuExtrasInputStatus`  
+  MuMu 觸控增強的實際生效狀態，`details` 結構如下：
+  - `available` (boolean, required): 是否已生效。
+  - `deferred` (boolean, required): 是否尚未判定（連線時遊戲尚未開始渲染，會在開始渲染後自動重試）。
+- `ResolutionGot`  
+  已獲取到解析度
+- `ResolutionChanged`  
+  執行中解析度被修改，連線已斷開並中斷目前任務，`details` 結構如下：
+  - `width` (number, required): 目前寬度。
+  - `height` (number, required): 目前高度。
+- `FastestWayToScreencap`  
+  已找到最快的截圖方式，`details` 結構如下：
+  - `method` (string, required): 最快的截圖方式。
+  - `cost` (number, required): 耗時，單位毫秒。
+  - `alternatives` (array`<object>`, required): 各候選方式及其耗時。
+
+- `ScreencapCost`  
+  截圖耗時統計（每 10 次截圖回傳一次），`details` 結構如下：
+  - `min` (number, required): 最小耗時，單位毫秒。
+  - `max` (number, required): 最大耗時，單位毫秒。
+  - `avg` (number, required): 平均耗時，單位毫秒。
+  - `fault_times` (number): 失敗次數（僅有失敗時存在）。
+
+- `EmulatorFPS`  
+  模擬器更新率（每 1 分鐘檢測一次），`details` 結構如下：
+  - `fps` (number, required): 模擬器/系統更新率（FPS）。
+  - `refresh_period_ns` (number, required): 每幀更新週期，單位奈秒。
 
 ### AsyncCallInfo
 
-:::: field-group
-::: field name="uuid" type="string" required
-設備唯一碼。
-:::
-::: field name="what" type="string" required
-回呼類型，例如 `Connect` | `Click` | `Screencap` 等。
-:::
-::: field name="async_call_id" type="number" required
-非同步請求 ID，即調用 `AsstAsyncXXX` 時的回傳值。
-:::
-::: field name="details" type="object" required
-非同步調用詳情。其結構如下：
+:::: field-group  
+::: field uuid  
+@type string  
+@required  
+設備唯一碼。  
+:::  
+::: field what  
+@type string  
+@required  
+回呼類型，例如 `Connect` | `AttachWindow` | `Click` | `Screencap` 等。  
+:::  
+::: field async_call_id  
+@type number  
+@required  
+非同步請求 ID，即呼叫 `AsstAsyncXXX` 時的回傳值。  
+:::  
+::: field details  
+@type object  
+@required  
+非同步呼叫詳情。其結構如下：
 
-- `ret` (boolean, required): 實際調用的回傳值。
+- `ret` (boolean, required): 實際呼叫的回傳值。
 - `cost` (number, required): 耗時，單位毫秒。
+- `error` (string): 未處理例外的類型（僅呼叫因未處理例外失敗時存在）。
 
-:::
+:::  
 ::::
 
 ### AllTasksCompleted
 
-:::: field-group
-::: field name="taskchain" type="string" required
-最後的任务鏈。
-:::
-::: field name="uuid" type="string" required
-設備唯一碼。
-:::
-::: field name="finished_tasks" type="array<number>" required
-已經執行過的任務 ID 列表。
-:::
+:::: field-group  
+::: field taskchain  
+@type string  
+@required  
+最後的任務鏈。  
+:::  
+::: field taskid  
+@type number  
+@required  
+最後一條任務鏈對應的任務 TaskId。  
+:::  
+::: field uuid  
+@type string  
+@required  
+設備唯一碼。  
+:::  
+::: field finished_tasks  
+@type array<number>  
+@required  
+已經執行過的任務 ID 列表。  
+:::  
 ::::
 
 #### 常見 `taskchain` 欄位
 
 - `StartUp`  
-   開始喚醒
+  開始喚醒
 - `CloseDown`  
-   關閉遊戲
+  關閉遊戲
 - `Fight`  
-   刷理智
+  刷理智
 - `Mall`  
-   信用點及購物
+  信用點及購物
 - `Recruit`  
-   自動公招
+  自動公招
 - `Infrast`  
-   基建換班
+  基建換班
 - `Award`  
-   領取日常獎勵
+  領取日常獎勵
 - `Roguelike`  
-   無限刷肉鴿
+  無限刷肉鴿
 - `Copilot`  
-   自動抄作業
+  自動抄作業
 - `SSSCopilot`  
-   自動抄保全作業
+  自動抄保全作業
+- `ParadoxCopilot`  
+  自動抄悖論模擬作業
 - `Depot`  
-   倉庫辨識
+  倉庫辨識
 - `OperBox`  
-   幹員 Box 辨識
+  幹員 Box 辨識
 - `Reclamation`  
-   生息演算
+  生息演算
 - `Custom`  
-   自定義任務
+  自訂任務
 - `SingleStep`  
-   單步任務
+  單步任務
 - `VideoRecognition`  
-   影片辨識任務
+  影片辨識任務
 - `Debug`  
-   偵錯
+  偵錯
 
 ### TaskChain 相關消息
 
-:::: field-group
-::: field name="taskchain" type="string" required
-目前的任務鏈。
-:::
-::: field name="taskid" type="number" required
-目前任務 TaskId。
-:::
-::: field name="uuid" type="string" required
-設備唯一碼。
-:::
+`TaskChainError` / `TaskChainStart` / `TaskChainCompleted` / `TaskChainExtraInfo` / `TaskChainStopped` 共用以下欄位：
+
+:::: field-group  
+::: field taskchain  
+@type string  
+@required  
+目前的任務鏈。  
+:::  
+::: field taskid  
+@type number  
+@required  
+目前任務 TaskId。  
+:::  
+::: field uuid  
+@type string  
+@required  
+設備唯一碼。  
+:::  
 ::::
+
+其中 `TaskChainError` 在任務鏈因未處理異常中斷時會額外攜帶 `details` 欄位：
+
+- `error` (string, required): 異常類型，取值為 `OpenCVException` | `OutOfMemory` | `GpuDeviceRemoved` | `UnhandledException` | `UnknownException`。其中 `OutOfMemory` 與 `GpuDeviceRemoved`（GPU 推論裝置失效，如顯示卡驅動程式更新或 GPU 重置）出現時剩餘任務會被清空，需重新啟動程式後才能繼續執行。
 
 ### TaskChainExtraInfo
 
-`details` 欄位為空。
+預設僅攜帶上述公共欄位。肉鴿（界園主題）路徑規劃判定無法避開過多戰鬥而主動重開時，訊息會額外攜帶：
+
+- `what` (string, required): 固定為 `RoutingRestart`。
+- `why` (string, required): 固定為 `TooManyBattlesAhead`。
+- `node_cost` (number, required): 規劃得到的下一節點代價。
 
 ### SubTask 相關消息
 
-:::: field-group
-::: field name="subtask" type="string" required
-子任務名稱。
-:::
-::: field name="class" type="string" required
-子任務符號名稱。
-:::
-::: field name="taskchain" type="string" required
-目前任務鏈。
-:::
-::: field name="taskid" type="number" required
-目前任務 TaskId。
-:::
-::: field name="details" type="object" required
-詳情。
-:::
-::: field name="uuid" type="string" required
-設備唯一碼。
-:::
+:::: field-group  
+::: field subtask  
+@type string  
+@required  
+子任務名稱。  
+:::  
+::: field class  
+@type string  
+@required  
+子任務符號名稱。  
+:::  
+::: field taskchain  
+@type string  
+@required  
+目前任務鏈。  
+:::  
+::: field taskid  
+@type number  
+@required  
+目前任務 TaskId。  
+:::  
+::: field details  
+@type object  
+@required  
+詳情。  
+:::  
+::: field uuid  
+@type string  
+@required  
+設備唯一碼。  
+:::  
 ::::
 
 #### 常見 `subtask` 欄位
 
 - `ProcessTask`  
-  `details` 欄位内容如下：
+  `details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="task" type="string" required
-  任務名稱。
-  :::
-  ::: field name="action" type="number" required
-  Action ID。
-  :::
-  ::: field name="exec_times" type="number" required
-  已執行次數。
-  :::
-  ::: field name="max_times" type="number" required
-  最大執行次數。
-  :::
-  ::: field name="algorithm" type="number" required
-  辨識算法。
-  :::
+  :::: field-group  
+  ::: field task  
+  @type string  
+  @required  
+  任務名稱。  
+  :::  
+  ::: field action  
+  @type string  
+  @required  
+  動作名稱，例如 `ClickSelf` | `DoNothing` | `Swipe`。  
+  :::  
+  ::: field exec_times  
+  @type number  
+  @required  
+  已執行次數。  
+  :::  
+  ::: field max_times  
+  @type number  
+  @required  
+  最大執行次數。  
+  :::  
+  ::: field algorithm  
+  @type string  
+  @required  
+  辨識演算法名稱，例如 `MatchTemplate` | `OcrDetect` | `FeatureMatch` | `JustReturn`。  
+  :::  
+  ::: field result  
+  @type object  
+  @required  
+  本次辨識結果，各演算法結構不同；無辨識結果時為空物件。  
+  :::  
   ::::
 
+  此外，當任務執行次數達到上限時，會先回傳一條 `SubTaskExtraInfo` 訊息，`what` 為 `ExceededLimit`，`details` 包含 `task`（任務名稱）、`exec_times`（已執行次數）、`max_times`（最大執行次數）。
+
+  若待辨識任務列表中存在未定義的任務名（任務資源與程式版本不匹配等），會在辨識開始前以 `SubTaskError` 回傳並停止整條任務鏈，`what` 為 `UnknownTask`，`details` 包含 `tasks`（string 陣列，未定義的任務名列表）。
+
+- `ReportToPenguinStats` / `ReportToYituliu`  
+  彙報戰鬥掉落到企鵝數據統計 / 一圖流大數據（上報失敗時以 `SubTaskError` 回傳）。
+- `StartGameTask`  
+  打開用戶端失敗（設定檔與傳入 `client_type` 不匹配）。
 - Todo 其他
 
 ##### 常見 `task` 欄位
 
 - `StartButton2`  
-   開始戰鬥
+  開始戰鬥
 - `MedicineConfirm`  
-   使用理智藥
-- `ExpiringMedicineConfirm`  
-   使用即將過期的理智藥
+  使用理智藥
 - `StoneConfirm`  
-   碎石
+  碎石
 - `RecruitRefreshConfirm`  
-   公招刷新標籤
+  公招刷新標籤
 - `RecruitConfirm`  
-   公招確認招募
+  公招確認招募
 - `RecruitNowConfirm`  
-   公招使用加急許可
-- `ReportToPenguinStats`  
-   匯報到企鵝數據統計
-- `ReportToYituliu`  
-   匯報到一圖流大數據
+  公招使用加急許可
 - `InfrastDormDoubleConfirmButton`  
-   基建宿舍的二次確認按鈕。僅當幹員衝突時才會出現，請提示使用者。
+  基建的二次確認按鈕。僅當待進駐幹員已進駐其他設施時才會出現（MAA 將自動點擊確認），請提示使用者。
 - `StartExplore`  
-   肉鴿開始探索
+  肉鴿開始探索
 - `StageTraderInvestConfirm`  
-   肉鴿投資源石錠
+  肉鴿投資源石錠
 - `StageTraderInvestSystemFull`  
-   肉鴿投資達到遊戲上限
+  肉鴿投資達到遊戲上限
 - `ExitThenAbandon`  
-   肉鴿放棄本次探索
+  肉鴿放棄本次探索
 - `MissionCompletedFlag`  
-   肉鴿戰鬥完成
+  肉鴿戰鬥完成
 - `MissionFailedFlag`  
-   肉鴿戰鬥失敗
+  肉鴿戰鬥失敗
 - `StageTraderEnter`  
-   肉鴿關卡：詭異行商
+  肉鴿關卡：詭異行商
 - `StageSafeHouseEnter`  
-   肉鴿關卡：安全的角落
+  肉鴿關卡：安全的角落
 - `StageEncounterEnter`  
-   肉鴿關卡：不期而遇 / 古堡饋贈
+  肉鴿關卡：不期而遇 / 古堡饋贈
 - `StageCombatOpsEnter`  
-   肉鴿關卡：普通作戰
+  肉鴿關卡：普通作戰
 - `StageEmergencyOps`  
-   肉鴿關卡：緊急作戰
+  肉鴿關卡：緊急作戰
 - `StageDreadfulFoe`  
-   肉鴿關卡：險路惡敵
-- `StartGameTask`
-  打開客戶端失敗（設定檔與傳入 client_type 不匹配）
+  肉鴿關卡：險路惡敵
 - Todo 其他
 
 ### SubTaskExtraInfo
 
-:::: field-group
-::: field name="taskchain" type="string" required
-目前任務鏈。
-:::
-::: field name="class" type="string" required
-子任務類型。
-:::
-::: field name="what" type="string" required
-資訊類型。
-:::
-::: field name="details" type="object" required
-資訊詳情。
-:::
-::: field name="uuid" type="string" required
-設備唯一碼。
-:::
+:::: field-group  
+::: field taskchain  
+@type string  
+@required  
+目前任務鏈。  
+:::  
+::: field class  
+@type string  
+@required  
+子任務類型。  
+:::  
+::: field what  
+@type string  
+@required  
+資訊類型。  
+:::  
+::: field details  
+@type object  
+@required  
+資訊詳情。  
+:::  
+::: field uuid  
+@type string  
+@required  
+設備唯一碼。  
+:::  
 ::::
 
 #### 常見 `what` 及 `details` 欄位
@@ -345,32 +462,40 @@ typedef void(ASST_CALL* AsstCallback)(int msg, const char* details, void* custom
     - `itemName` (string, required)：材料名稱。
     - `quantity` (number, required)：總計數量。
     - `addQuantity` (number, required)：本次新增的掉落數量。
+  - `cur_times` (number, optional)：結算畫面辨識到的連戰次數（辨識到時存在）。
+  - `annihilation_weekly_process` (array, optional)：剿滅模式的本週獲取進度，格式為 `[已完成數, 上限]`（僅剿滅關卡存在）。
 
 - `RecruitTagsDetected`  
   公招辨識到了 Tags。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="tags" type="array<string>" required
-  辨識到的 Tag 列表。
-  :::
+  :::: field-group  
+  ::: field tags  
+  @type array<string>  
+  @required  
+  辨識到的 Tag 列表。  
+  :::  
   ::::
 
 - `RecruitSpecialTag`  
   公招辨識到了特殊 Tag。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="tag" type="string" required
-  特殊 Tag 名稱，例如 高級資深幹員。
-  :::
+  :::: field-group  
+  ::: field tag  
+  @type string  
+  @required  
+  特殊 Tag 名稱，例如 高級資深幹員。  
+  :::  
   ::::
 
 - `RecruitPreservedTag`  
-   公招辨識到了已設定為保留的 Tag。`details` 欄位內容如下：
+  公招辨識到了已設定為保留的 Tag。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="tag" type="string" required
-  觸發保留的 Tag 名稱，例如 `支援機械`。
-  :::
+  :::: field-group  
+  ::: field tag  
+  @type string  
+  @required  
+  觸發保留的 Tag 名稱，例如 `支援機械`。  
+  :::  
   ::::
 
 - `RecruitResult`  
@@ -381,116 +506,240 @@ typedef void(ASST_CALL* AsstCallback)(int msg, const char* details, void* custom
     - `tags` (array, required)：參與組合的 tags。
     - `level` (number, required)：這組 tags 的星級。
     - `opers` (array, required)：可能招募到的幹員，陣列每一項包含：
+      - `id` (string, required)：幹員 ID。
       - `name` (string, required)：幹員名稱。
       - `level` (number, required)：幹員星級。
 
 - `RecruitTagsRefreshed`  
   公招刷新了 Tags。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="count" type="number" required
-  目前槽位已刷新次數。
-  :::
-  ::: field name="refresh_limit" type="number" required
-  目前槽位刷新次數上限。
-  :::
+  :::: field-group  
+  ::: field count  
+  @type number  
+  @required  
+  目前槽位已刷新次數。  
+  :::  
+  ::: field refresh_limit  
+  @type number  
+  @required  
+  目前槽位刷新次數上限。  
+  :::  
   ::::
 
 - `RecruitNoPermit`  
   公招無招聘許可。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="continue" type="boolean" required
-  是否繼續刷新。
-  :::
+  :::: field-group  
+  ::: field continue  
+  @type boolean  
+  @required  
+  是否繼續刷新。  
+  :::  
   ::::
+
+- `RecruitPermitReserved`
+  目前招聘許可數量小於等於為 3 星招募設定的保留值，因此跳過目前欄位。`details` 欄位內容如下：
+
+  :::: field-group  
+  ::: field current  
+  @type number  
+  @required  
+  目前招聘許可數量。  
+  :::  
+  ::::
+
+- `RecruitPermitCountRecognitionFailed`
+  啟用 3 星招聘許可保留後，招聘許可數量辨識失敗，因此跳過目前欄位。`details` 欄位為空。
 
 - `RecruitTagsSelected`  
   公招選擇了 Tags。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="tags" type="array<string>" required
-  選擇的 Tag 列表。
-  :::
+  :::: field-group  
+  ::: field tags  
+  @type array<string>  
+  @required  
+  選擇的 Tag 列表。  
+  :::  
   ::::
 
-- `RecruitSlotCompleted`  
-  目前公招槽位任務完成。`details` 欄位為空。
-
 - `RecruitError`  
-  公招辨識錯誤。`details` 欄位為空。
+  公招辨識錯誤。`details` 欄位為空；若因目前槽位刷新次數達到上限觸發，則包含 `refresh_limit`（槽位刷新次數上限）。
 
 - `EnterFacility`  
   基建進入了設施。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="facility" type="string" required
-  設施名稱。
-  :::
-  ::: field name="index" type="number" required
-  設施序號。
-  :::
+  :::: field-group  
+  ::: field facility  
+  @type string  
+  @required  
+  設施名稱。  
+  :::  
+  ::: field index  
+  @type number  
+  @required  
+  設施序號。  
+  :::  
   ::::
 
 - `NotEnoughStaff`  
   基建可用幹員不足。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="facility" type="string" required
-  設施名稱。
-  :::
-  ::: field name="index" type="number" required
-  設施序號。
-  :::
+  :::: field-group  
+  ::: field facility  
+  @type string  
+  @required  
+  設施名稱。  
+  :::  
+  ::: field index  
+  @type number  
+  @required  
+  設施序號。  
+  :::  
   ::::
 
 - `ProductOfFacility`  
   基建產物。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="product" type="string" required
-  產物名稱。
-  :::
-  ::: field name="facility" type="string" required
-  設施名稱。
-  :::
-  ::: field name="index" type="number" required
-  設施序號。
-  :::
+  :::: field-group  
+  ::: field product  
+  @type string  
+  @required  
+  產物名稱。  
+  :::  
+  ::: field facility  
+  @type string  
+  @required  
+  設施名稱。  
+  :::  
+  ::: field index  
+  @type number  
+  @required  
+  設施序號。  
+  :::  
+  ::::
+
+- `CustomInfrastRoomKeptUnchanged`  
+  自訂基建排班中，該房間保持原樣。`details` 欄位預設附帶 `facility`（設施名稱）與 `index`（設施序號），其餘內容如下：
+
+  :::: field-group  
+  ::: field reason  
+  @type string  
+  @required  
+  保持原樣的原因，取值如下：
+  - `facility_empty`: 自訂排班的 rooms 陣列為空。
+  - `room_no_intent`: 房間配置存在但沒有選人意圖。
+  - `candidates_unavailable`: 候補幹員均不可用，通常是名單有誤（拼字錯誤或幹員未擁有）。
+  - `candidates_working`: 候補幹員均在其他設施工作。
+  - `candidates_low_mood`: 候補幹員心情均低於閾值。
+
+  :::  
+  ::::
+
+- `CustomInfrastRoomsNotConfigured`  
+  自訂基建排班的 rooms 陣列未涵蓋到該設施，該設施保持原樣。`details` 欄位僅包含預設的 `facility`（設施名稱）與 `index`（設施序號）。
+
+- `CustomInfrastTraineeNotFound`  
+  自訂基建排班中，訓練位的候補幹員均未命中。`details` 欄位預設附帶 `facility`（設施名稱）與 `index`（設施序號），其餘內容如下：
+
+  :::: field-group  
+  ::: field candidates  
+  @type array<string>  
+  @required  
+  訓練位的候補幹員名單。  
+  :::  
+  ::::
+
+- `CustomInfrastAssistantNotFound`  
+  自訂基建排班中，協助者的候補幹員均未命中。`details` 欄位預設附帶 `facility`（設施名稱）與 `index`（設施序號），其餘內容如下：
+
+  :::: field-group  
+  ::: field candidates  
+  @type array<string>  
+  @required  
+  協助者的候補幹員名單。  
+  :::  
+  ::: field working_excluded  
+  @type array<string>  
+  @optional  
+  候選中因正在其他設施工作而被排除的幹員名單，僅非空時附帶。  
+  :::  
+  ::: field low_mood_excluded  
+  @type array<string>  
+  @optional  
+  候選中因心情低於閾值而被排除的幹員名單，僅非空時附帶。  
+  :::  
+  ::::
+
+- `CustomInfrastRoomGroupsMatchFailed`  
+  自訂基建排班中，編組匹配失敗。`details` 欄位預設附帶 `facility`（設施名稱）與 `index`（設施序號），其餘內容如下：
+
+  :::: field-group  
+  ::: field reason  
+  @type string  
+  @required  
+  匹配失敗原因，取值如下：
+  - `group_not_defined`: 引用的編組名稱均未在 groups 中定義。
+  - `all_unavailable`: 所有編組的幹員均不可用。
+  - `recognition_failed`: 幹員列表辨識失敗。
+
+  :::  
+  ::: field groups  
+  @type array<string>  
+  @optional  
+  未定義或不可用的編組名稱列表，僅在 `group_not_defined`、`all_unavailable` 時附帶。  
+  :::  
+  ::::
+
+- `CopilotPrecheckFile`  
+  自動抄作業多作業模式啟用 ｢使用一圖流資料輔助編隊｣ 時，預匹配各作業前回報。`details` 欄位內容如下：
+
+  :::: field-group  
+  ::: field nav_name  
+  @type string  
+  @required  
+  關卡名稱。  
+  :::  
+  ::: field filename  
+  @type string  
+  @required  
+  作業檔案名稱。  
+  :::  
   ::::
 
 - `StageInfo`  
   自動作戰關卡資訊。`details` 欄位內容如下：
 
-  :::: field-group
-  ::: field name="name" type="string" required
-  關卡名稱。
-  :::
+  :::: field-group  
+  ::: field name  
+  @type string  
+  @required  
+  關卡名稱。  
+  :::  
+  ::: field size  
+  @type number  
+  @required  
+  地圖格點數量。  
+  :::  
   ::::
 
 - `StageInfoError`  
   自動作戰關卡辨識錯誤。`details` 欄位為空。
 
-- `PenguinId`  
-  企鵝物流 ID。`details` 欄位內容如下：
-
-  :::: field-group
-  ::: field name="id" type="string" required
-  企鵝物流 ID。
-  :::
-  ::::
-
-- `Depot`  
+- `DepotInfo`  
   倉庫辨識結果。`details` 欄位結構如下：
   - `done` (boolean, required)：是否已經辨識完了，為 false 表示仍在辨識中（過程中的數據）。
-  - `data` (string, required)：json 字串，格式為 {"物品ID": 數量, ...}，例如 {"2001":18000,"31043":317}。
+  - `data` (string, required)：JSON 字串，格式為 `{"物品ID": 數量, ...}`，例如 `{"2001":18000,"31043":317}`。
 
-- `OperBox`  
+- `OperBoxInfo`  
   幹員辨識結果。`details` 欄位結構如下：
   - `done` (boolean, required)：是否已經辨識完了，為 false 表示仍在辨識中（過程中的數據）。
-  - `all_oper` (array, required)：全幹員列表，陣列每一項包含：
+  - `all_opers` (array, required)：全幹員列表，陣列每一項包含：
     - `id` (string, required)：幹員 ID。
     - `name` (string, required)：幹員名稱。
+    - `name_en` (string, required)：幹員英文名稱。
+    - `name_jp` (string, required)：幹員日文名稱。
+    - `name_kr` (string, required)：幹員韓文名稱。
+    - `name_tw` (string, required)：幹員繁中名稱。
     - `own` (boolean, required)：是否擁有。
     - `rarity` (number, required)：幹員稀有度 [1, 6]。
   - `own_opers` (array, required)：已擁有幹員的詳細資訊列表，陣列每一項包含：
@@ -503,23 +752,68 @@ typedef void(ASST_CALL* AsstCallback)(int msg, const char* details, void* custom
     - `rarity` (number, required)：幹員稀有度 [1, 6]。
 
 - `UnsupportedLevel`  
-  自動抄作業，不支援的關卡名稱。`details` 欄位為空。
+  自動抄作業，不支援的關卡名稱。`details` 欄位內容如下：
+
+  :::: field-group  
+  ::: field level  
+  @type string  
+  @required  
+  不支援的關卡名稱。  
+  :::  
+  ::::
+
+- `BlackFlowStartRun`  
+  黑流樹海刷開局（肉鴿模式 30003）的進度。`details` 欄位結構如下：
+  - `status` (string, required)：目前進度，取值如下：
+    - `preparing`：準備局開始。
+    - `target_run`：目標局開始。
+    - `reward_missed`：選擇支援頁辨識出了獎勵但沒有期望的，放棄該局，重新進行準備局。
+    - `reward_picked`：開啟 `blackflow_start_utopia` 時，選擇支援頁命中期望獎勵，已依 `blackflow_start_reward_priority` 選取獎勵，進入第一層檢查實托邦。
+    - `completed`：命中期望獎勵，已退出到主題頁並保留該局，任務結束；開啟 `blackflow_start_utopia` 時為第一層是實托邦。
+    - `reward_unrecognized`：選擇支援頁的獎勵辨識不出，停在該頁並停止任務。
+    - `reward_page_missing`：目標局沒有出現選擇支援頁，停止任務。
+    - `reward_recognition_failed`：準備局或目標局在選擇支援頁選擇獎勵失敗，停止任務。
+  - `rewards` (`array<string>`, optional)：目標局在選擇支援頁辨識出的獎勵名稱，如 `空间租赁`、`金乌`；只隨 `reward_missed`、`reward_picked`、`completed`、`reward_unrecognized`、`reward_recognition_failed` 回報；`blackflow_start_rewards` 為 0 且未開啟 `blackflow_start_utopia`（不辨識獎勵），或一項都沒辨識出時省略。
+
+- `BlackFlowScrapTradeAborted`  
+  黑流樹海秘境行商交易異常，中止交易。`details` 欄位內容如下：
+
+  :::: field-group  
+  ::: field reason  
+  @type string  
+  @required  
+  中止交易的原因。  
+  :::  
+  ::: field item  
+  @type string  
+  @required  
+  觸發中止的交易物品名稱。  
+  :::  
+  ::::
 
 ### ReportRequest
 
 該欄位主要用於核心模組向 UI 層傳遞網路請求資訊，UI 負責執行具體的 HTTP 彙報操作。
 
-:::: field-group
-::: field name="url" type="string" required
-請求的完整 URL，例如 `https://penguin-stats.io/PenguinStats/api/v2/report`。
-:::
-::: field name="headers" type="object" required
-請求 Headers 的 Key-Value 設定（不包含 `Content-Type`，由 UI 層自行加入）。
-:::
-::: field name="body" type="string" required
-請求 Body 內容（通常為 json 格式的字串）。
-:::
-::: field name="subtask" type="string" required
-子任務名稱，辨識具體彙報任務，如 `ReportToPenguinStats`、`ReportToYituliu`。
-:::
+:::: field-group  
+::: field url  
+@type string  
+@required  
+請求的完整 URL，例如 `https://penguin-stats.io/PenguinStats/api/v2/report`。  
+:::  
+::: field headers  
+@type object  
+@required  
+請求 Headers 的 Key-Value 設定（不包含 `Content-Type`，由 UI 層自行加入）。  
+:::  
+::: field body  
+@type string  
+@required  
+請求 Body 內容（通常為 json 格式的字串）。  
+:::  
+::: field subtask  
+@type string  
+@required  
+子任務名稱，辨識具體彙報任務，如 `ReportToPenguinStats`、`ReportToYituliu`。  
+:::  
 ::::

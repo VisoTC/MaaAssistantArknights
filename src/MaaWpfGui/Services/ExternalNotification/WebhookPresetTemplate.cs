@@ -1,0 +1,90 @@
+// <copyright file="WebhookPresetTemplate.cs" company="MaaAssistantArknights">
+// Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License v3.0 only as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY
+// </copyright>
+
+#nullable enable
+using System.Collections.Generic;
+using MaaWpfGui.Helper;
+
+namespace MaaWpfGui.Services.ExternalNotification;
+
+public class WebhookPresetTemplate
+{
+    public string Id { get; init; } = string.Empty;
+
+    private string NameResourceKey { get; init; } = string.Empty;
+
+    private string Name { get; init; } = string.Empty;
+
+    public string Url { get; init; } = string.Empty;
+
+    public string Headers { get; init; } = string.Empty;
+
+    public string Body { get; init; } = string.Empty;
+
+    // 新增模板时，必须在所有语言的 Localizations/*.xaml 中添加对应的 NameResourceKey 字符串
+    public string DisplayName => string.IsNullOrEmpty(NameResourceKey) ? Name : LocalizationHelper.GetString(NameResourceKey);
+
+    private static readonly List<WebhookPresetTemplate> _builtInTemplates =
+    [
+        new()
+        {
+            Id = "__custom__",
+            NameResourceKey = "ExternalNotification.CustomWebhook.Template.Custom",
+        },
+        new()
+        {
+            Id = "Discord Webhook",
+            Name = "Discord Webhook",
+            Body = $"{{\"content\": \"{{content}}\"}}",
+        },
+        new()
+        {
+            Id = "Kook Channel",
+            Name = "KOOK Channel",
+            Url = "https://www.kookapp.cn/api/v3/message/create",
+            Headers = "Authorization: Bot <bot_token>",
+            Body = @"{""type"": 9, ""target_id"": ""<channel_id>"", ""content"": ""**{title}**\n{content}""}",
+        },
+        new()
+        {
+            Id = "Kook Direct",
+            Name = "KOOK Direct",
+            Url = "https://www.kookapp.cn/api/v3/direct-message/create",
+            Headers = "Authorization: Bot <bot_token>",
+            Body = @"{""type"": 9, ""target_id"": ""<user_id>"", ""content"": ""**{title}**\n{content}""}",
+        },
+        new()
+        {
+            Id = "meow",
+            NameResourceKey = "ExternalNotification.CustomWebhook.Template.MeoW",
+            Url = "https://api.chuckfang.com/<nickname>",
+            Body = "{\"title\":\"{title}\",\"msg\":\"{content}\\n{time}\"}",
+        },
+        new()
+        {
+            Id = "ntfy",
+            Name = "ntfy",
+            Url = "https://ntfy.sh/<topic>",
+            Body = @"{""message"": ""{content}"", ""title"": ""{title}""}",
+        },
+        new()
+        {
+            Id = "WeCom",
+            Name = "WeCom",
+            Url = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=<key>",
+            Body = @"{""msgtype"": ""text"", ""text"": {""content"": ""{content}""}}",
+        },
+    ];
+
+    public static IReadOnlyList<WebhookPresetTemplate> BuiltInTemplates => _builtInTemplates;
+}

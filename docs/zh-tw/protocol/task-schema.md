@@ -7,12 +7,12 @@ icon: material-symbols:task
 
 `resource/tasks` 的使用方法及各欄位說明
 
-::: tip
-推薦使用 [Visual Studio Code](https://code.visualstudio.com/) 並安裝 [Maa Pipeline Support](https://marketplace.visualstudio.com/items?itemName=nekosu.maa-support) 擴充功能以實作高效編輯，詳情請查閱擴充功能首頁和 [文件](../develop/vsc-ext-tutorial.md)。
+::: tip  
+推薦使用 [Visual Studio Code](https://code.visualstudio.com/) 並安裝 [Maa Pipeline Support](https://marketplace.visualstudio.com/items?itemName=nekosu.maa-support) 擴充功能以實作高效編輯，詳情請查閱擴充功能首頁和 [文件](../develop/vsc-ext-tutorial.md)。  
 :::
 
-::: warning
-請注意，json 檔案不支援註解。文件中的註解僅供說明參考，請勿直接複製使用。
+::: warning  
+請注意，json 檔案不支援註解。文件中的註解僅供說明參考，請勿直接複製使用。  
 :::
 
 ## 完整欄位一覽
@@ -41,7 +41,7 @@ icon: material-symbols:task
 
         "sub": ["SubTaskName1", "SubTaskName2"],
                                             // 選填，子任務，不推薦使用。會在執行完目前任務後，依序執行每一個子任務
-                                            // 可以套娃，子任務再套子任務。但要注意不要寫出死循環
+                                            // 可以套娃，子任務再套子任務。但要注意不要寫出無窮迴圈
 
         "subErrorIgnored": true,            // 選填，是否忽略子任務的錯誤。
                                             // 不填寫預設為 false
@@ -55,6 +55,7 @@ icon: material-symbols:task
                                             // 對於相同任務，第一次辨識後第二次就不再辨識：
                                             //      "next": [ "A", "B", "A", "A" ] -> "next": [ "A", "B" ]
                                             // 不允許 JustReturn 型任務位於非最後一項
+                                            // 列表中存在未定義的任務名時，會在辨識開始前回傳 UnknownTask 錯誤並停止整條任務鏈
 
         "maxTimes": 10,                     // 選填，表示該任務最大執行次數
                                             // 不填寫時預設為無窮大
@@ -73,9 +74,9 @@ icon: material-symbols:task
                                             // 以 1280 * 720 為基準自動縮放；不填寫時預設為 [ 0, 0, 1280, 720 ]
                                             // 儘量填寫，減小辨識範圍可以減少效能消耗，加快辨識速度
 
-        "cache": true,                      // 選填，表示該任務是否使用快取，預設為 true;
-                                            // 第一次辨識到後，以後永遠只在第一次辨識到的位置進行辨識，開啟可大幅節省效能
-                                            // 但僅適用於待辨識目標位置完全不會變的任務，若待辨識目標位置會變請設為 false
+        "cache": false,                     // 選填，表示該任務是否使用快取，預設為 false
+                                            // 開啟後第一次辨識到目標時，以後永遠只在第一次辨識到的位置進行辨識，可大幅節省效能
+                                            // 但僅適用於待辨識目標位置完全不會變的任務，若待辨識目標位置會變請保持預設的 false
 
         "rectMove": [0, 0, 0, 0],           // 選填，辨識後的目標移動，不建議使用該選項。以 1280 * 720 為基準自動縮放
                                             // 例如辨識到了 A ，但實際要點擊的是 A 下方 10 像素 5 * 2 區域的某個位置，
@@ -90,10 +91,11 @@ icon: material-symbols:task
                                             // 當 action 為 ClickRect 時有效且必填，表示指定的點擊位置（範圍內隨機一點）。
                                             // 當 action 為 Swipe 時有效且必填，表示滑動起點。
                                             // 以 1280 * 720 為基準自動縮放
-                                            // 當 algorithm 為 OcrDetect 時，specificRect[0] 和 specificRect[1] 表示灰度上下限門檻值。
 
         "specialParams": [int, ...],        // 某些特殊辨識器需要的參數
-                                            // 額外的，當 action 為 Swipe 時選填，[0] 表示 duration，[1] 表示是否啟用額外滑動
+                                            // 額外的，當 action 為 Swipe 時選填，[0] 表示 duration，[1] 表示額外滑動的方向（0 不啟用，1/2/3/4 分別為上/下/左/右），
+                                            // [2] 和 [3] 分別表示滑動軌跡的緩入、緩出斜率，需要乘 10 輸入，預設均為 10
+                                            // 如果需要正常進入並緩出，則 [2]、[3] 建議分別為 37, 1
 
         "highResolutionSwipeFix": false,    // 選填，是否啟用高解析度滑動修復
                                             // 現階段應該只有關卡導航未使用 unity 滑動方式所以需要開啟
@@ -129,6 +131,10 @@ icon: material-symbols:task
                                             // 適用於顏色特徵明顯但範本比對效果不佳的場景
                                             // 使用此選項時建議相應提高 templThreshold 門檻值
 
+        "nmsDistance": 0,                   // 選填，範本比對多結果的重複排除半徑，單位為像素，預設為 0
+                                            // 兩個命中位置的橫縱座標差都小於該值時，只保留得分最高的一個
+                                            // 不填或 0 時按範本短邊的一半取值
+
         "method": "Ccoeff",                 // 選填，範本比對演算法，可以是列表
                                             // 不填寫時預設為 Ccoeff
                                             //      - Ccoeff:       對顏色不敏感的範本比對演算法，對應 cv::TM_CCOEFF_NORMED
@@ -151,8 +157,17 @@ icon: material-symbols:task
                                             // false 時只要是子字串即可：例如 text: [ "開始" ]，實際辨識到了 "開始行動"，也算辨識成功；
                                             // true 時則必須辨識到了 "開始"，多一個字都不行
 
+        "replaceFull": false,               // 選填，ocrReplace 命中時是否替換整段辨識文字，預設為 false
+                                            // false 時僅替換命中的子字串；true 時只要整段文字命中任一替換規則，就將整段文字替換為該規則的替換值
+
         "isAscii": false,                   // 選填，要辨識的文字內容是否為 ASCII 碼字元
                                             // 不填寫預設為 false
+
+        "orderBy": "None",                  // 選填，多個匹配時的結果排序方式（不填預設繼承 baseTask，無 base 則不重排、按辨識順序）
+                                            //      - None:         不重排（按辨識順序），可顯式寫來覆蓋 base 已設的排序
+                                            //      - Horizontal:   行優先（行內從左到右）
+                                            //      - Vertical:     列優先（列內從上到下）
+                                            //      - Score:        按分數從高到低
 
         "withoutDet": false,                // 選填，是否不使用檢測模型
                                             // 不填寫預設為 false
@@ -193,14 +208,14 @@ icon: material-symbols:task
 
 任務列表類型欄位（`sub`, `next`, `onErrorNext`, `exceededNext`, `reduceOtherTimes`）支援運算式計算。
 
-|    符號     |                           含義                           |                  實例                   |
+| 符號 | 含義 | 實例 |
 | :---------: | :------------------------------------------------------: | :-------------------------------------: |
-|     `@`     |                        `@` 型任務                        |            `Fight@ReturnTo`             |
-| `#`（一元） |                          虛任務                          |                 `#self`                 |
-| `#`（二元） |                          虛任務                          |          `StartUpThemes#next`           |
-|     `*`     |                       重複多個任務                       | `(ClickCornerAfterPRTS+ClickCorner)*10` |
-|     `+`     | 任務列表合併（在 next 系列欄位中同名任務只保留最靠前者） |                  `A+B`                  |
-|     `^`     |         任務列表差（在前者但不在後者，順序不變）         |    `(A+A+B+C)^(A+B+D)`（結果為 `C`）    |
+| `@` | `@` 型任務 | `Fight@ReturnTo` |
+| `#`（一元） | 虛任務 | `#self` |
+| `#`（二元） | 虛任務 | `StartUpThemes#next` |
+| `*` | 重複多個任務 | `(ClickCornerAfterPRTS+ClickCorner)*10` |
+| `+` | 任務列表合併（在 next 系列欄位中同名任務只保留最靠前者） | `A+B` |
+| `^` | 任務列表差（在前者但不在後者，順序不變） | `(A+A+B+C)^(A+B+D)`（結果為 `C`） |
 
 運算子 `@`, `#`, `*`, `+`, `^` 有優先順序：`#`（一元）> `@` = `#`（二元）> `*` > `+` = `^`。
 
@@ -240,12 +255,12 @@ icon: material-symbols:task
 
 可以將虛任務分為**指令虛任務**（`#none` / `#self` / `#back`）和**欄位虛任務**（`#next` 等）。
 
-|  虛任務類型  |         含義         |                                                                簡單範例                                                                |
+| 虛任務類型 | 含義 | 簡單範例 |
 | :----------: | :------------------: | :------------------------------------------------------------------------------------------------------------------------------------: |
-|     none     |        空任務        |        直接跳過<sup>1</sup><br>`"A": {"next": ["#none", "T1"]}` 被視為 `"A": {"next": ["T1"]}`<br>`"A#none + T1"` 被視為 `"T1"`        |
-|     self     |     目前任務名稱     | `"A": {"next": ["#self"]}` 中的 `"#self"` 被視為 `"A"`<br>`"B": {"next": ["A@B@C#self"]}` 中的 `"A@B@C#self"` 被視為 `"B"`<sup>2</sup> |
-|     back     |   # 前面的任務名稱   |                                `"A@B#back"` 被視為 `"A@B"`<br>`"#back"` 直接出現則會被跳過<sup>3</sup>                                 |
-| next, sub 等 | # 前任務名稱對應欄位 |                      以 `next` 為例：<br>`"A#next"` 被視為 `Task.get("A")->next`<br>`"#next"` 直接出現則會被跳過                       |
+| none | 空任務 | 直接跳過<sup>1</sup><br>`"A": {"next": ["#none", "T1"]}` 被視為 `"A": {"next": ["T1"]}`<br>`"A#none + T1"` 被視為 `"T1"` |
+| self | 目前任務名稱 | `"A": {"next": ["#self"]}` 中的 `"#self"` 被視為 `"A"`<br>`"B": {"next": ["A@B@C#self"]}` 中的 `"A@B@C#self"` 被視為 `"B"`<sup>2</sup> |
+| back | # 前面的任務名稱 | `"A@B#back"` 被視為 `"A@B"`<br>`"#back"` 直接出現則會被跳過<sup>3</sup> |
+| next, sub 等 | # 前任務名稱對應欄位 | 以 `next` 為例：<br>`"A#next"` 被視為 `Task.get("A")->next`<br>`"#next"` 直接出現則會被跳過 |
 
 _Note<sup>1</sup>: `"#none"` 一般配合範本任務增加前綴的特性使用，或用在欄位 `baseTask` 中避免多檔案繼承不必要的欄位。_
 
@@ -435,7 +450,7 @@ default:
 
 ### Visual Studio
 
-在 `MaaCore.vcxporj` 中已對其進行設定，內建功能開箱即用。提示效果較為晦澀，且有部分資訊缺失。
+在 `MaaCore.vcxproj` 中已對其進行設定，內建功能開箱即用。提示效果較為晦澀，且有部分資訊缺失。
 
 ### Visual Studio Code
 

@@ -5,15 +5,15 @@ icon: jam:write-f
 
 # 文档编写指南
 
-::: tip
-本文档的目的在于指导文档编写者更好的使用主题提供的功能，以此达到更易读的效果。
+::: tip  
+本文档的目的在于指导文档编写者更好的使用主题提供的功能，以此达到更易读的效果。  
 :::
 
 我们的文档基于 [vuepress](https://github.com/vuejs/vuepress) 构建，使用了 [vuepress-theme-plume](https://github.com/pengzhanbo/vuepress-theme-plume) 主题，你也可以查看[官方文档](https://theme-plume.vuejs.press/)来获取更加详细的说明，这里仅介绍一些常用的功能，或是经过我们自定义的功能
 
 ## 本地部署
 
-1. 安装 [pnpm](https://pnpm.io/installation)，并参考 [Pull Request 流程简述](./development.md#github-pull-request-流程简述)将仓库克隆到本地。
+1. 安装 [pnpm](https://pnpm.io/installation)，并参考 [Pull Request 流程简述](./development.md)将仓库克隆到本地。
 2. 在 `docs` 目录下新建终端，运行 `pnpm i` 部署依赖。
 3. 运行 `pnpm run dev` 进行部署。
 
@@ -50,32 +50,32 @@ icon: jam:write-f
 
 ### 容器示例
 
-::: tip
-这是提示容器
+::: tip  
+这是提示容器  
 :::
 
-::: note
-这是注释容器
+::: note  
+这是注释容器  
 :::
 
-::: info
-这是信息容器
+::: info  
+这是信息容器  
 :::
 
-::: warning
-这是注意容器
+::: warning  
+这是注意容器  
 :::
 
-::: danger
-这是危险容器
+::: danger  
+这是危险容器  
 :::
 
-::: details
-这是详情容器
+::: details  
+这是详情容器  
 :::
 
-::: window
-这是一个很特殊的容器
+::: window  
+这是一个很特殊的容器  
 :::
 
 ## 马克笔标记
@@ -115,7 +115,7 @@ MaaAssistantArknights 是由 ==很多猪== 开发的
 
 有以下配置可以使用
 
-::: window
+::: window  
 输入：
 
 ```markdown
@@ -178,8 +178,8 @@ MaaAssistantArknights 是由 ==很多猪== 开发的
 
 3. 步骤 3
 
-   ::: tip
-   提示容器
+   ::: tip  
+   提示容器  
    :::
 
 4. 结束
@@ -238,24 +238,35 @@ MaaAssistantArknights 是由 ==很多猪== 开发的
 
 效果展示如下
 
-:::: field-group
-::: field name="theme" type="ThemeConfig" required default="{ base: '/' }"
-主题配置
+:::: field-group  
+::: field theme  
+@type ThemeConfig  
+@default { base: '/' }  
+@required  
+主题配置  
 :::
 
-::: field name="enabled" type="boolean" optional default="true"
-是否启用
+::: field enabled  
+@type boolean  
+@default true  
+@optional  
+是否启用  
 :::
 
-::: field name="callback" type="(...args: any[]) => void" optional default="() => {}"
+::: field callback  
+@type (...args: any[]) => void  
+@default () => {}  
+@optional  
 <Badge type="tip" text="v1.0.0 新增"  />
-回调函数
+回调函数  
 :::
 
-::: field name="other" type="string" deprecated
+::: field other  
+@type string  
+@deprecated  
 <Badge type="danger" text="v0.9.0 弃用"  />
-已弃用属性
-:::
+已弃用属性  
+:::  
 ::::
 
 ## 图标

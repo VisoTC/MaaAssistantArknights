@@ -1,6 +1,6 @@
 // <copyright file="InfrastTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -83,6 +83,50 @@ public class InfrastTask : BaseTask, IJsonOnDeserialized
     /// </summary>
     public bool ContinueTraining { get; set; } = false;
 
+    public string FiammettaTarget1 { get; set; } = "清流";
+
+    public string FiammettaTarget2 { get; set; } = "可露希尔";
+
+    public string FiammettaTarget3 { get; set; } = "但书";
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 常规模式换班开始时是否使用菲亚梅塔为恢复目标恢复心情
+    /// </summary>
+    public bool FiammettaRecoveryEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Pinus Sylvestris cross-facility team is enabled.
+    /// </summary>
+    public bool UsePinusSylvestris { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Perception Information cross-facility team is enabled.
+    /// </summary>
+    public bool UsePerceptionInformation { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Worldly Plight cross-facility team is enabled.
+    /// </summary>
+    public bool UseWorldlyPlight { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Abyssal Hunter cross-facility team is enabled.
+    /// </summary>
+    public bool UseAbyssalHunter { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 是否启用周计划。
+    /// </summary>
+    public bool UseWeeklySchedule { get; set; }
+
+    /// <summary>
+    /// Gets or sets 周计划。当 <see cref="UseWeeklySchedule"/> 为 false 时不参与序列化。
+    /// </summary>
+    [JsonPredict(nameof(UseWeeklySchedule))]
+    public Dictionary<DayOfWeek, bool> WeeklySchedule { get; set; } = Enum.GetValues<DayOfWeek>().ToDictionary(i => i, _ => true);
+
+    public string CustomFileType { get; set; } = InfrastTaskUserControlModel.UserDefined;
+
     /// <summary>
     /// Gets or sets 自定义配置文件路径
     /// </summary>
@@ -101,6 +145,15 @@ public class InfrastTask : BaseTask, IJsonOnDeserialized
 
     public void OnDeserialized()
     {
+        WeeklySchedule ??= Enum.GetValues<DayOfWeek>().ToDictionary(i => i, _ => true);
+
+        // 容错反序列化会删除无效枚举属性并回退默认值，可能产生重复房间
+        if (RoomList.Select(i => i.Room).Distinct().Count() != RoomList.Count)
+        {
+            _logger.Warning("InfrastTask: duplicate rooms in RoomList, deduplicating: {RoomList}", RoomList);
+            RoomList = [.. RoomList.GroupBy(i => i.Room).Select(g => g.First())];
+        }
+
         if (Mode != InfrastMode.Custom || string.IsNullOrWhiteSpace(Filename) || !File.Exists(Filename))
         {
             return;

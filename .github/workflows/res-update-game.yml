@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone ArknightsGameResource for Official
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           show-progress: false
           repository: yuanyan3060/ArknightsGameResource
@@ -27,11 +27,13 @@ jobs:
           sparse-checkout: |
             /levels.json
             /item
+            /avatar/char_*
             /building_skill
             /gamedata/excel/item_table.json
             /gamedata/excel/building_data.json
             /gamedata/excel/range_table.json
             /gamedata/excel/character_table.json
+            /gamedata/excel/char_patch_table.json
             /gamedata/excel/gacha_table.json
             /gamedata/excel/roguelike_topic_table.json
             /gamedata/excel/activity_table.json
@@ -49,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone ArknightsGameResource_Yostar for Overseas
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           show-progress: false
           repository: ArknightsAssets/ArknightsGamedata
@@ -92,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone arknights-toolbox-update for Taiwan
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           show-progress: false
           repository: arkntools/arknights-data-tw-for-maa
@@ -145,7 +147,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # TL;DR https://github.com/MaaAssistantArknights/MaaAssistantArknights/issues/9872#issuecomment-2251378371
           # actions/checkout uses ${{ secrets.GITHUB_TOKEN }} by default, meaning all steps will inherit it
@@ -155,12 +157,12 @@ jobs:
 
       - name: Restore ResourceUpdater from cache
         id: resupd-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         continue-on-error: true
         with:
           key: ResourceUpdater-${{ runner.os }}-${{ hashFiles('tools/ResourceUpdater/main.cpp') }}
           path: |
-            ./tools/ResourceUpdater/libopencv_world4.4.11.0.dylib
+            ./tools/ResourceUpdater/libopencv_world4*.dylib
             ./tools/ResourceUpdater/res_updater
 
       - name: Fetch submodules
@@ -171,7 +173,7 @@ jobs:
       - name: Cache MaaDeps
         if: steps.resupd-cache.outputs.cache-hit != 'true'
         id: maadeps-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         continue-on-error: true
         with:
           path: |
@@ -195,12 +197,12 @@ jobs:
 
       - name: Save ResourceUpdater to cache
         if: always() && steps.resupd-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         continue-on-error: true
         with:
           key: ResourceUpdater-${{ runner.os }}-${{ hashFiles('tools/ResourceUpdater/main.cpp') }}
           path: |
-            ./tools/ResourceUpdater/libopencv_world4.4.11.0.dylib
+            ./tools/ResourceUpdater/libopencv_world4*.dylib
             ./tools/ResourceUpdater/res_updater
 
       - name: Wait for resource cloning
@@ -236,7 +238,7 @@ jobs:
           ./tools/ResourceUpdater/res_updater
 
       - name: Setup python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
@@ -255,7 +257,7 @@ jobs:
           echo "gitdiff=$(echo $(git diff --name-only --diff-filter=ACM 2>/dev/null | grep '\.json$'))" >> $GITHUB_OUTPUT
 
       - name: Run prettier
-        uses: Nerixyz/actionsx-prettier@v3-adj
+        uses: Nerixyz/actionsx-prettier@v4.0.0
         with:
           args: -w ${{ steps.task_sorting.outputs.gitdiff }}
 
@@ -278,7 +280,7 @@ jobs:
       - name: Optimize png images
         if: steps.update_version.outputs.contains_png == 'True'
         run: |
-          python tools/OptimizeTemplates/optimize_templates.py --no-cleanup -p resource/template/items/ resource/template/infrast/
+          python tools/OptimizeTemplates/optimize_templates.py --no-cleanup -p resource/template/items/ resource/template/infrast/ resource/template/avatar/
 
       - name: Commit changes
         if: steps.update_version.outputs.changes == 'True'
@@ -297,8 +299,9 @@ jobs:
 
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          git commit -m "$commit_msg" -m "$run_url" -m "[skip changelog]"
-          if [ $? -eq 0 ]; then
+          # staged 与 HEAD 无实际差异时跳过提交，避免 bash -e 把 nothing to commit 打成失败
+          if ! git diff --cached --quiet; then
+            git commit -m "$commit_msg" -m "$run_url" -m "[skip changelog]"
             echo "have_commits=True" >> $GITHUB_OUTPUT
           fi
 
@@ -306,7 +309,7 @@ jobs:
 
       - name: Push changes
         if: steps.add_files.outputs.have_commits == 'True'
-        uses: ad-m/github-push-action@d30dc2d070765d7e509df00c34c5fa2dd636ff74 # master as of 2026-05-06
+        uses: ad-m/github-push-action@881a6320fdb16eb5318c5054f31c218aec2b324c # v1.3.0
         with:
           branch: ${{ github.ref }}
           github_token: ${{ secrets.MAA_RESOURCE_SYNC }}

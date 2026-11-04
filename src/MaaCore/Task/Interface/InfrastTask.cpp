@@ -2,7 +2,9 @@
 
 #include "Utils/Logger.hpp"
 
+#include "Status.h"
 #include "Task/Infrast/DronesForShamareTaskPlugin.h"
+#include "Task/Infrast/InfrastAssistantChangeTask.h"
 #include "Task/Infrast/InfrastControlTask.h"
 #include "Task/Infrast/InfrastDormTask.h"
 #include "Task/Infrast/InfrastInfoTask.h"
@@ -11,6 +13,8 @@
 #include "Task/Infrast/InfrastPowerTask.h"
 #include "Task/Infrast/InfrastProcessingTask.h"
 #include "Task/Infrast/InfrastReceptionTask.h"
+#include "Task/Infrast/InfrastRecycleTask.h"
+#include "Task/Infrast/InfrastRewardRecycleProductTaskPlugin.h"
 #include "Task/Infrast/InfrastTradeTask.h"
 #include "Task/Infrast/InfrastTrainingTask.h"
 #include "Task/Infrast/ReplenishOriginiumShardTaskPlugin.h"
@@ -23,6 +27,7 @@ asst::InfrastTask::InfrastTask(const AsstCallback& callback, Assistant* inst) :
     m_queue_rotation_task(std::make_shared<ProcessTask>(callback, inst, TaskType)),
     m_info_task_ptr(std::make_shared<InfrastInfoTask>(callback, inst, TaskType)),
     m_mfg_task_ptr(std::make_shared<InfrastMfgTask>(callback, inst, TaskType)),
+    m_mfg_info_task_ptr(std::make_shared<InfrastMfgTask>(callback, inst, TaskType)),
     m_trade_task_ptr(std::make_shared<InfrastTradeTask>(callback, inst, TaskType)),
     m_power_task_ptr(std::make_shared<InfrastPowerTask>(callback, inst, TaskType)),
     m_control_task_ptr(std::make_shared<InfrastControlTask>(callback, inst, TaskType)),
@@ -30,16 +35,24 @@ asst::InfrastTask::InfrastTask(const AsstCallback& callback, Assistant* inst) :
     m_office_task_ptr(std::make_shared<InfrastOfficeTask>(callback, inst, TaskType)),
     m_processing_task_ptr(std::make_shared<InfrastProcessingTask>(callback, inst, TaskType)),
     m_training_task_ptr(std::make_shared<InfrastTrainingTask>(callback, inst, TaskType)),
-    m_dorm_task_ptr(std::make_shared<InfrastDormTask>(callback, inst, TaskType))
+    m_recycle_task_ptr(std::make_shared<InfrastRecycleTask>(callback, inst, TaskType)),
+    m_dorm_task_ptr(std::make_shared<InfrastDormTask>(callback, inst, TaskType)),
+    m_dorm_task_ptr_post(std::make_shared<InfrastDormTask>(callback, inst, TaskType)),
+    m_assistant_change_task_ptr(std::make_shared<InfrastAssistantChangeTask>(callback, inst, TaskType))
 {
     LogTraceFunction;
 
     m_infrast_begin_task_ptr->set_tasks({ "InfrastBegin" }).set_ignore_error(false);
     m_infrast_begin_task_ptr->register_plugin<ScreenshotTaskPlugin>();
+    m_infrast_begin_task_ptr->register_plugin<InfrastRewardRecycleProductTaskPlugin>();
     m_queue_rotation_task->set_tasks({ "InfrastEnterRotation" }).set_ignore_error(true);
     m_replenish_task_ptr = m_mfg_task_ptr->register_plugin<ReplenishOriginiumShardTaskPlugin>();
     m_info_task_ptr->set_ignore_error(true);
+    // InfrastInfoTask 内部按布局完整性最多尝试三轮，避免框架重试再次放大次数。
+    m_info_task_ptr->set_retry_times(0);
     m_mfg_task_ptr->set_ignore_error(true);
+    m_mfg_info_task_ptr->set_ignore_error(true);
+    m_mfg_info_task_ptr->set_inspect_only(true);
     m_trade_task_ptr->set_ignore_error(true);
     m_power_task_ptr->set_ignore_error(true);
     m_control_task_ptr->set_ignore_error(true);
@@ -47,9 +60,24 @@ asst::InfrastTask::InfrastTask(const AsstCallback& callback, Assistant* inst) :
     m_office_task_ptr->set_ignore_error(true);
     m_training_task_ptr->set_ignore_error(true);
     m_processing_task_ptr->set_ignore_error(true);
+    m_recycle_task_ptr->set_ignore_error(true);
     m_dorm_task_ptr->set_ignore_error(true);
+    m_dorm_task_ptr_post->set_ignore_error(true);
+    m_dorm_task_ptr->set_prepare_phase(true);
+    m_dorm_task_ptr_post->set_prepare_phase(false);
+    m_assistant_change_task_ptr->set_ignore_error(true);
+    m_assistant_change_task_ptr->set_retry_times(0);
 
     m_subtasks.emplace_back(m_infrast_begin_task_ptr);
+}
+
+bool asst::InfrastTask::run()
+{
+    // 编组可用集存于跨任务持久的 Status，跨轮基建会继承上一轮的消耗与陈旧心情快照，
+    // 上一轮已进驻的编组本轮将永远匹配不到；写入空集让首个编组房间重新收集。
+    // 默认模式（无编组）不读该键，无条件清空无影响
+    status()->set_str(Status::InfrastAvailableOpersForGroup, json::array().dumps());
+    return InterfaceTask::run();
 }
 
 bool asst::InfrastTask::set_params(const json::value& params)
@@ -57,6 +85,8 @@ bool asst::InfrastTask::set_params(const json::value& params)
     LogTraceFunction;
 
     auto mode = static_cast<Mode>(params.get("mode", 0));
+    // 仅常规模式支持菲亚梅塔配对；关闭时不把前置宿舍步骤纳入子任务序列。
+    const bool fiammetta_recovery_enabled = mode == Mode::Default && params.get("fiammetta_recovery_enabled", false);
     const std::initializer_list<std::shared_ptr<InfrastProductionTask>> shift_tasks = { m_mfg_task_ptr,
                                                                                         m_trade_task_ptr,
                                                                                         m_reception_task_ptr };
@@ -67,10 +97,32 @@ bool asst::InfrastTask::set_params(const json::value& params)
         }
     }
 
+    const std::initializer_list<std::shared_ptr<InfrastProductionTask>> selection_tasks = {
+        m_mfg_task_ptr,       m_mfg_info_task_ptr, m_trade_task_ptr, m_power_task_ptr,     m_control_task_ptr,
+        m_reception_task_ptr, m_office_task_ptr,   m_dorm_task_ptr,  m_dorm_task_ptr_post,
+    };
+    for (const auto& task : selection_tasks) {
+        task->set_default_mode(mode == Mode::Default);
+    }
+
     if (!m_running) {
         auto facility_opt = params.find<json::array>("facility");
         if (!facility_opt) {
             return false;
+        }
+
+        m_task_data = std::make_shared<infrast::TaskData>();
+        const std::initializer_list<std::shared_ptr<InfrastAbstractTask>> data_tasks = {
+            m_info_task_ptr,       m_mfg_task_ptr,
+            m_mfg_info_task_ptr,   m_trade_task_ptr,
+            m_power_task_ptr,      m_control_task_ptr,
+            m_reception_task_ptr,  m_office_task_ptr,
+            m_processing_task_ptr, m_training_task_ptr,
+            m_recycle_task_ptr,    m_dorm_task_ptr,
+            m_dorm_task_ptr_post,  m_assistant_change_task_ptr,
+        };
+        for (const auto& task : data_tasks) {
+            task->set_task_data(m_task_data);
         }
 
         auto append_infrast_begin = [&]() {
@@ -86,57 +138,74 @@ bool asst::InfrastTask::set_params(const json::value& params)
 
         m_subtasks.emplace_back(m_info_task_ptr);
 
-        const std::unordered_set<std::string> rotation_skip_facilities = { "Dorm", "Power", "Office", "Control" };
+        auto add_facility = [&](const std::shared_ptr<InfrastAbstractTask>& task) {
+            m_subtasks.emplace_back(task);
+            append_infrast_begin();
+        };
 
+        auto get_task = [&](infrast::FacilityStep step) -> std::shared_ptr<InfrastAbstractTask> {
+            switch (step) {
+            case infrast::FacilityStep::DormPrepare:
+                return m_dorm_task_ptr;
+            case infrast::FacilityStep::DormRearrange:
+                return m_dorm_task_ptr_post;
+            case infrast::FacilityStep::MfgInspect:
+                return m_mfg_info_task_ptr;
+            case infrast::FacilityStep::Mfg:
+                return m_mfg_task_ptr;
+            case infrast::FacilityStep::Trade:
+                return m_trade_task_ptr;
+            case infrast::FacilityStep::Power:
+                return m_power_task_ptr;
+            case infrast::FacilityStep::Office:
+                return m_office_task_ptr;
+            case infrast::FacilityStep::ControlForce:
+                return m_control_task_ptr;
+            case infrast::FacilityStep::Reception:
+                return m_reception_task_ptr;
+            case infrast::FacilityStep::Processing:
+                return m_processing_task_ptr;
+            case infrast::FacilityStep::Training:
+                return m_training_task_ptr;
+            case infrast::FacilityStep::Recycle:
+                return m_recycle_task_ptr;
+            case infrast::FacilityStep::AssistantChange:
+                return m_assistant_change_task_ptr;
+            }
+            return nullptr;
+        };
+
+        std::vector<std::string> facilities;
+        facilities.reserve(facility_opt->size());
         for (const auto& facility_json : facility_opt.value()) {
             if (!facility_json.is_string()) {
                 m_subtasks.clear();
                 append_infrast_begin();
                 return false;
             }
+            facilities.emplace_back(facility_json.as_string());
+        }
 
-            std::string facility = facility_json.as_string();
-
-            if (mode == Mode::Rotation && rotation_skip_facilities.find(facility) != rotation_skip_facilities.cend()) {
-                Log.info("skip facility in rotation mode", facility);
+        const auto plan_mode = mode == Mode::Default  ? infrast::FacilityPlanMode::Default
+                               : mode == Mode::Custom ? infrast::FacilityPlanMode::Custom
+                                                      : infrast::FacilityPlanMode::Rotation;
+        const auto plan = infrast::build_facility_plan(plan_mode, facilities);
+        if (!plan) {
+            Log.error(__FUNCTION__, "| Unknown facility in configuration");
+            m_subtasks.clear();
+            append_infrast_begin();
+            return false;
+        }
+        for (const auto step : *plan) {
+            if (step == infrast::FacilityStep::DormPrepare && mode == Mode::Default && !fiammetta_recovery_enabled) {
                 continue;
             }
-
-            if (facility == "Dorm") {
-                m_subtasks.emplace_back(m_dorm_task_ptr);
-            }
-            else if (facility == "Mfg") {
-                m_subtasks.emplace_back(m_mfg_task_ptr);
-            }
-            else if (facility == "Trade") {
-                m_subtasks.emplace_back(m_trade_task_ptr);
-            }
-            else if (facility == "Power") {
-                m_subtasks.emplace_back(m_power_task_ptr);
-            }
-            else if (facility == "Office") {
-                m_subtasks.emplace_back(m_office_task_ptr);
-            }
-            else if (facility == "Reception") {
-                m_subtasks.emplace_back(m_reception_task_ptr);
-            }
-            else if (facility == "Control") {
-                m_subtasks.emplace_back(m_control_task_ptr);
-            }
-            else if (facility == "Processing") {
-                m_subtasks.emplace_back(m_processing_task_ptr);
-            }
-            else if (facility == "Training") {
-                m_subtasks.emplace_back(m_training_task_ptr);
-            }
-            else {
-                Log.error(__FUNCTION__, "| Unknown facility", facility);
-                m_subtasks.clear();
-                append_infrast_begin();
-                return false;
-            }
-            append_infrast_begin();
+            // 贸易站评分依赖赤金生产线数量。制造站未启用时只读取产品类型，
+            // 不进入干员选择，也不执行无人机或补货操作。
+            add_facility(get_task(step));
         }
+        m_info_task_ptr->set_layout_required(mode == Mode::Default);
+        m_info_task_ptr->set_ignore_error(mode != Mode::Default);
     }
 
     bool continue_training = params.get("continue_training", false);
@@ -158,13 +227,36 @@ bool asst::InfrastTask::set_params(const json::value& params)
     m_reception_task_ptr->set_mood_threshold(threshold);
     m_office_task_ptr->set_mood_threshold(threshold);
     m_processing_task_ptr->set_mood_threshold(threshold);
+    m_recycle_task_ptr->set_mood_threshold(threshold);
     m_dorm_task_ptr->set_mood_threshold(threshold);
+    m_dorm_task_ptr_post->set_mood_threshold(threshold);
+    // 训练室协助者候补同按生产类语义过滤低心情（低于阈值跳过）
+    m_training_task_ptr->set_mood_threshold(threshold);
 
     bool dorm_notstationed_enabled = params.get("dorm_notstationed_enabled", false);
     m_dorm_task_ptr->set_notstationed_enabled(dorm_notstationed_enabled);
 
     bool dorm_trust_enabled = params.get("dorm_trust_enabled", false);
     m_dorm_task_ptr->set_trust_enabled(dorm_trust_enabled);
+    m_dorm_task_ptr_post->set_notstationed_enabled(dorm_notstationed_enabled);
+    m_dorm_task_ptr_post->set_trust_enabled(dorm_trust_enabled);
+
+    const bool default_mode = mode == Mode::Default;
+    const auto fiammetta_targets =
+        default_mode && fiammetta_recovery_enabled
+            ? infrast::normalize_fiammetta_targets(params.get("fiammetta_targets", std::vector<std::string> {}))
+            : std::vector<std::string> {};
+    m_dorm_task_ptr->set_fiammetta_targets(fiammetta_targets);
+    const bool pinus_sylvestris_enabled = default_mode && params.get("use_pinus_sylvestris", false);
+    const bool perception_information_enabled = default_mode && params.get("use_perception_information", false);
+    const bool worldly_plight_enabled = default_mode && params.get("use_worldly_plight", false);
+    const bool abyssal_hunter_enabled = default_mode && params.get("use_abyssal_hunter", false);
+    for (const auto& task : selection_tasks) {
+        task->set_pinus_sylvestris_enabled(pinus_sylvestris_enabled);
+        task->set_perception_information_enabled(perception_information_enabled);
+        task->set_worldly_plight_enabled(worldly_plight_enabled);
+        task->set_abyssal_hunter_enabled(abyssal_hunter_enabled);
+    }
 
     bool reception_message_board = params.get("reception_message_board", true);
     m_reception_task_ptr->set_receive_message_board(reception_message_board);
@@ -208,34 +300,34 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
     LogTraceFunction;
 
     if (!std::filesystem::exists(path) || !std::filesystem::is_regular_file(path)) {
-        Log.error("custom infrast file does not exist:", path);
+        LogError << "custom infrast file does not exist:" << path;
         return false;
     }
 
     auto custom_json_opt = json::open(path, true, true);
     if (!custom_json_opt) {
-        Log.error("failed to open json file:", path);
+        LogError << "failed to open json file:" << path;
         return false;
     }
     auto& custom_json = custom_json_opt.value();
-    Log.trace(__FUNCTION__, "| custom json:", custom_json.to_string());
+    LogTrace << __FUNCTION__ << "| custom json:" << custom_json.to_string();
 
     auto& all_plans = custom_json.at("plans").as_array();
     if (index < 0 || index >= int(all_plans.size())) {
-        Log.error("index is out of range, plans size:", all_plans.size(), ", index:", index);
+        LogError << "index is out of range, plans size:" << all_plans.size() << ", index:" << index;
         return false;
     }
     auto& cur_plan = all_plans.at(index);
 
-    // 录入干员编组
-    std::unordered_map<std::string, std::vector<std::string>> ori_operator_groups;
+    // 录入干员编组；保序容器，匹配顺序即此处的录入顺序
+    std::vector<std::pair<std::string, std::vector<std::string>>> ori_operator_groups;
     if (auto opt = cur_plan.find<json::array>("groups")) {
         for (const auto& group_info : opt.value()) {
             std::vector<std::string> oper_group;
             for (const auto& oper_info : group_info.at("operators").as_array()) {
                 oper_group.emplace_back(oper_info.as_string());
             }
-            ori_operator_groups.emplace(group_info.at("name").as_string(), std::move(oper_group));
+            ori_operator_groups.emplace_back(group_info.at("name").as_string(), std::move(oper_group));
         }
     }
 
@@ -263,8 +355,8 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
                     room_config.product = iter->second;
                 }
                 else {
-                    Log.error("Unknown product", product);
-                    return false;
+                    // 兼容配置表先于 Core 更新，未知产物保留默认 Unknown，该房间照常换人但不校验、不更换产物
+                    LogWarn << __FUNCTION__ << "Unknown product, keep as Unknown:" << product;
                 }
             }
 
@@ -273,23 +365,34 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
                 for (const auto& oper_name : opers_opt.value()) {
                     std::string name = oper_name.as_string();
                     if (name.empty()) {
-                        Log.warn("operators.name is empty");
+                        LogWarn << "operators.name is empty";
                         continue;
                     }
                     room_config.names.emplace_back(std::move(name));
                 }
                 if (room_config.use_operator_groups) {
-                    // 将引用了的干员编组，装载到对应房间配置
+                    // 将引用了的干员编组，装载到对应房间配置（按 groups 定义顺序）
                     // name数组此后可以作废
                     std::set<std::string> name_set;
                     name_set.insert(room_config.names.begin(), room_config.names.end());
                     std::ranges::for_each(
                         ori_operator_groups,
-                        [name_set, &room_config](std::pair<std::string, std::vector<std::string>> pair) {
+                        [name_set, &room_config](const std::pair<std::string, std::vector<std::string>>& pair) {
                             if (name_set.contains(pair.first)) {
-                                room_config.operator_groups[pair.first] = std::move(pair.second);
+                                // 拷贝而非移动：ori 是全计划共享的模板，后续房间还会引用同名组
+                                room_config.operator_groups.emplace_back(pair.first, pair.second);
                             }
                         });
+                    for (const auto& name : name_set) {
+                        const auto defined = std::ranges::any_of(
+                            room_config.operator_groups,
+                            [&name](const std::pair<std::string, std::vector<std::string>>& pair) {
+                                return pair.first == name;
+                            });
+                        if (!defined) {
+                            LogWarn << __FUNCTION__ << " operator group not defined in groups: " << name;
+                        }
+                    }
                 }
             }
 
@@ -298,10 +401,37 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
                 for (const auto& candidate_name : candidates_opt.value()) {
                     std::string name = candidate_name.as_string();
                     if (name.empty()) {
-                        Log.warn("operators.candidates is empty");
+                        LogWarn << "operators.candidates is empty";
                         continue;
                     }
                     room_config.candidates.emplace_back(std::move(name));
+                }
+            }
+
+            // 训练室的双槽位字段：operatorsA 为协助者候选池，operatorsB 为训练位干员候选池，仅训练室解析。
+            // 与 is_room_config_without_intent 的空意图判定联动，必须只在训练室解析：
+            // 其他设施误写这两个字段时不解析、trainee_names/assistant_names 恒空，误写房间仍判空意图保持原样；
+            // 若无条件解析，空意图判定会把误写 operatorsA 的房间翻成 Shift，走默认算法整房换血
+            if (facility == "training") {
+                if (auto trainees_opt = room_info.find<json::array>("operatorsB")) {
+                    for (const auto& trainee_name : trainees_opt.value()) {
+                        std::string name = trainee_name.as_string();
+                        if (name.empty()) {
+                            LogWarn << "operatorsB.name is empty";
+                            continue;
+                        }
+                        room_config.trainee_names.emplace_back(std::move(name));
+                    }
+                }
+                if (auto assistants_opt = room_info.find<json::array>("operatorsA")) {
+                    for (const auto& assistant_name : assistants_opt.value()) {
+                        std::string name = assistant_name.as_string();
+                        if (name.empty()) {
+                            LogWarn << "operatorsA.name is empty";
+                            continue;
+                        }
+                        room_config.assistant_names.emplace_back(std::move(name));
+                    }
                 }
             }
             facility_config.emplace_back(std::move(room_config));
@@ -332,9 +462,16 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
         else if (facility == "dormitory") {
             m_dorm_task_ptr->set_custom_config(facility_config);
         }
+        else if (facility == "training") {
+            m_training_task_ptr->set_custom_config(facility_config);
+        }
+        else if (facility == "recycle") {
+            m_recycle_task_ptr->set_custom_config(facility_config);
+        }
         else {
-            Log.error(__FUNCTION__, "unknown facility", facility);
-            return false;
+            // 兼容游戏新增设施、配置表先于 MAA 适配的场景，不认识的设施类型直接跳过，不影响已知设施
+            LogWarn << __FUNCTION__ << "unknown facility, skip:" << facility;
+            continue;
         }
     }
 
@@ -352,10 +489,10 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
         }
         std::string target = Fia_json.get("target", std::string());
         if (target.empty()) {
-            Log.warn("Fiammetta's target is unsetted or empty");
+            LogWarn << "Fiammetta's target is unsetted or empty";
             break;
         }
-        Log.trace("Fiammetta's target:", target);
+        LogTrace << "Fiammetta's target:" << target;
 
         static const std::string FiaName = "菲亚梅塔";
 
@@ -366,6 +503,8 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
         pre_room_config.names = { target };
         auto pre_task_ptr = std::make_shared<InfrastDormTask>(m_callback, m_inst, TaskType);
         pre_task_ptr->set_custom_config(std::move(pre_facility_config));
+        // 只配 1 间但宿舍循环会跑满全部房间，越界 break 是正常终止，不发面向用户的未配置提示
+        pre_task_ptr->set_suppress_unconfigured_notice(true);
 
         infrast::CustomFacilityConfig facility_config(1);
         auto& room_config = facility_config.front();
@@ -374,6 +513,8 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
 
         auto Fia_task_ptr = std::make_shared<InfrastDormTask>(m_callback, m_inst, TaskType);
         Fia_task_ptr->set_custom_config(std::move(facility_config));
+        // 同上：单间配置跑满宿舍循环，越界为正常终止
+        Fia_task_ptr->set_suppress_unconfigured_notice(true);
 
         if (Fia_json.get("order", "pre") != "post") {
             m_subtasks.insert(m_subtasks.begin(), { m_infrast_begin_task_ptr, pre_task_ptr, Fia_task_ptr });
@@ -402,11 +543,11 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
         bool additional_advance_drones = Fia_is_pre && drones_config.order == infrast::CustomDronesConfig::Order::Pre;
         std::string room = drones_json.get("room", std::string());
         if (room.empty()) {
-            Log.warn("drones room is unsetted or empty");
+            LogWarn << "drones room is unsetted or empty";
             break;
         }
         else if (room != "trading" && room != "manufacture") {
-            Log.error("error drones config, unknown room", room);
+            LogError << "error drones config, unknown room" << room;
             return false;
         }
 
@@ -423,6 +564,8 @@ bool asst::InfrastTask::parse_and_set_custom_config(const std::filesystem::path&
             drones_only_task_ptr->set_custom_config(
                 infrast::CustomFacilityConfig(drones_config.index + 1, infrast::CustomRoomConfig { .skip = true }));
             drones_only_task_ptr->set_custom_drones_config(std::move(drones_config));
+            // 只配到无人机目标间数，后续房间越界 break 是正常终止，不发面向用户的未配置提示
+            drones_only_task_ptr->set_suppress_unconfigured_notice(true);
             m_subtasks.insert(m_subtasks.begin(), { m_infrast_begin_task_ptr, drones_only_task_ptr });
         }
         else {

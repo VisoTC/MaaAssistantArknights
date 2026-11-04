@@ -7,12 +7,12 @@ icon: material-symbols:task
 
 Usage of `resource/tasks` and description of each field
 
-::: tip
-It is recommended to use [Visual Studio Code](https://code.visualstudio.com/) and install [Maa Pipeline Support](https://marketplace.visualstudio.com/items?itemName=nekosu.maa-support) extension for efficient editing. For more details, please visit the extension's homepage and the [docs](../develop/vsc-ext-tutorial.md).
+::: tip  
+It is recommended to use [Visual Studio Code](https://code.visualstudio.com/) and install [Maa Pipeline Support](https://marketplace.visualstudio.com/items?itemName=nekosu.maa-support) extension for efficient editing. For more details, please visit the extension's homepage and the [docs](../develop/vsc-ext-tutorial.md).  
 :::
 
-::: warning
-Please note that JSON files do not support comments. The comments in this document are for demonstration purposes only. Do not copy them directly into your JSON files.
+::: warning  
+Please note that JSON files do not support comments. The comments in this document are for demonstration purposes only. Do not copy them directly into your JSON files.  
 :::
 
 ## Complete Field Reference
@@ -55,6 +55,7 @@ Please note that JSON files do not support comments. The comments in this docume
                                             // For identical tasks, second recognition won't occur after first:
                                             //     "next": [ "A", "B", "A", "A" ] -> "next": [ "A", "B" ]
                                             // JustReturn type tasks must not be in non-last positions
+                                            // If the list contains undefined task names, an UnknownTask error is reported back before recognition starts and the whole task chain is stopped
 
         "maxTimes": 10,                     // Optional, maximum execution count for this task
                                             // Default is infinity when not specified
@@ -74,9 +75,9 @@ Please note that JSON files do not support comments. The comments in this docume
                                             // Auto-scales to 1280 * 720 resolution; default [0, 0, 1280, 720] when not specified
                                             // Try to specify this to reduce recognition area, improve performance and recognition speed
 
-        "cache": true,                      // Optional, whether to use cache for this task, default true
-                                            // After first recognition, will always check at same position, greatly improves performance
-                                            // Only suitable for targets whose position never changes, set false if target position may change
+        "cache": false,                     // Optional, whether to use cache for this task, default false
+                                            // When enabled, after the first recognition the task will always check at the same position as the first recognition, greatly improves performance
+                                            // Only suitable for targets whose position never changes, keep the default false if the target position may change
 
         "rectMove": [0, 0, 0, 0],           // Optional, target movement after recognition, not recommended. Auto-scales to 1280 * 720
                                             // For example, if A is recognized but actual click target is 10 pixels below in 5 * 2 area,
@@ -91,10 +92,11 @@ Please note that JSON files do not support comments. The comments in this docume
                                             // Required when action is ClickRect, indicates specified click area (random point within)
                                             // Required when action is Swipe, indicates starting point
                                             // Auto-scales to 1280 * 720 resolution
-                                            // When algorithm is "OcrDetect", specificRect[0] and specificRect[1] represent grayscale threshold limits
 
         "specialParams": [int, ...],        // Parameters for special recognizers
-                                            // Optional when action is Swipe, [0] for duration, [1] for extra swipe toggle
+                                            // Optional when action is Swipe, [0] for duration, [1] for the extra swipe direction (0 disabled, 1/2/3/4 for up/down/left/right),
+                                            // [2] and [3] for the ease-in and ease-out slopes of the swipe trajectory, need to be multiplied by 10, both default to 10
+                                            // If you want normal ease-in and ease-out, [2] and [3] are recommended to be 37 and 1 respectively
 
         "highResolutionSwipeFix": false,    // Optional, whether to enable high-resolution swipe fix
                                             // Currently only needed for stage navigation which doesn't use unity swipe method
@@ -130,6 +132,10 @@ Please note that JSON files do not support comments. The comments in this docume
                                             // Suitable for scenarios where color features are distinct but template matching performs poorly
                                             // When using this option, it is recommended to correspondingly increase the templThreshold
 
+        "nmsDistance": 0,                   // Optional, deduplication radius for multiple template matching results, in pixels, default 0
+                                            // When both horizontal and vertical coordinate differences of two hits are less than this value, only the highest-scoring one is kept
+                                            // 0 or unset means half of the shorter side of the template
+
         "method": "Ccoeff",                 // Optional, template matching algorithm, can be list
                                             // Default is Ccoeff when not specified
                                             //      - Ccoeff:       Color-insensitive template matching, corresponds to cv::TM_CCOEFF_NORMED
@@ -152,8 +158,17 @@ Please note that JSON files do not support comments. The comments in this docume
                                             // When false, substring is sufficient: e.g., text: [ "开始" ], recognized "开始行动" is success
                                             // When true, must recognize exactly "开始", not one character more
 
+        "replaceFull": false,               // Optional, whether ocrReplace replaces the entire recognized text on match, default false
+                                            // When false, only the matched substring is replaced; when true, if the entire text matches any replacement rule, the whole text is replaced with that rule's replacement value
+
         "isAscii": false,                   // Optional, whether text content is ASCII characters
                                             // Default false
+
+        "orderBy": "None",                  // Optional, ordering of results when there are multiple matches (omit to inherit baseTask; no base = no reorder, recognition order)
+                                            //      - None:         no reorder (recognition order); write explicitly to override an ordering set by base
+                                            //      - Horizontal:   row-major (left-to-right within a row)
+                                            //      - Vertical:     column-major (top-to-bottom within a column)
+                                            //      - Score:        by score from high to low
 
         "withoutDet": false,                // Optional, whether to skip detection model
                                             // Default false
@@ -194,14 +209,14 @@ Please note that JSON files do not support comments. The comments in this docume
 
 Task list type fields (`sub`, `next`, `onErrorNext`, `exceededNext`, `reduceOtherTimes`) support expression calculations.
 
-|    Symbol    |                                         Meaning                                          |                 Example                 |
+| Symbol | Meaning | Example |
 | :----------: | :--------------------------------------------------------------------------------------: | :-------------------------------------: |
-|     `@`      |                                      `@`-type Task                                       |            `Fight@ReturnTo`             |
-| `#` (unary)  |                                       Virtual task                                       |                 `#self`                 |
-| `#` (binary) |                                       Virtual task                                       |          `StartUpThemes#next`           |
-|     `*`      |                                       Repeat tasks                                       | `(ClickCornerAfterPRTS+ClickCorner)*10` |
-|     `+`      | Task list merge (in next-type attributes, only first occurrence of same-name tasks kept) |                  `A+B`                  |
-|     `^`      |             Task list difference (in first but not second, order preserved)              |   `(A+A+B+C)^(A+B+D)` (result is `C`)   |
+| `@` | `@`-type Task | `Fight@ReturnTo` |
+| `#` (unary) | Virtual task | `#self` |
+| `#` (binary) | Virtual task | `StartUpThemes#next` |
+| `*` | Repeat tasks | `(ClickCornerAfterPRTS+ClickCorner)*10` |
+| `+` | Task list merge (in next-type attributes, only first occurrence of same-name tasks kept) | `A+B` |
+| `^` | Task list difference (in first but not second, order preserved) | `(A+A+B+C)^(A+B+D)` (result is `C`) |
 
 Operators `@`, `#`, `*`, `+`, `^` have precedence: `#` (unary) > `@` = `#` (binary) > `*` > `+` = `^`.
 
@@ -241,12 +256,12 @@ Virtual tasks are tasks of the form `"#{sharp_type}"` or `"B#{sharp_type}"`, whe
 
 Virtual tasks can be divided into **command virtual tasks** (`#none` / `#self` / `#back`) and **field virtual tasks** (`#next`, etc.).
 
-| Virtual Task Type |                       Meaning                       |                                                                    Simple example                                                                     |
+| Virtual Task Type | Meaning | Simple example |
 | :---------------: | :-------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------: |
-|       none        |                     Empty Task                      |  Skip directly<sup>1</sup><br>`"A": {"next": ["#none", "T1"]}` is interpreted as `"A": {"next": ["T1"]}`<br>`"A#none + T1"` is interpreted as `"T1"`  |
-|       self        |                  Current Task Name                  | `"A": {"next": "#self"}` in `"#self"` is interpreted as `"A"`<br>`"B": {"next": "A@B@C#self"}` in `"A@B@C#self"` is interpreted as `"B"`.<sup>2</sup> |
-|       back        |                # Preceding task name                |                        `"A@B#back"` is interpreted as `"A@B"`<br>`"#back"` will be skipped if it appears directly<sup>3</sup>                         |
-|  next, sub, etc.  | # The field corresponding to the previous task name |          Take `next` for example:<br>`"A#next"` is interpreted as `Task.get("A")->next`<br>`"#next"` will be skipped if it appears directly           |
+| none | Empty Task | Skip directly<sup>1</sup><br>`"A": {"next": ["#none", "T1"]}` is interpreted as `"A": {"next": ["T1"]}`<br>`"A#none + T1"` is interpreted as `"T1"` |
+| self | Current Task Name | `"A": {"next": "#self"}` in `"#self"` is interpreted as `"A"`<br>`"B": {"next": "A@B@C#self"}` in `"A@B@C#self"` is interpreted as `"B"`.<sup>2</sup> |
+| back | # Preceding task name | `"A@B#back"` is interpreted as `"A@B"`<br>`"#back"` will be skipped if it appears directly<sup>3</sup> |
+| next, sub, etc. | # The field corresponding to the previous task name | Take `next` for example:<br>`"A#next"` is interpreted as `Task.get("A")->next`<br>`"#next"` will be skipped if it appears directly |
 
 _Note<sup>1</sup>: `"#none"` generally used in conjunction with the template task to add prefixes, or used in the `baseTask` field to avoid unnecessary fields in multi-file inheritance._
 
@@ -436,7 +451,7 @@ This project configures JSON schema validation for `tasks.json`, schema file is 
 
 ### Visual Studio
 
-Configured in `MaaCore.vcxporj`, works out of the box. Prompts are somewhat cryptic with some missing information.
+Configured in `MaaCore.vcxproj`, works out of the box. Prompts are somewhat cryptic with some missing information.
 
 ### Visual Studio Code
 

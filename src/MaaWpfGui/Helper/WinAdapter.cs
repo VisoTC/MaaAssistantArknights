@@ -1,6 +1,6 @@
 // <copyright file="WinAdapter.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -18,6 +18,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management;
+using MaaWpfGui.Constants.Enums;
 using Microsoft.Win32;
 using Serilog;
 
@@ -30,39 +32,42 @@ public class WinAdapter
 {
     private static readonly ILogger _logger = Log.ForContext<WinAdapter>();
 
-    public sealed class DetectedEmulatorInfo(string emulatorName, string? adbPath)
+    public sealed class DetectedEmulatorInfo(ConnectConfig emulatorName, string? adbPath, string? address = null)
     {
-        public string EmulatorName { get; } = emulatorName;
+        public ConnectConfig EmulatorName { get; } = emulatorName;
 
         public string? AdbPath { get; } = adbPath;
 
-        public string SelectionDisplayText => string.IsNullOrEmpty(AdbPath)
-            ? EmulatorName
-            : $"{EmulatorName} ({AdbPath})";
+        public string? Address { get; } = address;
+
+        public string SelectionDisplayText => (string.IsNullOrEmpty(AdbPath)
+            ? EmulatorName.ToString()
+            : $"{EmulatorName} ({AdbPath})") + (Address == null ? string.Empty : $" - {Address}");
     }
 
-    private static readonly Dictionary<string, string> _emulatorIdDict = new()
+    private static readonly Dictionary<string, ConnectConfig> _emulatorIdDict = new()
     {
-        { "HD-Player", "BlueStacks" },
-        { "dnplayer", "LDPlayer" },
-        { "Nox", "Nox" },
-        { "MuMuPlayer", "MuMuEmulator12" },
-        { "MuMuNxDevice", "MuMuEmulator12" },
-        { "MEmu", "XYAZ" },
+        { "HD-Player", ConnectConfig.BlueStacks },
+        { "dnplayer", ConnectConfig.LDPlayer },
+        { "Nox", ConnectConfig.Nox },
+        { "MuMuPlayer", ConnectConfig.MuMuEmulator12 },
+        { "MuMuNxDevice", ConnectConfig.MuMuEmulator12 },
+        { "nemux-shell-winui", ConnectConfig.MuMuArm },
+        { "MEmu", ConnectConfig.XYAZ },
     };
 
-    private static readonly Dictionary<string, List<string>> _adbRelativePathDict = new()
+    private static readonly Dictionary<ConnectConfig, List<string>> _adbRelativePathDict = new()
     {
         {
-            "BlueStacks", [
+            ConnectConfig.BlueStacks, [
                 @".\HD-Adb.exe",
                 @".\Engine\ProgramFiles\HD-Adb.exe"
             ]
         },
-        { "LDPlayer", [@".\adb.exe"] },
-        { "Nox", [@".\nox_adb.exe"] },
+        { ConnectConfig.LDPlayer, [@".\adb.exe"] },
+        { ConnectConfig.Nox, [@".\nox_adb.exe"] },
         {
-            "MuMuEmulator12", [
+            ConnectConfig.MuMuEmulator12, [
                 @"..\..\..\nx_main\adb.exe",
 
                 @"..\vmonitor\bin\adb_server.exe",
@@ -70,7 +75,8 @@ public class WinAdapter
                 @".\adb.exe"
             ]
         },
-        { "XYAZ", [@".\adb.exe"] },
+        { ConnectConfig.XYAZ, [@".\adb.exe"] },
+        { ConnectConfig.MuMuArm, [@".\adb.exe"] },
     };
 
     /// <summary>
@@ -89,21 +95,47 @@ public class WinAdapter
                 continue;
             }
 
-            var adbPath = GetAdbPathByProcessPath(process.MainModule?.FileName, emulatorId);
-            var detectionKey = $"{emulatorId}\n{adbPath}";
+            var processPath = process.MainModule?.FileName;
+            var adbPath = GetAdbPathByProcessPath(processPath, emulatorId);
+            var address = emulatorId == ConnectConfig.MuMuArm
+                ? GetMuMuArmAddress(process.Id, processPath)
+                : null;
+            var detectionKey = $"{emulatorId}\n{adbPath}\n{address}";
             if (detectedEmulators.Add(detectionKey))
             {
-                emulators.Add(new DetectedEmulatorInfo(emulatorId, adbPath));
+                emulators.Add(new DetectedEmulatorInfo(emulatorId, adbPath, address));
             }
         }
 
         var androwsAdbPath = GetAndrowsAdbPathFromRegistry();
         if (androwsAdbPath != null && detectedEmulators.Add($"Androws\n{androwsAdbPath}"))
         {
-            emulators.Add(new DetectedEmulatorInfo("Androws", androwsAdbPath));
+            emulators.Add(new DetectedEmulatorInfo(ConnectConfig.Androws, androwsAdbPath));
         }
 
         return emulators;
+    }
+
+    private static string? GetMuMuArmAddress(int processId, string? processPath)
+    {
+        try
+        {
+            using var searcher = new ManagementObjectSearcher($"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {processId}");
+            using var results = searcher.Get();
+            foreach (ManagementObject result in results)
+            {
+                using (result)
+                {
+                    return MuMuArmConnection.GetAddress(processPath, result["CommandLine"] as string);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.Warning(e, "Failed to read MuMu ARM process command line for {ProcessId}", processId);
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -150,7 +182,7 @@ public class WinAdapter
     /// <param name="processPath">The emulator executable path.</param>
     /// <param name="emulatorName">The name of the emulator.</param>
     /// <returns>The ADB path of the emulator.</returns>
-    private static string? GetAdbPathByProcessPath(string? processPath, string emulatorName)
+    private static string? GetAdbPathByProcessPath(string? processPath, ConnectConfig emulatorName)
     {
         var processDirectory = Path.GetDirectoryName(processPath);
         if (string.IsNullOrEmpty(processDirectory))

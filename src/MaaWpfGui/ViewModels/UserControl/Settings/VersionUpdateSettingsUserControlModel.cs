@@ -1,6 +1,6 @@
 // <copyright file="VersionUpdateSettingsUserControlModel.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -19,21 +19,27 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using JetBrains.Annotations;
+using MaaWpfGui.Configuration.Factory;
 using MaaWpfGui.Constants;
+using MaaWpfGui.Constants.Enums;
 using MaaWpfGui.Extensions;
 using MaaWpfGui.Helper;
 using MaaWpfGui.Models;
 using MaaWpfGui.Properties;
 using MaaWpfGui.Services;
+using MaaWpfGui.Utilities;
 using MaaWpfGui.Utilities.ValueType;
 using MaaWpfGui.ViewModels.Dialogs;
 using MaaWpfGui.ViewModels.UI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
 using Stylet;
+using static MaaWpfGui.Models.UpdateCredentialModel;
 
 namespace MaaWpfGui.ViewModels.UserControl.Settings;
 
@@ -42,9 +48,65 @@ namespace MaaWpfGui.ViewModels.UserControl.Settings;
 /// </summary>
 public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
 {
+    private static readonly ILogger _logger = Log.ForContext<VersionUpdateSettingsUserControlModel>();
+
     static VersionUpdateSettingsUserControlModel()
     {
         Instance = new();
+        LocalizationHelper.LanguageChanged += Instance.RefreshLocalization;
+    }
+
+    public VersionUpdateSettingsUserControlModel()
+    {
+        GitHubCredential = new(
+            SimpleEncryptionHelper.Decrypt(ConfigFactory.Root.Update.GitHubToken),
+            ConfigFactory.Root.Update.GitHubTokenExpiresAt,
+            UpdateCredentialStatus.None,
+            new("Settings.Update.GitHub.Token.Checking", "Settings.Update.GitHub.Token.Invalid",
+                "Settings.Update.GitHub.Token.Expired", "Settings.Update.GitHub.Token.Failed",
+                "Settings.Update.GitHub.Token.RemainingDays", "Settings.Update.GitHub.Token.NeverExpires"),
+            () => UpdateSource == UpdateSource.GitHub,
+            value => value.Length == (value.StartsWith("github_pat_", StringComparison.Ordinal) ? 93 : 40),
+            value => {
+                if (SimpleEncryptionHelper.TryEncrypt(value, out var encryptedValue))
+                {
+                    ConfigFactory.Root.Update.GitHubToken = encryptedValue;
+                }
+            },
+            (expiresAt, _) => ConfigFactory.Root.Update.GitHubTokenExpiresAt = expiresAt,
+            revision => QueueCredentialUpdate(UpdateSource.GitHub, revision));
+
+        long mirrorExpiration = ConfigFactory.Root.Update.MirrorChyanCdkExpiredTime;
+        MirrorChyanCredential = new(
+            SimpleEncryptionHelper.Decrypt(ConfigFactory.Root.Update.MirrorChyanCdk),
+            MirrorChyanUpdateHelper.ParseExpiration(mirrorExpiration.ToString()),
+            mirrorExpiration == 1 ? UpdateCredentialStatus.Expired : UpdateCredentialStatus.None,
+            new("Settings.Update.MirrorChyan.Checking", "VersionUpdate.MirrorChyan.CdkInvalid",
+                "VersionUpdate.MirrorChyan.CdkExpired", "Settings.Update.MirrorChyan.ValidationFailed",
+                "Settings.Update.MirrorChyan.CdkRemainingDays", UnknownExpiration: "Settings.Update.MirrorChyan.ExpirationUnknown"),
+            () => UpdateSource == UpdateSource.MirrorChyan,
+            value => value.Length == 24,
+            value => {
+                if (SimpleEncryptionHelper.TryEncrypt(value, out var encryptedValue))
+                {
+                    ConfigFactory.Root.Update.MirrorChyanCdk = encryptedValue;
+                }
+            },
+            (expiresAt, status) => ConfigFactory.Root.Update.MirrorChyanCdkExpiredTime =
+                expiresAt?.ToUnixTimeSeconds() ?? (status == UpdateCredentialStatus.Expired ? 1 : 0),
+            revision => QueueCredentialUpdate(UpdateSource.MirrorChyan, revision));
+
+        foreach (var credential in new[] { GitHubCredential, MirrorChyanCredential })
+        {
+            credential.PropertyChanged += (_, args) => {
+                if (args.PropertyName == nameof(UpdateCredentialModel.Value) && credential == CurrentUpdateCredential)
+                {
+                    CancelPendingCredentialUpdate();
+                }
+            };
+        }
+
+        PropertyDependsOnUtility.InitializePropertyDependencies(this);
     }
 
     public static VersionUpdateSettingsUserControlModel Instance { get; }
@@ -68,9 +130,11 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
     }
 
     /// <summary>
-    /// Gets the core version.
+    /// Gets the core version. UI 预览模式下 Core 未加载，不触碰 native，降级为占位值。
     /// </summary>
-    private static readonly string _coreVersion = Marshal.PtrToStringAnsi(MaaService.AsstGetVersion()) ?? "0.0.1";
+    private static readonly string _coreVersion = Main.Bootstrapper.IsCoreInitSkipped
+        ? "N/A"
+        : Marshal.PtrToStringAnsi(MaaService.AsstGetVersion()) ?? "0.0.1";
 
     public static string CoreVersion => FakeUpdateHelper.IsEnabled ? FakeUpdateHelper.CurrentVersion : _coreVersion;
 
@@ -93,7 +157,7 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
 
     public static string BuildDateTimeCurrentCultureString => BuildDateTime.ToLocalTimeString();
 
-    private static (DateTimeOffset DateTime, string VersionName) _resourceInfo = GetResourceVersionByClientType(SettingsViewModel.GameSettings.ClientType);
+    private static (DateTimeOffset DateTime, string VersionName) _resourceInfo = GetResourceVersionByClientType(ConfigFactory.CurrentConfig.Gui.RuntimeSettings.ClientType);
 
     public (DateTimeOffset DateTime, string VersionName) ResourceInfo
     {
@@ -105,7 +169,7 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
 
     public string NewResourceFoundInfo
     {
-        get => field;
+        get;
         set {
             SetAndNotify(ref field, value);
             Instances.SettingsViewModel.UpdateWindowTitle();
@@ -114,7 +178,7 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
 
     public string NewVersionFoundInfo
     {
-        get => field;
+        get;
         set {
             SetAndNotify(ref field, value);
             Instances.SettingsViewModel.UpdateWindowTitle();
@@ -155,14 +219,14 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
         Instances.SettingsViewModel.UpdateWindowTitle();
     }
 
-    public static (DateTimeOffset DateTime, string VersionName) GetResourceVersionByClientType(string clientType)
+    public static (DateTimeOffset DateTime, string VersionName) GetResourceVersionByClientType(ClientType clientType)
     {
-        bool isDefaultClient = new HashSet<string> { Constants.Enums.ClientType.Official, Constants.Enums.ClientType.Bilibili }.Contains(clientType);
+        bool isDefaultClient = new HashSet<ClientType> { ClientType.Official, ClientType.Bilibili }.Contains(clientType);
 
         string defaultJsonPath = Path.Combine(PathsHelper.ResourceDir, "version.json");
         var jsonPath = isDefaultClient
             ? defaultJsonPath
-            : Path.Combine(PathsHelper.ResourceDir, $"global/{clientType}/resource/version.json");
+            : Path.Combine(PathsHelper.ResourceDir, $"global/{clientType.ToCustomString()}/resource/version.json");
 
         string versionName;
         if (!File.Exists(defaultJsonPath) || (!isDefaultClient && !File.Exists(jsonPath)))
@@ -211,196 +275,142 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
         }
     }
 
-    private UpdateVersionType _versionType = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.VersionType, UpdateVersionType.Stable);
-
     /// <summary>
     /// Gets or sets the type of version to update.
     /// </summary>
     public UpdateVersionType VersionType
     {
-        get => _versionType;
-        set {
-            SetAndNotify(ref _versionType, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.VersionType, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.Root.Update.VersionType = value;
         }
-    }
+    } = ConfigFactory.Root.Update.VersionType;
 
     /// <summary>
     /// Gets the list of the version type.
     /// </summary>
-    public List<GenericCombinedData<UpdateVersionType>> AllVersionTypeList { get; } =
-        [
-            new() { Display = LocalizationHelper.GetString("UpdateCheckNightly"), Value = UpdateVersionType.Nightly },
-            new() { Display = LocalizationHelper.GetString("UpdateCheckBeta"), Value = UpdateVersionType.Beta },
-            new() { Display = LocalizationHelper.GetString("UpdateCheckStable"), Value = UpdateVersionType.Stable },
-        ];
+    public LocalizedObservableList<UpdateVersionType> AllVersionTypeList { get; } = new(
+        (UpdateVersionType.Nightly, "Settings.Update.Channel.Nightly"),
+        (UpdateVersionType.Beta, "Settings.Update.Channel.Beta"),
+        (UpdateVersionType.Stable, "Settings.Update.Channel.Stable"));
 
     public List<GenericCombinedData<UpdateVersionType>> VersionTypeList
     {
-        get => AllVersionTypeList.Where(v => AllowNightlyUpdates || v.Value != UpdateVersionType.Nightly).ToList();
+        get => [.. AllVersionTypeList.Items.Where(v => AllowNightlyUpdates || v.Value != UpdateVersionType.Nightly)];
     }
 
-    public bool AllowNightlyUpdates { get; set; } = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.AllowNightlyUpdates, false);
-
-    private bool _hasAcknowledgedNightlyWarning = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.HasAcknowledgedNightlyWarning, false);
+    public bool AllowNightlyUpdates { get; set; } = ConfigFactory.Root.Update.AllowNightlyUpdates;
 
     public bool HasAcknowledgedNightlyWarning
     {
-        get => _hasAcknowledgedNightlyWarning;
-        set {
-            SetAndNotify(ref _hasAcknowledgedNightlyWarning, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.HasAcknowledgedNightlyWarning, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.Root.Update.HasAcknowledgedNightlyWarning = value;
         }
-    }
+    } = ConfigFactory.Root.Update.HasAcknowledgedNightlyWarning;
 
-    public List<GenericCombinedData<string>> UpdateSourceList { get; } = [
-        new() { Display = LocalizationHelper.GetString("GlobalSource"), Value = "Github" },
-        new() { Display = LocalizationHelper.GetString("MirrorChyan"), Value = "MirrorChyan" },
-    ];
-
-    private string _updateSource = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.UpdateSource, "Github");
+    public LocalizedObservableList<UpdateSource> UpdateSourceList { get; } = new(
+        (UpdateSource.GitHub, "Settings.Update.Source.Global"),
+        (UpdateSource.MirrorChyan, "Settings.Update.Source.MirrorChyan"));
 
     /// <summary>
     /// Gets or sets the type of version to update.
     /// </summary>
-    public string UpdateSource
+    public UpdateSource UpdateSource
     {
-        get => _updateSource;
-        set {
-            SetAndNotify(ref _updateSource, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.UpdateSource, value);
-        }
-    }
-
-    private bool _forceGithubGlobalSource = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.ForceGithubGlobalSource, false);
-
-    public bool ForceGithubGlobalSource
-    {
-        get => _forceGithubGlobalSource;
-        set {
-            SetAndNotify(ref _forceGithubGlobalSource, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.ForceGithubGlobalSource, value.ToString());
-        }
-    }
-
-    private string _mirrorChyanCdk = SimpleEncryptionHelper.Decrypt(ConfigurationHelper.GetGlobalValue(ConfigurationKeys.MirrorChyanCdk, string.Empty));
-
-    public string MirrorChyanCdk
-    {
-        get => _mirrorChyanCdk;
-        set {
-            if (string.IsNullOrEmpty(value))
-            {
-                MirrorChyanCdkExpiredTime = 0;
-            }
-
-            if (!SetAndNotify(ref _mirrorChyanCdk, value))
+        get; set {
+            if (!SetAndNotify(ref field, value))
             {
                 return;
             }
 
-            if (value.Length == 24)
-            {
-                Task.Run(async () => {
-                    await Instances.VersionUpdateDialogViewModel.VersionUpdateAndAskToRestartAsync();
-                    await ResourceUpdater.ResourceUpdateAndReloadAsync();
-                });
-            }
-
-            value = SimpleEncryptionHelper.Encrypt(value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.MirrorChyanCdk, value);
+            ConfigFactory.Root.Update.UpdateSource = value;
+            CancelCredentialChecks();
         }
+    } = ConfigFactory.Root.Update.UpdateSource;
+
+    private (UpdateSource Source, int Revision)? _pendingCredentialUpdate;
+    private bool _credentialUpdateRunning;
+
+    public UpdateCredentialModel GitHubCredential { get; }
+
+    public UpdateCredentialModel MirrorChyanCredential { get; }
+
+    [PropertyDependsOn(nameof(UpdateSource))]
+    public UpdateCredentialModel CurrentUpdateCredential => GetCredential(UpdateSource);
+
+    public string MirrorChyanCdk => MirrorChyanCredential.Value;
+
+    public void RefreshUpdateCredentials()
+    {
+        GitHubCredential.RefreshDisplay();
+        MirrorChyanCredential.RefreshDisplay();
     }
 
-    // 时间戳
-    private long _mirrorChyanCdkExpiredTime = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.MirrorChyanCdkExpiredTime, 0L);
+    private UpdateCredentialModel GetCredential(UpdateSource source) =>
+        source == UpdateSource.GitHub ? GitHubCredential : MirrorChyanCredential;
 
-    // 0 表示未设置，1 表示未设置且已过期
-    public long MirrorChyanCdkExpiredTime
+    private void CancelPendingCredentialUpdate()
     {
-        get => _mirrorChyanCdkExpiredTime;
-        set {
-            if (!SetAndNotify(ref _mirrorChyanCdkExpiredTime, value))
-            {
-                return;
-            }
+        _pendingCredentialUpdate = null;
+    }
 
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.MirrorChyanCdkExpiredTime, value.ToString());
-            RefreshMirrorChyanCdkRemaining();
+    private void QueueCredentialUpdate(UpdateSource source, int revision)
+    {
+        var credential = GetCredential(source);
+        if (source != UpdateSource || revision != credential.Revision || string.IsNullOrEmpty(credential.Value))
+        {
+            return;
         }
+
+        _pendingCredentialUpdate = (source, revision);
+        TryStartPendingCredentialUpdate();
     }
 
-    private bool _mirrorChyanCdkFetchFailed = false;
-
-    public bool MirrorChyanCdkFetchFailed
+    private void TryStartPendingCredentialUpdate()
     {
-        get => _mirrorChyanCdkFetchFailed;
-        set => SetAndNotify(ref _mirrorChyanCdkFetchFailed, value);
-    }
-
-    public DateTimeOffset MirrorChyanCdkExpiredDateTime => DateTimeOffset.FromUnixTimeSeconds(MirrorChyanCdkExpiredTime);
-
-    public DateTime MirrorChyanCdkExpiredLocalTime => MirrorChyanCdkExpiredDateTime.LocalDateTime;
-
-    /// <summary>
-    /// Gets 剩余时间
-    /// </summary>
-    public TimeSpan MirrorChyanCdkRemaining => MirrorChyanCdkExpiredDateTime - DateTimeOffset.Now;
-
-    /// <summary>
-    /// Gets a value indicating whether 是否已过期
-    /// </summary>
-    public bool IsMirrorChyanCdkExpired => MirrorChyanCdkRemaining.TotalSeconds <= 0;
-
-    /// <summary>
-    /// Gets 显示用的剩余时间提示
-    /// </summary>
-    public string MirrorChyanCdkRemainingText =>
-        MirrorChyanCdkExpiredTime != 0
-        ? IsMirrorChyanCdkExpired
-            ? LocalizationHelper.GetString("MirrorChyanCdkExpired")
-            : LocalizationHelper.GetStringFormat("MirrorChyanCdkRemainingDays",
-                            MirrorChyanCdkRemaining.TotalDays.ToString("F1"))
-        : string.Empty;
-
-    /// <summary>
-    /// Gets uI 显示用颜色
-    /// </summary>
-    public string MirrorChyanCdkRemainingBrush
-    {
-        get {
-            if (IsMirrorChyanCdkExpired)
-            {
-                return UiLogColor.Error;
-            }
-
-            if (MirrorChyanCdkRemaining.TotalDays <= 7)
-            {
-                return UiLogColor.Warning;
-            }
-
-            return UiLogColor.Success;
+        if (IsCheckingForUpdates || _credentialUpdateRunning || _pendingCredentialUpdate is not { } pending)
+        {
+            return;
         }
+
+        CancelPendingCredentialUpdate();
+        var credential = GetCredential(pending.Source);
+        if (pending.Source != UpdateSource || pending.Revision != credential.Revision || string.IsNullOrEmpty(credential.Value))
+        {
+            return;
+        }
+
+        _credentialUpdateRunning = true;
+        _ = CheckUpdatesAfterCredentialChangedAsync(pending.Source, pending.Revision);
     }
 
-    public void RefreshMirrorChyanCdkRemaining()
+    private async Task CheckUpdatesAfterCredentialChangedAsync(UpdateSource source, int revision)
     {
-        OnPropertyChanged(nameof(MirrorChyanCdkExpiredDateTime));
-        OnPropertyChanged(nameof(MirrorChyanCdkRemaining));
-        OnPropertyChanged(nameof(IsMirrorChyanCdkExpired));
-        OnPropertyChanged(nameof(MirrorChyanCdkRemainingText));
-        OnPropertyChanged(nameof(MirrorChyanCdkRemainingBrush));
-        OnPropertyChanged(nameof(MirrorChyanCdkExpiredLocalTime));
-    }
-
-    private bool _startupUpdateCheck = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.StartupUpdateCheck, true);
-
-    // UI 绑定的方法
-    [UsedImplicitly]
-    public void MirrorChyanCdkCopy()
-    {
-        Clipboard.Clear();
-        Clipboard.SetDataObject(MirrorChyanCdk);
+        var credential = GetCredential(source);
+        try
+        {
+            await Instances.VersionUpdateDialogViewModel.VersionUpdateAndAskToRestartAsync();
+            if (source == UpdateSource && revision == credential.Revision)
+            {
+                await ResourceUpdater.ResourceUpdateAndReloadAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 输入或更新源已改变，忽略旧请求。
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to check updates after credential change");
+        }
+        finally
+        {
+            await Execute.OnUIThreadAsync(() => {
+                _credentialUpdateRunning = false;
+                TryStartPendingCredentialUpdate();
+            });
+        }
     }
 
     /// <summary>
@@ -408,112 +418,139 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
     /// </summary>
     public bool StartupUpdateCheck
     {
-        get => _startupUpdateCheck;
-        set {
-            SetAndNotify(ref _startupUpdateCheck, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.StartupUpdateCheck, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.Root.Update.CheckOnStartup = value;
         }
-    }
-
-    private bool _updateAutoCheck = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.UpdateAutoCheck, false);
+    } = ConfigFactory.Root.Update.CheckOnStartup;
 
     /// <summary>
     /// Gets or sets a value indicating whether to check update.
     /// </summary>
     public bool UpdateAutoCheck
     {
-        get => _updateAutoCheck;
-        set {
-            SetAndNotify(ref _updateAutoCheck, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.UpdateAutoCheck, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.Root.Update.CheckOnSchedule = value;
         }
-    }
-
-    private string _proxy = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.UpdateProxy, string.Empty);
+    } = ConfigFactory.Root.Update.CheckOnSchedule;
 
     /// <summary>
     /// Gets or sets the proxy settings.
     /// </summary>
     public string Proxy
     {
-        get => _proxy;
-        set {
-            SetAndNotify(ref _proxy, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.UpdateProxy, value);
+        get; set {
+            if (field == value)
+            {
+                return;
+            }
+
+            ConfigFactory.Root.Update.Proxy = value;
+            SetAndNotify(ref field, value);
+            CancelCredentialChecks();
         }
-    }
+    } = ConfigFactory.Root.Update.Proxy;
 
     public List<CombinedData> ProxyTypeList { get; } =
         [
-            new() { Display = "HTTP Proxy", Value = "http" },
-            new() { Display = "SOCKS5 Proxy", Value = "socks5" },
+            new() { Display = "HTTP Proxy", Value = "Http" },
+            new() { Display = "SOCKS5 Proxy", Value = "Socks5" },
         ];
-
-    private string _proxyType = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.ProxyType, "http");
 
     public string ProxyType
     {
-        get => _proxyType;
-        set {
-            SetAndNotify(ref _proxyType, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.ProxyType, value);
-        }
-    }
+        get; set {
+            if (field == value)
+            {
+                return;
+            }
 
-    private bool _isCheckingForUpdates;
+            ConfigFactory.Root.Update.ProxyType = value;
+            SetAndNotify(ref field, value);
+            CancelCredentialChecks();
+        }
+    } = ConfigFactory.Root.Update.ProxyType;
+
+    private void CancelCredentialChecks()
+    {
+        CancelPendingCredentialUpdate();
+        GitHubCredential.CancelCheck();
+        MirrorChyanCredential.CancelCheck();
+    }
 
     /// <summary>
     /// Gets or sets a value indicating whether the update is being checked.
     /// </summary>
     public bool IsCheckingForUpdates
     {
-        get => _isCheckingForUpdates;
-        set {
-            SetAndNotify(ref _isCheckingForUpdates, value);
+        get; set {
+            if (SetAndNotify(ref field, value) && !value)
+            {
+                Execute.OnUIThread(TryStartPendingCredentialUpdate);
+            }
         }
     }
-
-    private bool _autoDownloadUpdatePackage = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.AutoDownloadUpdatePackage, true);
 
     /// <summary>
     /// Gets or sets a value indicating whether to auto download update package.
     /// </summary>
     public bool AutoDownloadUpdatePackage
     {
-        get => _autoDownloadUpdatePackage;
-        set {
-            SetAndNotify(ref _autoDownloadUpdatePackage, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.AutoDownloadUpdatePackage, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.Root.Update.AutoDownloadUpdatePackage = value;
         }
-    }
-
-    private bool _autoInstallUpdatePackage = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.AutoInstallUpdatePackage, false);
+    } = ConfigFactory.Root.Update.AutoDownloadUpdatePackage;
 
     /// <summary>
     /// Gets or sets a value indicating whether to auto install update package.
     /// </summary>
     public bool AutoInstallUpdatePackage
     {
-        get => _autoInstallUpdatePackage;
-        set {
-            SetAndNotify(ref _autoInstallUpdatePackage, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.AutoInstallUpdatePackage, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.Root.Update.AutoInstallUpdatePackage = value;
         }
-    }
-
-    private bool _showUpdaterConsole = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.ShowUpdaterConsole, false);
+    } = ConfigFactory.Root.Update.AutoInstallUpdatePackage;
 
     /// <summary>
     /// Gets or sets a value indicating whether to show the updater console window.
     /// </summary>
     public bool ShowUpdaterConsole
     {
-        get => _showUpdaterConsole;
-        set {
-            SetAndNotify(ref _showUpdaterConsole, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.ShowUpdaterConsole, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.Root.Update.ShowUpdaterConsole = value;
         }
-    }
+    } = ConfigFactory.Root.Update.ShowUpdaterConsole;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to show the updater progress window.
+    /// </summary>
+    public bool ShowUpdaterProgress
+    {
+        get; set {
+            // 关闭进度窗口属于有风险的操作，需要二次确认
+            if (!value)
+            {
+                var result = MessageBoxHelper.Show(
+                    LocalizationHelper.GetString("Settings.Update.ShowUpdaterProgress.Warning"),
+                    LocalizationHelper.GetString("Common.Warning"),
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
+                    yes: LocalizationHelper.GetString("Common.Confirm"),
+                    no: LocalizationHelper.GetString("Common.Cancel"));
+                if (result != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+            }
+
+            SetAndNotify(ref field, value);
+            ConfigFactory.Root.Update.ShowUpdaterProgress = value;
+        }
+    } = ConfigFactory.Root.Update.ShowUpdaterProgress;
 
     /// <summary>
     /// Updates manually.
@@ -527,9 +564,9 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
             return;
         }
 
-        if (SettingsViewModel.VersionUpdateSettings.UpdateSource == "MirrorChyan" && string.IsNullOrEmpty(SettingsViewModel.VersionUpdateSettings.MirrorChyanCdk))
+        if (SettingsViewModel.VersionUpdateSettings.UpdateSource == UpdateSource.MirrorChyan && string.IsNullOrEmpty(SettingsViewModel.VersionUpdateSettings.MirrorChyanCdk))
         {
-            ToastNotification.ShowDirect(LocalizationHelper.GetString("MirrorChyanSelectedButNoCdk"));
+            ToastNotification.ShowDirect(LocalizationHelper.GetString("Settings.Update.MirrorChyan.SelectedButNoCdk"));
             return;
         }
 
@@ -537,19 +574,20 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
 
         var toastMessage = ret switch {
             VersionUpdateDialogViewModel.CheckUpdateRetT.NoNeedToUpdate => string.Empty,
-            VersionUpdateDialogViewModel.CheckUpdateRetT.NoNeedToUpdateDebugVersion => LocalizationHelper.GetString("NoNeedToUpdateDebugVersion"),
-            VersionUpdateDialogViewModel.CheckUpdateRetT.AlreadyLatest => LocalizationHelper.GetString("AlreadyLatest"),
-            VersionUpdateDialogViewModel.CheckUpdateRetT.UnknownError => LocalizationHelper.GetString("NewVersionDetectFailedTitle"),
-            VersionUpdateDialogViewModel.CheckUpdateRetT.NetworkError => LocalizationHelper.GetString("CheckNetworking"),
-            VersionUpdateDialogViewModel.CheckUpdateRetT.FailedToGetInfo => LocalizationHelper.GetString("GetReleaseNoteFailed"),
+            VersionUpdateDialogViewModel.CheckUpdateRetT.NoNeedToUpdateDebugVersion => LocalizationHelper.GetString("Settings.Update.NoNeedToUpdateDebugVersion"),
+            VersionUpdateDialogViewModel.CheckUpdateRetT.AlreadyLatest => LocalizationHelper.GetString("Settings.Update.AlreadyLatest"),
+            VersionUpdateDialogViewModel.CheckUpdateRetT.UnknownError => LocalizationHelper.GetString("VersionUpdate.NewVersionDetectFailed.Title"),
+            VersionUpdateDialogViewModel.CheckUpdateRetT.NetworkError => LocalizationHelper.GetString("VersionUpdate.CheckNetworking"),
+            VersionUpdateDialogViewModel.CheckUpdateRetT.FailedToGetInfo => LocalizationHelper.GetString("VersionUpdate.GetReleaseNoteFailed"),
+            VersionUpdateDialogViewModel.CheckUpdateRetT.UpdatePackageDownloadFailed => LocalizationHelper.GetString("VersionUpdate.NewVersionDownloadFailed.Title"),
             VersionUpdateDialogViewModel.CheckUpdateRetT.OK => string.Empty,
-            VersionUpdateDialogViewModel.CheckUpdateRetT.NewVersionIsBeingBuilt => LocalizationHelper.GetString("NewVersionIsBeingBuilt"),
-            VersionUpdateDialogViewModel.CheckUpdateRetT.OnlyGameResourceUpdated => LocalizationHelper.GetString("GameResourceUpdated"),
-            VersionUpdateDialogViewModel.CheckUpdateRetT.NoMirrorChyanCdk => LocalizationHelper.GetString("MirrorChyanSelectedButNoCdk"),
+            VersionUpdateDialogViewModel.CheckUpdateRetT.NewVersionIsBeingBuilt => LocalizationHelper.GetString("VersionUpdate.NewVersionIsBeingBuilt"),
+            VersionUpdateDialogViewModel.CheckUpdateRetT.OnlyGameResourceUpdated => LocalizationHelper.GetString("VersionUpdate.GameResource.Updated"),
+            VersionUpdateDialogViewModel.CheckUpdateRetT.NoMirrorChyanCdk => LocalizationHelper.GetString("Settings.Update.MirrorChyan.SelectedButNoCdk"),
             _ => string.Empty,
         };
 
-        if (toastMessage != string.Empty)
+        if (toastMessage != string.Empty && !CurrentUpdateCredential.HasError)
         {
             ToastNotification.ShowDirect(toastMessage);
         }
@@ -573,49 +611,74 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
             return;
         }
 
-        if (SettingsViewModel.VersionUpdateSettings.UpdateSource == "MirrorChyan" && string.IsNullOrEmpty(SettingsViewModel.VersionUpdateSettings.MirrorChyanCdk))
+        if (SettingsViewModel.VersionUpdateSettings.UpdateSource == UpdateSource.MirrorChyan && string.IsNullOrEmpty(SettingsViewModel.VersionUpdateSettings.MirrorChyanCdk))
         {
-            ToastNotification.ShowDirect(LocalizationHelper.GetString("MirrorChyanSelectedButNoCdk"));
+            ToastNotification.ShowDirect(LocalizationHelper.GetString("Settings.Update.MirrorChyan.SelectedButNoCdk"));
             return;
         }
 
         IsCheckingForUpdates = true;
-
-        var (ret, uri, releaseNote) = await ResourceUpdater.CheckFromMirrorChyanAsync();
-        var toastMessage = ret switch {
-            VersionUpdateDialogViewModel.CheckUpdateRetT.AlreadyLatest => LocalizationHelper.GetString("AlreadyLatest"),
-            VersionUpdateDialogViewModel.CheckUpdateRetT.UnknownError => LocalizationHelper.GetString("NewVersionDetectFailedTitle"),
-            VersionUpdateDialogViewModel.CheckUpdateRetT.NetworkError => LocalizationHelper.GetString("CheckNetworking"),
-            _ => string.Empty,
-        };
-
-        if (toastMessage != string.Empty)
+        try
         {
-            ToastNotification.ShowDirect(toastMessage);
-        }
+            var credential = CurrentUpdateCredential;
+            int revision = credential.Revision;
+            var updateSource = UpdateSource;
+            var request = await credential.BeginCheckAsync();
+            if (updateSource != UpdateSource || revision != credential.Revision)
+            {
+                return;
+            }
 
-        if (ret == VersionUpdateDialogViewModel.CheckUpdateRetT.AlreadyLatest)
+            var cancellationToken = request?.CancellationToken ?? default;
+            var (ret, uri, releaseNote) = updateSource == UpdateSource.GitHub && request is { } check
+                ? await ResourceUpdater.CheckFromGitHubAsync(check)
+                : await ResourceUpdater.CheckFromMirrorChyanAsync(request);
+            if (updateSource != UpdateSource || revision != credential.Revision)
+            {
+                return;
+            }
+
+            var toastMessage = ret switch {
+                VersionUpdateDialogViewModel.CheckUpdateRetT.AlreadyLatest => LocalizationHelper.GetString("Settings.Update.AlreadyLatest"),
+                VersionUpdateDialogViewModel.CheckUpdateRetT.UnknownError => LocalizationHelper.GetString("VersionUpdate.NewVersionDetectFailed.Title"),
+                VersionUpdateDialogViewModel.CheckUpdateRetT.NetworkError => LocalizationHelper.GetString("VersionUpdate.CheckNetworking"),
+                _ => string.Empty,
+            };
+
+            if (toastMessage != string.Empty && !credential.HasError)
+            {
+                ToastNotification.ShowDirect(toastMessage);
+            }
+
+            if (ret is not (VersionUpdateDialogViewModel.CheckUpdateRetT.OK or
+                VersionUpdateDialogViewModel.CheckUpdateRetT.NoMirrorChyanCdk))
+            {
+                return;
+            }
+
+            bool success = updateSource switch {
+                UpdateSource.GitHub => await ResourceUpdater.UpdateFromGithubAsync(cancellationToken),
+                UpdateSource.MirrorChyan => (ret == VersionUpdateDialogViewModel.CheckUpdateRetT.OK) && await ResourceUpdater.DownloadFromMirrorChyanAsync(uri, releaseNote, cancellationToken),
+                _ => await ResourceUpdater.UpdateFromGithubAsync(cancellationToken),
+            };
+
+            if (success)
+            {
+                _ = ResourceUpdater.ResourceReloadWhenIdleAsync();
+            }
+            else
+            {
+                AchievementTrackerHelper.Instance.AddProgress(AchievementIds.CdnTorture);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            VersionUpdateDialogViewModel.OutputDownloadProgress(string.Empty, downloading: false);
+        }
+        finally
         {
             IsCheckingForUpdates = false;
-            return;
         }
-
-        bool success = UpdateSource switch {
-            "Github" => await ResourceUpdater.UpdateFromGithubAsync(),
-            "MirrorChyan" => (ret == VersionUpdateDialogViewModel.CheckUpdateRetT.OK) && await ResourceUpdater.DownloadFromMirrorChyanAsync(uri, releaseNote),
-            _ => await ResourceUpdater.UpdateFromGithubAsync(),
-        };
-
-        if (success)
-        {
-            _ = ResourceUpdater.ResourceReloadWhenIdleAsync();
-        }
-        else
-        {
-            AchievementTrackerHelper.Instance.AddProgress(AchievementIds.CdnTorture);
-        }
-
-        IsCheckingForUpdates = false;
     }
 
     // UI 绑定的方法
@@ -623,6 +686,7 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
     public void ShowChangelog()
     {
         AchievementTrackerHelper.Instance.Unlock(AchievementIds.ChangelogReader);
+        _ = Instances.VersionUpdateDialogViewModel.DownloadMissingContributorAvatarsAsync();
         if (Instances.VersionUpdateDialogViewModel.View is System.Windows.Window window)
         {
             if (window.WindowState == System.Windows.WindowState.Minimized)
@@ -636,5 +700,16 @@ public class VersionUpdateSettingsUserControlModel : PropertyChangedBase
         {
             Instances.WindowManager.ShowWindow(Instances.VersionUpdateDialogViewModel);
         }
+    }
+
+    /// <summary>
+    /// 刷新构造时缓存的本地化列表文本。
+    /// </summary>
+    private void RefreshLocalization()
+    {
+        AllVersionTypeList.RefreshLocalization();
+        UpdateSourceList.RefreshLocalization();
+
+        RefreshUpdateCredentials();
     }
 }

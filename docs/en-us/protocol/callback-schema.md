@@ -5,19 +5,21 @@ icon: material-symbols:u-turn-left
 
 # Callback Message Protocol
 
-::: info Note
-Callback messages are rapidly evolving with each version update, so this document may become outdated. For the latest information, please refer to the [C# Integration Source Code](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/src/MaaWpfGui/Main/AsstProxy.cs)
+::: info Note  
+Callback messages are rapidly evolving with each version update, so this document may become outdated. For the latest information, please refer to the [C# Integration Source Code](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/src/MaaWpfGui/Main/AsstProxy.cs)  
 :::
 
 ## Callback Function Prototype
 
 ```cpp
-typedef void(ASST_CALL* AsstCallback)(int msg, const char* details, void* custom_arg);
+typedef void(ASST_CALL* AsstApiCallback)(AsstMsgId msg, const char* details_json, void* custom_arg);
 ```
+
+Here `AsstMsgId` is an alias of `int32_t`.
 
 ## Parameter Overview
 
-- `int msg`  
+- `AsstMsgId msg`  
   Message type
 
   ```cpp
@@ -108,17 +110,44 @@ Todo
   Screenshot failed (adb/emulator crashed), and retry failed
 - `TouchModeNotAvailable`  
   Unsupported touch mode
+- `MuMuExtrasInputStatus`  
+  The actual status of MuMu touch enhancement, `details` structure:
+  - `available` (boolean, required): Whether it has taken effect.
+  - `deferred` (boolean, required): Whether the status is not determined yet (the game was not rendering when connected; it will be rechecked automatically once rendering starts).
+- `ResolutionGot`  
+  Resolution retrieved
+- `ResolutionChanged`  
+  Resolution changed while running; the connection is invalidated and the current task is interrupted, `details` structure:
+  - `width` (number, required): The current width.
+  - `height` (number, required): The current height.
+- `FastestWayToScreencap`  
+  Fastest screenshot method found, `details` structure:
+  - `method` (string, required): Fastest screenshot method.
+  - `cost` (number, required): Time cost in milliseconds.
+  - `alternatives` (array`<object>`, required): All candidate methods and their costs.
+- `ScreencapCost`  
+  Screenshot cost statistics (reported every 10 screenshots), `details` structure:
+  - `min` (number, required): Minimum cost in milliseconds.
+  - `max` (number, required): Maximum cost in milliseconds.
+  - `avg` (number, required): Average cost in milliseconds.
+  - `fault_times` (number): Number of failures (only present when there are failures).
+
+- `EmulatorFPS`  
+  Emulator refresh rate (checked every 1 minute), `details` structure:
+  - `fps` (number, required): Emulator/system refresh rate (FPS).
+  - `refresh_period_ns` (number, required): Frame refresh period in nanoseconds.
 
 ### AsyncCallInfo
 
 ```json
 {
     "uuid": string,             // Device unique ID
-    "what": string,             // Callback type, "Connect" | "Click" | "Screencap" | ...
+    "what": string,             // Callback type, "Connect" | "AttachWindow" | "Click" | "Screencap" | ...
     "async_call_id": int,       // Asynchronous request ID, i.e., return value when calling AsstAsyncXXX
     "details": {
         "ret": bool,            // Actual call return value
         "cost": int64,          // Time cost, in milliseconds
+        "error": string,        // Unhandled exception type, only present when the call failed due to an unhandled exception
     }
 }
 ```
@@ -158,6 +187,8 @@ Todo
   Auto combat
 - `SSSCopilot`  
   Auto Stationary Security Service
+- `ParadoxCopilot`  
+  Auto Paradox Simulation
 - `Depot`  
   Depot recognition
 - `OperBox`  
@@ -175,6 +206,8 @@ Todo
 
 ### TaskChain Related Messages
 
+`TaskChainError` / `TaskChainStart` / `TaskChainCompleted` / `TaskChainExtraInfo` / `TaskChainStopped` share the following fields:
+
 ```json
 {
     "taskchain": string,            // Current task chain
@@ -182,6 +215,10 @@ Todo
     "uuid": string                  // Device unique ID
 }
 ```
+
+When a task chain is interrupted by an unhandled exception, `TaskChainError` additionally carries a `details` field:
+
+- `error` (string, required): The exception type, one of `OpenCVException` | `OutOfMemory` | `GpuDeviceRemoved` | `UnhandledException` | `UnknownException`. When `OutOfMemory` or `GpuDeviceRemoved` (GPU inference device removed, e.g. due to a graphics driver update or GPU reset) occurs, the remaining tasks are cleared, and the program must be restarted to continue.
 
 ### TaskChainExtraInfo
 
@@ -208,13 +245,22 @@ Todo
   // Corresponding details field example
   {
     "task": "StartButton2", // Task name
-    "action": 512,
+    "action": "ClickSelf", // Action name, e.g. "ClickSelf" | "DoNothing" | "Swipe"
     "exec_times": 1, // Execution times
     "max_times": 999, // Maximum execution times
-    "algorithm": 0
+    "algorithm": "MatchTemplate", // Recognition algorithm name, e.g. "MatchTemplate" | "OcrDetect" | "FeatureMatch" | "JustReturn"
+    "result": {} // Recognition result of this run, structure varies by algorithm; empty object when there is none
   }
   ```
 
+  Additionally, when the task execution count reaches its limit, a `SubTaskExtraInfo` message with `what` set to `ExceededLimit` is reported first; its `details` contains `task` (task name), `exec_times` (execution times), and `max_times` (maximum execution times).
+
+  If the list of tasks to be recognized contains undefined task names (e.g. task resources not matching the program version), a `SubTaskError` with `what` set to `UnknownTask` is reported back before recognition starts and the whole task chain is stopped; its `details` contains `tasks` (string array, the list of undefined task names).
+
+- `ReportToPenguinStats` / `ReportToYituliu`  
+  Report battle drops to Penguin Statistics / Yituliu big data (a `SubTaskError` is reported back when the upload fails)
+- `StartGameTask`  
+  Failed to open client (config file does not match passed client_type)
 - Todo others
 
 ##### Common `task` Field Values
@@ -223,8 +269,6 @@ Todo
   Start battle
 - `MedicineConfirm`  
   Use sanity potion
-- `ExpiringMedicineConfirm`  
-  Use expiring sanity potion
 - `StoneConfirm`  
   Use Originium Prime
 - `RecruitRefreshConfirm`  
@@ -233,12 +277,8 @@ Todo
   Confirm recruitment
 - `RecruitNowConfirm`  
   Use Expedited Plan
-- `ReportToPenguinStats`  
-  Report to Penguin Statistics
-- `ReportToYituliu`  
-  Report to Yituliu big data
 - `InfrastDormDoubleConfirmButton`  
-  Base dormitory double confirmation button, appears only when operators conflict, please notify users
+  Base double confirmation button, appears only when the operator to be assigned is already stationed in another facility (MAA will click confirm automatically), please notify users
 - `StartExplore`  
   Start Integrated Strategy exploration
 - `StageTraderInvestConfirm`  
@@ -263,8 +303,6 @@ Todo
   Integrated Strategy stage: Emergency Combat
 - `StageDreadfulFoe`  
   Integrated Strategy stage: Dreadful Foe
-- `StartGameTask`
-  Failed to open client (config file does not match passed client_type)
 - Todo others
 
 ### SubTaskExtraInfo
@@ -331,7 +369,9 @@ Todo
         "quantity": 4,
         "addQuantity": 2
       }
-    ]
+    ],
+    "cur_times": 2, // Number of consecutive battles recognized on the settlement screen (only present when recognized)
+    "annihilation_weekly_process": [1600, 1800] // Weekly acquisition progress of Annihilation mode, format: [completed count, limit] (only present on Annihilation stages)
   }
   ```
 
@@ -456,6 +496,19 @@ Todo
   }
   ```
 
+- `RecruitPermitReserved`
+  The current recruitment permit count is at or below the reserve configured for 3★ recruitment, so the current slot is skipped.
+
+  ```json
+  // Corresponding details field example
+  {
+    "current": 8
+  }
+  ```
+
+- `RecruitPermitCountRecognitionFailed`
+  Recruitment permit count recognition failed while the 3★ permit reserve was enabled, so the current slot is skipped. The `details` field is empty.
+
 - `RecruitTagsSelected`  
   Recruitment tags selected
 
@@ -466,11 +519,8 @@ Todo
   }
   ```
 
-- `RecruitSlotCompleted`  
-  Current recruitment slot task completed
-
 - `RecruitError`  
-  Recruitment recognition error
+  Recruitment recognition error. The `details` field is empty; if triggered because the current slot reached its refresh limit, it contains `refresh_limit` (the slot refresh limit).
 
 - `EnterFacility`  
   Base entered facility
@@ -506,30 +556,90 @@ Todo
   }
   ```
 
+- `CustomInfrastRoomKeptUnchanged`  
+  The room is kept unchanged during custom infrastructure scheduling. The `details` field always includes `facility` (facility name) and `index` (facility index), plus:
+
+  ```json
+  // Corresponding details field example
+  {
+    "reason": "candidates_working" // Reason for keeping the room unchanged, see below
+  }
+  ```
+
+  `reason` values:
+  - `facility_empty`: the custom rooms array is empty.
+  - `room_no_intent`: the room is configured but has no operator selection intent.
+  - `candidates_unavailable`: none of the candidate operators is available, usually a misconfigured list (typo or unowned operator).
+  - `candidates_working`: all candidate operators are working in other facilities.
+  - `candidates_low_mood`: all candidate operators are below the mood threshold.
+
+- `CustomInfrastRoomsNotConfigured`  
+  The facility is not covered by the custom rooms array and is kept unchanged. The `details` field contains only the default `facility` (facility name) and `index` (facility index).
+
+- `CustomInfrastTraineeNotFound`  
+  None of the training room candidate operators is matched. The `details` field always includes `facility` (facility name) and `index` (facility index), plus:
+
+  ```json
+  // Corresponding details field example
+  {
+    "candidates": ["艾雅法拉", "焰影苇草"] // List of candidate operators for the training room
+  }
+  ```
+
+- `CustomInfrastAssistantNotFound`  
+  None of the assistant candidate operators is matched. The `details` field always includes `facility` (facility name) and `index` (facility index), plus:
+
+  ```json
+  // Corresponding details field example
+  {
+    "candidates": ["凯尔希"],        // List of candidate operators for the assistant
+    "working_excluded": ["琴柳"],    // Optional; candidates excluded because working in other facilities, only present when non-empty
+    "low_mood_excluded": ["歌蕾蒂娅"] // Optional; candidates excluded because their mood is below the threshold, only present when non-empty
+  }
+  ```
+
+- `CustomInfrastRoomGroupsMatchFailed`  
+  Operator group matching failed during custom infrastructure scheduling. The `details` field always includes `facility` (facility name) and `index` (facility index), plus:
+
+  ```json
+  // Corresponding details field example
+  {
+    "reason": "all_unavailable", // Reason for the failure, see below
+    "groups": ["古+銀"] // Optional; undefined or unavailable group names, only present with `group_not_defined` and `all_unavailable`
+  }
+  ```
+
+  `reason` values:
+  - `group_not_defined`: none of the referenced group names is defined in groups.
+  - `all_unavailable`: operators of all groups are unavailable.
+  - `recognition_failed`: the operator list recognition failed.
+
+- `CopilotPrecheckFile`  
+  Reported before pre-matching each copilot file when "Assist formation with Yituliu data" is enabled in multi-file copilot mode. The `details` field contains:
+
+  ```json
+  // Corresponding details field example
+  {
+    "nav_name": "CV-EX-1", // Stage name
+    "filename": "作业.json" // Copilot file name
+  }
+  ```
+
 - `StageInfo`  
   Auto combat stage information
 
   ```json
   // Corresponding details field example
   {
-      "name": string  // Stage name
+      "name": string,  // Stage name
+      "size": number   // Number of map grid cells
   }
   ```
 
 - `StageInfoError`  
   Auto combat stage recognition error
 
-- `PenguinId`  
-  Penguin Statistics ID
-
-  ```json
-  // Corresponding details field example
-  {
-      "id": string
-  }
-  ```
-
-- `Depot`  
+- `DepotInfo`  
   Depot recognition result
 
   ```json
@@ -538,16 +648,20 @@ Todo
   "data": "{\"2001\":18000,\"31043\":317}"  // JSON string, format: {"itemId": quantity, ...}
   ```
 
-- `OperBox`  
+- `OperBoxInfo`  
   Operator recognition result
 
   ```json
   // Corresponding details field example
   "done": bool,       // Whether recognition is complete, false means still in progress (data during process)
-  "all_oper": [
+  "all_opers": [
       {
           "id": "char_002_amiya",
           "name": "阿米娅", // "Amiya"
+          "name_en": "Amiya", // Operator English name
+          "name_jp": "アーミヤ", // Operator Japanese name
+          "name_kr": "아미야", // Operator Korean name
+          "name_tw": "阿米婭", // Operator Traditional Chinese name
           "own": true,
           "rarity": 5
       },
@@ -588,6 +702,40 @@ Todo
 
 - `UnsupportedLevel`  
   Auto combat, unsupported stage name
+
+- `BlackFlowStartRun`  
+  Progress of BlackFlow starting reward farming (roguelike mode 30003). (machine-translated)
+
+  ```json
+  // Corresponding details field example
+  {
+      "status": "reward_missed",       // Current progress, see below
+      "rewards": ["空间租赁", "金乌"]   // Optional; reward names recognized on the target run's support selection page
+  }
+  ```
+
+  `status` values:
+  - `preparing`: the preparation run started.
+  - `target_run`: the target run started.
+  - `reward_missed`: rewards were recognized on the support selection page but none is desired; the run is abandoned and a new preparation run starts.
+  - `reward_picked`: with `blackflow_start_utopia` on, a desired reward was found on the support selection page; a reward was picked by `blackflow_start_reward_priority` and the run enters floor 1 to check for 实托邦.
+  - `completed`: a desired reward was found; the task exited to the theme page keeping the run, and the task ends. With `blackflow_start_utopia` on, this means floor 1 is 实托邦.
+  - `reward_unrecognized`: rewards on the support selection page could not be recognized; the task stops on that page.
+  - `reward_page_missing`: the target run did not show the support selection page; the task stops.
+  - `reward_recognition_failed`: the preparation run or the target run failed to pick a reward on the support selection page; the task stops.
+
+  `rewards` is only reported with `reward_missed`, `reward_picked`, `completed`, `reward_unrecognized` and `reward_recognition_failed`, and is omitted when `blackflow_start_rewards` is 0 with `blackflow_start_utopia` off (rewards are not recognized) or when no reward was recognized. Reward names are reported in Simplified Chinese.
+
+- `BlackFlowScrapTradeAborted`  
+  The BlackFlow scrap trade is aborted due to an anomaly. The `details` field contains:
+
+  ```json
+  // Corresponding details field example
+  {
+    "reason": "sale_failed", // Reason for aborting the trade
+    "item": "晶体元件" // Name of the item that triggered the abort
+  }
+  ```
 
 ### ReportRequest
 

@@ -15,14 +15,7 @@
         Margin="10"
         HorizontalAlignment="Center"
         VerticalAlignment="Center">
-        <controls:TextBlock
-            Grid.Row="0"
-            HorizontalAlignment="Center"
-            FontWeight="Bold"
-            Text="{DynamicResource GlobalConfigTip}"
-            TextAlignment="Center"
-            Visibility="{c:Binding 'ConfigurationList.Count > 1',
-                                   Source={x:Static helper:Instances.SettingsViewModel}}" />
+        <controls:GlobalConfigTip Grid.Row="0" />
         <StackPanel
             HorizontalAlignment="Right"
             VerticalAlignment="Center"
@@ -30,12 +23,13 @@
             <controls:TextBlock
                 Margin="10"
                 Block.TextAlignment="Center"
-                Text="{DynamicResource HotKeyShowGui}" />
+                Text="{DynamicResource Settings.HotKey.ShowGui}" />
             <settings:HotKeyEditorUserControl
                 Margin="10,10,0,10"
                 HorizontalAlignment="Right"
-                HotKey="{Binding HotKeyShowGui}" />
-            <controls:TooltipBlock TooltipText="{DynamicResource HotKeyChangingTip}" />
+                HotKey="{Binding HotKeyShowGui}"
+                IsRegistrationFailed="{Binding HotKeyShowGuiRegistrationFailed}" />
+            <controls:TooltipBlock TooltipText="{DynamicResource Settings.HotKey.Changing.Tip}" />
         </StackPanel>
         <StackPanel
             HorizontalAlignment="Right"
@@ -44,12 +38,13 @@
             <controls:TextBlock
                 Margin="10"
                 Block.TextAlignment="Center"
-                Text="{DynamicResource HotKeyLinkStart}" />
+                Text="{DynamicResource Settings.HotKey.LinkStart}" />
             <settings:HotKeyEditorUserControl
                 Margin="10,10,0,10"
                 HorizontalAlignment="Right"
-                HotKey="{Binding HotKeyLinkStart}" />
-            <controls:TooltipBlock TooltipText="{DynamicResource HotKeyChangingTip}" />
+                HotKey="{Binding HotKeyLinkStart}"
+                IsRegistrationFailed="{Binding HotKeyLinkStartRegistrationFailed}" />
+            <controls:TooltipBlock TooltipText="{DynamicResource Settings.HotKey.Changing.Tip}" />
         </StackPanel>
     </StackPanel>
 </UserControl>

@@ -19,6 +19,9 @@ enum class ControllerType
     Win32,
 #endif
     MaaFwAdb,
+#if ASST_WITH_EMULATOR_EXTRAS
+    Mumu,
+#endif
 #ifdef __ANDROID__
     MaaFwAndroidNative,
 #endif
@@ -27,6 +30,12 @@ enum class ControllerType
 class ControllerAPI
 {
 public:
+    // 全控制器共享的触控节奏基准，对齐 minitouch 行为：minitouch 用协议内建的 w 2 等待为
+    // 每个插值步进定拍，无此协议的本地输入后端按同样的 2ms 步进间隔执行；每次 touch
+    // down/up 各保持 50ms（w 50），使目标识别为完整手势
+    static constexpr int SwipeIntervalMs = 2;
+    static constexpr int TouchHoldMs = 50;
+
     virtual ~ControllerAPI() = default;
 
     virtual bool connect(const std::string& adb_path, const std::string& address, const std::string& config) = 0;
@@ -44,6 +53,12 @@ public:
 
     virtual bool screencap(cv::Mat& image_payload, bool allow_reconnect = false) = 0;
 
+    // 预览只需要画面，不需要识别前的输入操作；无此区别的控制器沿用普通截图。
+    virtual bool screencap_for_preview(cv::Mat& image_payload, bool allow_reconnect = false)
+    {
+        return screencap(image_payload, allow_reconnect);
+    }
+
     virtual bool start_game(const std::string& client_type) = 0;
     virtual bool stop_game(const std::string& client_type) = 0;
 
@@ -55,7 +70,7 @@ public:
         const Point& p1,
         const Point& p2,
         int duration = 0,
-        bool extra_swipe = false,
+        SwipeExtraDirection extra_swipe = SwipeExtraDirection::None,
         double slope_in = 1,
         double slope_out = 1,
         bool with_pause = false) = 0;
@@ -72,6 +87,8 @@ public:
     ControllerAPI& operator=(ControllerAPI&&) = delete;
 
     virtual void back_to_home() noexcept {}
+
+    virtual void set_main_screen_recognition(bool /*on*/) {}
 };
 
 struct InputEvent

@@ -13,7 +13,7 @@
 #include <onnxruntime/dml_provider_factory.h>
 #endif
 
-#if __has_include(<onnxruntime/coreml_provider_factory.h>)
+#if defined(__APPLE__) && __has_include(<onnxruntime/coreml_provider_factory.h>)
 #define WITH_COREML
 #include <onnxruntime/coreml_provider_factory.h>
 #endif
@@ -24,18 +24,29 @@ bool asst::OnnxSessions::load(const std::filesystem::path& path)
     Log.info("record path", path.lexically_relative(UserDir.get()));
 
     std::string name = utils::path_to_utf8_string(path.stem());
-
+    std::lock_guard lock(m_mutex);
     if (auto iter = m_model_paths.find(name); iter == m_model_paths.end() || iter->second != path) {
-        m_sessions.erase(name);
         m_model_paths.insert_or_assign(name, path);
+        // 引用归零前不能销毁会话，持有者（如地图感知）还握着裸引用；挂起待 release 时销毁
+        if (m_session_users.contains(name)) {
+            m_pending_reload.insert(name);
+        }
+        else {
+            m_sessions.erase(name);
+        }
     }
 
     return true;
 }
 
-Ort::Session& asst::OnnxSessions::get(const std::string& name)
+Ort::Session& asst::OnnxSessions::get_or_create(const std::string& name)
 {
-    if (m_sessions.find(name) == m_sessions.end()) {
+    if (!m_sessions.contains(name)) {
+        if (gpu_enabled && !gpu_options_initialized && !initialize_gpu_options()) {
+            Log.error(__FUNCTION__, "Failed to initialize configured GPU; falling back to CPU mode");
+            use_cpu_locked();
+        }
+
         Log.info(__FUNCTION__, "lazy load", name);
         Ort::Session session(m_env, m_model_paths.at(name).c_str(), m_options);
         m_sessions.emplace(name, std::move(session));
@@ -43,14 +54,44 @@ Ort::Session& asst::OnnxSessions::get(const std::string& name)
     return m_sessions.at(name);
 }
 
-bool asst::OnnxSessions::use_cpu()
+Ort::Session& asst::OnnxSessions::get(const std::string& name)
 {
-    if (m_sessions.size() != 0) {
-        return false;
+    std::lock_guard lock(m_mutex);
+    return get_or_create(name);
+}
+
+Ort::Session& asst::OnnxSessions::acquire(const std::string& name)
+{
+    std::lock_guard lock(m_mutex);
+    Ort::Session& session = get_or_create(name);
+    ++m_session_users[name];
+    return session;
+}
+
+void asst::OnnxSessions::release(const std::string& name)
+{
+    std::lock_guard lock(m_mutex);
+    const auto found = m_session_users.find(name);
+    if (found == m_session_users.end()) {
+        Log.error(__FUNCTION__, "session was not acquired", name);
+        return;
     }
+    if (--found->second == 0) {
+        m_session_users.erase(found);
+        if (m_pending_reload.erase(name) > 0) {
+            // 持有期间模型路径变化过，最后一个引用释放后销毁旧会话，下次 acquire 按新路径重建
+            m_sessions.erase(name);
+            Log.info(__FUNCTION__, "stale session destroyed after last release", name);
+        }
+        Log.info(__FUNCTION__, "released", name);
+    }
+}
+
+int asst::OnnxSessions::reset_session_options()
+{
     m_options = Ort::SessionOptions();
 
-    int logical = std::max(1u, std::thread::hardware_concurrency());
+    const int logical = std::max(1u, std::thread::hardware_concurrency());
     int cpu_threads;
     if (logical <= 2) {
         cpu_threads = 1;
@@ -69,48 +110,107 @@ bool asst::OnnxSessions::use_cpu()
     m_options.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
     m_options.SetIntraOpNumThreads(cpu_threads);
 
+    return cpu_threads;
+}
+
+bool asst::OnnxSessions::use_cpu()
+{
+    std::lock_guard lock(m_mutex);
+    return use_cpu_locked();
+}
+
+bool asst::OnnxSessions::use_cpu_locked()
+{
+    if (!m_sessions.empty()) {
+        return false;
+    }
+
+    const auto cpu_threads = reset_session_options();
     Log.info("CPU OCR enabled with", cpu_threads, "threads");
 
+    m_gpu_selector = std::nullopt;
     gpu_enabled = false;
+    gpu_options_initialized = false;
     return true;
 }
 
-bool asst::OnnxSessions::use_gpu(int device_id)
+bool asst::OnnxSessions::use_gpu(GpuDeviceSelector selector)
+{
+    std::lock_guard lock(m_mutex);
+    return use_gpu_locked(std::move(selector));
+}
+
+bool asst::OnnxSessions::use_gpu_locked(GpuDeviceSelector selector)
 {
     if (gpu_enabled) {
-        return true;
-    }
-    if (m_sessions.size() != 0) {
+        if (m_gpu_selector == selector) {
+            return true;
+        }
+
+        Log.error(__FUNCTION__, "GPU OCR is already configured with a different device selector");
         return false;
     }
+    if (!m_sessions.empty()) {
+        Log.error(__FUNCTION__, "GPU OCR cannot be configured after ONNX sessions have been created");
+        return false;
+    }
+
+    reset_session_options();
+    m_gpu_selector = std::move(selector);
+    gpu_enabled = true;
+    gpu_options_initialized = false;
+    return true;
+}
+
+bool asst::OnnxSessions::initialize_gpu_options()
+{
+    if (!m_gpu_selector) {
+        return false;
+    }
+
+    const auto device_id = m_gpu_selector->resolve_device_id();
+    if (!device_id) {
+        return false;
+    }
+
     auto all_providers = Ort::GetAvailableProviders();
     bool support_cuda = false;
+#ifdef WITH_DML
     bool support_dml = false;
+#endif
+#ifdef WITH_COREML
     bool support_coreml = false;
+#endif
     for (const auto& provider : all_providers) {
         if (provider == "CUDAExecutionProvider") {
             support_cuda = true;
         }
+#ifdef WITH_DML
         if (provider == "DmlExecutionProvider") {
             support_dml = true;
         }
+#endif
+#ifdef WITH_COREML
         if (provider == "CoreMLExecutionProvider") {
             support_coreml = true;
         }
+#endif
     }
 
-    bool any_gpu = support_cuda || support_dml || support_coreml;
+    bool provider_configured = false;
 
     if (support_cuda) {
-        OrtCUDAProviderOptions cuda_options;
-        cuda_options.device_id = device_id;
+        OrtCUDAProviderOptions cuda_options {};
+        cuda_options.device_id = *device_id;
         m_options.AppendExecutionProvider_CUDA(cuda_options);
+        provider_configured = true;
     }
 #ifdef WITH_DML
     else if (support_dml) {
-        if (!Ort::Status(OrtSessionOptionsAppendExecutionProvider_DML(m_options, device_id)).IsOK()) {
+        if (!Ort::Status(OrtSessionOptionsAppendExecutionProvider_DML(m_options, *device_id)).IsOK()) {
             return false;
         }
+        provider_configured = true;
     }
 #endif
 #ifdef WITH_COREML
@@ -118,14 +218,15 @@ bool asst::OnnxSessions::use_gpu(int device_id)
         if (!Ort::Status(OrtSessionOptionsAppendExecutionProvider_CoreML((OrtSessionOptions*)m_options, 0)).IsOK()) {
             return false;
         }
+        provider_configured = true;
     }
 #endif
-    if (!any_gpu) {
+    if (!provider_configured) {
         Log.error(__FUNCTION__, "No GPU execution provider available");
         return false;
     }
 
-    gpu_enabled = true;
+    gpu_options_initialized = true;
     return true;
 }
 

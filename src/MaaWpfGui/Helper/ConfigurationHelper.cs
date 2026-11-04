@@ -1,6 +1,6 @@
 // <copyright file="ConfigurationHelper.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -372,6 +372,12 @@ public class ConfigurationHelper
     /// <returns>The result of saving process</returns>
     private static bool Save(string file = null)
     {
+        if (Main.Bootstrapper.IsDemoMode)
+        {
+            // README 截图演示模式：不落盘任何配置文件，进程内状态退出即弃
+            return true;
+        }
+
         lock (_lock)
         {
             if (Released)

@@ -91,7 +91,11 @@ bool MaaFwAdbController::connect(const std::string& adb_path, const std::string&
         adb_path.c_str(),
         address.c_str(),
         MaaAdbScreencapMethod::Default,
-        MaaAdbInputMethod::AdbShell | MaaAdbInputMethod::EmulatorExtras,
+        // 不要加 EmulatorExtras：MaaFramework 的 MuMuPlayerExtras::click/swipe 是空实现，
+        // 它靠 get_features() 返回 UseMouseDownAndUpInsteadOfClick 让上层改走 touch_down/up，
+        // 而这里的 click()/swipe() 直接透传给 ControlUnit，从不读 features，会全部失败。
+        // MuMu 触控走 MumuController（TouchMode::MumuExtras）。
+        MaaAdbInputMethod::AdbShell,
         config == "AVD" ? "{\"extras\":{\"avd\":{\"enable\":true}}}" : "{}",
         // MaaAgentBinary目录
         utils::path_to_utf8_string(ResDir.get()).c_str());
@@ -258,7 +262,7 @@ bool MaaFwAdbController::swipe(
     const Point& p1,
     const Point& p2,
     int duration,
-    bool extra_swipe [[maybe_unused]],
+    SwipeExtraDirection extra_swipe [[maybe_unused]],
     double slope_in [[maybe_unused]],
     double slope_out [[maybe_unused]],
     bool with_pause [[maybe_unused]])
@@ -317,6 +321,7 @@ bool MaaFwAdbController::press_esc()
 
 ControlFeat::Feat MaaFwAdbController::support_features() const noexcept
 {
+    // swipe 只把起止点与时长交给 MaaAdbControlUnit，extra_swipe、slope、with_pause 不会生效
     return ControlFeat::PRECISE_SWIPE;
 }
 

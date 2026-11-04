@@ -23,9 +23,9 @@
             VerticalAlignment="Center"
             HorizontalContentAlignment="Stretch"
             hc:TitleElement.HorizontalAlignment="Center"
-            hc:TitleElement.Title="{DynamicResource ConfigurationName}"
+            hc:TitleElement.Title="{DynamicResource Settings.Configuration.Name}"
             IsEditable="True"
-            IsHitTestVisible="{Binding Idle}"
+            IsHitTestVisible="{Binding Run.Idle}"
             IsReadOnly="True"
             ItemsSource="{Binding ConfigurationList}"
             SelectedValue="{Binding CurrentConfiguration}"
@@ -44,10 +44,15 @@
                             Text="{Binding}" />
                         <Button
                             Grid.Column="1"
+                            Width="25"
+                            Height="25"
+                            Padding="0"
                             HorizontalAlignment="Right"
+                            hc:IconElement.Geometry="{StaticResource DeleteTaskGeometry}"
+                            hc:IconElement.Height="15"
+                            hc:IconElement.Width="15"
                             Command="{s:Action DeleteConfiguration}"
                             CommandParameter="{Binding}"
-                            Content="×"
                             FontWeight="Bold"
                             Visibility="{c:Binding 'DataContext.ConfigurationList.Count > 1',
                                                    RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}" />
@@ -75,7 +80,7 @@
                 hc:BorderElement.CornerRadius="0,4,4,0"
                 BorderThickness="0,1,1,1"
                 Command="{s:Action AddConfiguration}"
-                Content="{DynamicResource AddConfiguration}" />
+                Content="{DynamicResource Settings.Configuration.Add}" />
         </Grid>
     </StackPanel>
 </UserControl>

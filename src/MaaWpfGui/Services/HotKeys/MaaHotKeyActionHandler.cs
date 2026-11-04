@@ -1,6 +1,6 @@
 // <copyright file="MaaHotKeyActionHandler.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -57,7 +57,7 @@ public class MaaHotKeyActionHandler : IMaaHotKeyActionHandler
             return;
         }
 
-        if (_runningState.GetIdle())
+        if (_runningState.CanInterrupt())
         {
             _ = Instances.TaskQueueViewModel.LinkStart();
 
@@ -66,11 +66,11 @@ public class MaaHotKeyActionHandler : IMaaHotKeyActionHandler
                 return;
             }
 
-            ToastNotification.ShowDirect(LocalizationHelper.GetString("BackgroundLinkStarted"));
+            ToastNotification.ShowDirect(LocalizationHelper.GetString("TaskQueue.LinkStarted"));
         }
         else
         {
-            _ = Instances.TaskQueueViewModel.Stop();
+            _ = Instances.TaskQueueViewModel.StopManuallyAsync();
 
             if (Application.Current.MainWindow == null ||
                 Application.Current.MainWindow.WindowState != WindowState.Minimized)
@@ -78,7 +78,7 @@ public class MaaHotKeyActionHandler : IMaaHotKeyActionHandler
                 return;
             }
 
-            ToastNotification.ShowDirect(LocalizationHelper.GetString("BackgroundLinkStopped"));
+            ToastNotification.ShowDirect(LocalizationHelper.GetString("TaskQueue.LinkStopped"));
         }
     }
 }

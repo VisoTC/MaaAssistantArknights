@@ -1,6 +1,6 @@
 // <copyright file="CopilotView.xaml.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -12,7 +12,6 @@
 // </copyright>
 
 using System;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -30,7 +29,7 @@ namespace MaaWpfGui.Views.UI;
 /// </summary>
 public partial class CopilotView
 {
-    private static readonly Duration CopilotTabAnimationDuration = new(TimeSpan.FromMilliseconds(180));
+    private static readonly Duration _copilotTabAnimationDuration = new(TimeSpan.FromMilliseconds(180));
 
     public CopilotView()
     {
@@ -168,38 +167,23 @@ public partial class CopilotView
     {
         return new DoubleAnimation {
             To = toValue,
-            Duration = CopilotTabAnimationDuration,
+            Duration = _copilotTabAnimationDuration,
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
         };
     }
 
-    private void FileTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    // 下拉展开前刷新作业文件列表（与旧实现 ｢打开前刷新数据源｣ 的时机对齐）
+    private void FileTreeBox_DropDownOpening(object sender, EventArgs e)
     {
-        if (DataContext is CopilotViewModel viewModel && e.NewValue is CopilotFileItem fileItem && !fileItem.IsFolder)
-        {
-            viewModel.OnFileSelected(fileItem);
-        }
+        (DataContext as CopilotViewModel)?.LoadFileItems();
     }
 
-    private bool _lostFocus = false;
-
-    private async void Popup_LostFocus(object sender, RoutedEventArgs e)
+    private void FileTreeBox_SelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
-        _lostFocus = true;
-        await Task.Delay(500);
-        _lostFocus = false;
-    }
-
-    private void Border_MouseUp(object sender, RoutedEventArgs e)
-    {
-        if (_lostFocus)
+        if (e.NewValue is CopilotFileItem { IsFolder: false } fileItem)
         {
-            return;
-        }
-
-        if (DataContext is CopilotViewModel viewModel)
-        {
-            viewModel.ToggleFilePopup();
+            (DataContext as CopilotViewModel)?.OnFileSelected(fileItem);
+            FileTreeBox.CloseDropDown();
         }
     }
 }

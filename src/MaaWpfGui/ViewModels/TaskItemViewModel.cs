@@ -1,6 +1,6 @@
 // <copyright file="TaskItemViewModel.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -15,34 +15,38 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MaaWpfGui.Configuration.Factory;
+using MaaWpfGui.Configuration.Single.MaaTask;
 using MaaWpfGui.Constants.Enums;
 using MaaWpfGui.Helper;
 using MaaWpfGui.Models;
+using MaaWpfGui.Utilities;
+using MaaWpfGui.ViewModels.UserControl.Settings;
 using Stylet;
 
 namespace MaaWpfGui.ViewModels;
 
 public class TaskItemViewModel : PropertyChangedBase, IDisposable
 {
-    public TaskItemViewModel(string name, bool? isCheckedWithNull = true)
+    public TaskItemViewModel(bool? isCheckedWithNull = true)
     {
-        _name = name;
         _isEnable = isCheckedWithNull;
         Instances.AsstProxy.OnTaskStatusChanged += OnTaskStatusChanged;
+        PropertyDependsOnUtility.InitializePropertyDependencies(this);
     }
 
-    private string _name;
-
+    /// <summary>
+    /// Gets or sets 显示名称：优先返回用户自定义名称，否则返回本地化任务类型名。
+    /// 始终从配置动态读取，语言切换或任务排序（Index 变化）时通过
+    /// <see cref="PropertyDependsOnAttribute"/> 自动刷新。
+    /// </summary>
+    [PropertyDependsOn(typeof(GuiSettingsUserControlModel), nameof(GuiSettingsUserControlModel.Language))]
+    [PropertyDependsOn(nameof(Index))]
     public string Name
     {
-        get => _name;
+        get => ConfigFactory.CurrentConfig.TaskQueue[Index].NameOrTaskType;
         set {
-            if (!SetAndNotify(ref _name, value))
-            {
-                return;
-            }
-
             ConfigFactory.CurrentConfig.TaskQueue[Index].Name = value;
+            NotifyOfPropertyChange();
         }
     }
 
@@ -63,6 +67,36 @@ public class TaskItemViewModel : PropertyChangedBase, IDisposable
     }
 
     public int Index { get => field; set => SetAndNotify(ref field, value); }
+
+    /// <summary>
+    /// Gets a value indicating whether the task can be copied.
+    /// 开始唤醒任务至多一个，开始唤醒行禁止复制，其余行不受限。
+    /// </summary>
+    [PropertyDependsOn(nameof(Index))]
+    public bool CanCopy => ConfigFactory.CurrentConfig.TaskQueue[Index] is not StartUpTask;
+
+    /// <summary>
+    /// Gets a value indicating whether the task can be moved up. 首行禁止上移。
+    /// </summary>
+    [PropertyDependsOn(nameof(Index))]
+    public bool CanMoveUp => Index > 0;
+
+    /// <summary>
+    /// Gets a value indicating whether the task can be moved down. 末行禁止下移。
+    /// 判定依赖集合总数，行数增减时 Index 不变的行由集合变更处理器补充通知。
+    /// </summary>
+    [PropertyDependsOn(nameof(Index))]
+    public bool CanMoveDown => Index < ConfigFactory.CurrentConfig.TaskQueue.Count - 1;
+
+    /// <summary>
+    /// 行数增减后由集合变更处理器调用，补发依赖集合总数的上移/下移可用性通知
+    /// （Index 不变的行不会经 Index 依赖链刷新）
+    /// </summary>
+    public void NotifyMoveAvailabilityChanged()
+    {
+        NotifyOfPropertyChange(nameof(CanMoveUp));
+        NotifyOfPropertyChange(nameof(CanMoveDown));
+    }
 
     /// <summary>
     /// Gets or sets a value indicating whether gets or sets whether the setting enabled.
@@ -92,6 +126,13 @@ public class TaskItemViewModel : PropertyChangedBase, IDisposable
     private List<TaskItemStatus> StatusList { get; set; } = [];
 
     /// <summary>
+    /// Gets 本条目已处理（完成或出错）的 chain 数，作为任务栏进度分子的组成单元（Error chain 视作已处理一格）；
+    /// 与 <see cref="StatusDisplay"/> 的条目级聚合显示互不相干：聚合值不变（如部分 chain 完成后条目仍显示
+    /// InProgress）时本计数仍在推进。
+    /// </summary>
+    public int CompletedChainCount => StatusList.Count(s => s is TaskItemStatus.Completed or TaskItemStatus.Error);
+
+    /// <summary>
     /// Gets or sets 上次状态, 可能和当前不一致
     /// </summary>
     public TaskItemStatus StatusDisplay { get => field; set => SetAndNotify(ref field, value); }
@@ -108,6 +149,13 @@ public class TaskItemViewModel : PropertyChangedBase, IDisposable
             return;
         }
         StatusList[index] = status;
+
+        // chain 级进度分子只由 StatusList 派生，随其变化在此显式重算（状态驱动的唯一触发点）；
+        // StatusDisplay 是 StatusList 的聚合显示，不在其 setter 里联动重算——那会令每次链状态变化
+        // 双重重算（TaskProgress setter 无同值短路，每次重算即一次任务栏 COM 调用），且空闲期写
+        // StatusDisplay 的路径（切勾选置 Idle、DemoShot 注入）会空转任务栏
+        Instances.TaskQueueViewModel?.RefreshMainTasksProgress();
+
         if (StatusList.Any(s => s == TaskItemStatus.Error))
         {
             StatusDisplay = TaskItemStatus.Error;
@@ -130,5 +178,13 @@ public class TaskItemViewModel : PropertyChangedBase, IDisposable
         }
     }
 
-    void IDisposable.Dispose() => Instances.AsstProxy.OnTaskStatusChanged -= OnTaskStatusChanged;
+    void IDisposable.Dispose()
+    {
+        Instances.AsstProxy.OnTaskStatusChanged -= OnTaskStatusChanged;
+
+        // 清理跨实例依赖注册，避免 Dispose 后被静态 _externalDependencies 强引用持有
+        // （导致内存泄漏与语言切换时的僵尸通知）
+        PropertyDependsOnUtility.UnInitializePropertyDependencies(this);
+        GC.SuppressFinalize(this);
+    }
 }

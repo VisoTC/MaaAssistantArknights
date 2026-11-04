@@ -15,7 +15,7 @@
     d:DesignHeight="5000"
     d:DesignWidth="800"
     mc:Ignorable="d">
-    <Grid Margin="20">
+    <Grid Margin="20,5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="175" />
             <ColumnDefinition Width="*" />
@@ -56,12 +56,13 @@
             Grid.Column="1"
             Margin="20,5"
             HorizontalAlignment="Stretch"
-            properties:SearchHighlightBehavior.SearchText="{Binding SearchText}"
-            properties:SearchHighlightBehavior.SectionFilter="{Binding Settings}"
             properties:ScrollViewerBinding.DividerVerticalOffsetList="{Binding DividerVerticalOffsetList}"
             properties:ScrollViewerBinding.ExtentHeight="{Binding ScrollExtentHeight}"
+            properties:ScrollViewerBinding.SmoothScrollTo="{Binding ScrollAnimationTarget}"
             properties:ScrollViewerBinding.VerticalOffset="{Binding ScrollOffset}"
             properties:ScrollViewerBinding.ViewportHeight="{Binding ScrollViewportHeight}"
+            properties:SearchHighlightBehavior.SearchText="{Binding SearchText}"
+            properties:SearchHighlightBehavior.SectionFilter="{Binding Settings}"
             IsInertiaEnabled="True"
             PanningMode="Both">
             <Grid>
@@ -142,7 +143,7 @@
                                 Margin="0,20"
                                 HorizontalAlignment="Center"
                                 DataContext="{Binding PerformanceSettings}"
-                                IsEnabled="{Binding DataContext.Idle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}" />
+                                IsEnabled="{Binding DataContext.Run.Idle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}" />
                         </Border>
                     </Expander>
                 </Grid>
@@ -186,8 +187,7 @@
                             <settings:ConnectSettingsUserControl
                                 Margin="0,20"
                                 HorizontalAlignment="Center"
-                                DataContext="{Binding ConnectSettings}"
-                                IsEnabled="{Binding DataContext.Idle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type UserControl}}}" />
+                                DataContext="{Binding ConnectSettings}" />
                         </Border>
                     </Expander>
                 </Grid>
@@ -259,45 +259,53 @@
                 </Grid>
 
                 <Grid
-                    Grid.Row="{Binding BackgroundSettingsSetting.Value}"
+                    Grid.Row="{Binding NotificationSettingsSetting.Value}"
                     Margin="0,0,0,5"
                     d:Grid.Row="8"
-                    Visibility="{c:Binding BackgroundSettingsSetting.IsVisibleInSearch}">
+                    Visibility="{c:Binding NotificationSettingsSetting.IsVisibleInSearch}">
                     <Expander
                         d:IsExpanded="True"
                         Background="Transparent"
-                        Header="{Binding BackgroundSettingsSetting.Display}"
-                        IsExpanded="{Binding IsBackgroundSettingsExpanded}">
+                        Header="{Binding NotificationSettingsSetting.Display}"
+                        IsExpanded="{Binding IsNotificationSettingsExpanded}">
                         <Border
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1,0,1,1"
                             CornerRadius="0,0,4,4">
-                            <settings:BackgroundSettingsUserControl
-                                Margin="0,20"
-                                HorizontalAlignment="Center"
-                                DataContext="{Binding BackgroundSettings}" />
+                            <!--  外部通知渠道并入通知设置聚合展示  -->
+                            <StackPanel HorizontalAlignment="Center">
+                                <settings:NotificationSettingsUserControl
+                                    Margin="0,10"
+                                    HorizontalAlignment="Center"
+                                    DataContext="{Binding NotificationSettings}" />
+                                <hc:Divider Margin="10,0" Content="{DynamicResource ExternalNotification.Title}" />
+                                <settings:ExternalNotificationSettingsUserControl
+                                    Margin="0,10"
+                                    HorizontalAlignment="Center"
+                                    DataContext="{Binding ExternalNotificationSettings}" />
+                            </StackPanel>
                         </Border>
                     </Expander>
                 </Grid>
 
                 <Grid
-                    Grid.Row="{Binding ExternalNotificationSettingsSetting.Value}"
+                    Grid.Row="{Binding ThirdPartyServiceSettingsSetting.Value}"
                     Margin="0,0,0,5"
                     d:Grid.Row="9"
-                    Visibility="{c:Binding ExternalNotificationSettingsSetting.IsVisibleInSearch}">
+                    Visibility="{c:Binding ThirdPartyServiceSettingsSetting.IsVisibleInSearch}">
                     <Expander
                         d:IsExpanded="True"
                         Background="Transparent"
-                        Header="{Binding ExternalNotificationSettingsSetting.Display}"
-                        IsExpanded="{Binding IsExternalNotificationSettingsExpanded}">
+                        Header="{Binding ThirdPartyServiceSettingsSetting.Display}"
+                        IsExpanded="{Binding IsThirdPartyServiceSettingsExpanded}">
                         <Border
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1,0,1,1"
                             CornerRadius="0,0,4,4">
-                            <settings:ExternalNotificationSettingsUserControl
+                            <settings:ThirdPartyServiceSettingsUserControl
                                 Margin="0,20"
                                 HorizontalAlignment="Center"
-                                DataContext="{Binding ExternalNotificationSettings}" />
+                                DataContext="{Binding ThirdPartyServiceSettings}" />
                         </Border>
                     </Expander>
                 </Grid>

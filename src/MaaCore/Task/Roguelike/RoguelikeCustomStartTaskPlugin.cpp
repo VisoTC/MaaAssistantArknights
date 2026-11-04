@@ -26,11 +26,13 @@ bool asst::RoguelikeCustomStartTaskPlugin::verify(AsstMsg msg, const json::value
     if (task_view.starts_with(roguelike_name)) {
         task_view.remove_prefix(roguelike_name.length());
     }
-    static const std::array<std::tuple<AsstMsg, std::string_view, RoguelikeCustomType>, 4> TaskMap = {
+    static const std::array<std::tuple<AsstMsg, std::string_view, RoguelikeCustomType>, 5> TaskMap = {
         std::make_tuple(AsstMsg::SubTaskCompleted, "Roguelike@Squad-EnterPoint", RoguelikeCustomType::Squad),
         std::make_tuple(AsstMsg::SubTaskStart, "Roguelike@LastReward-EnterPoint", RoguelikeCustomType::Reward),
         std::make_tuple(AsstMsg::SubTaskCompleted, "Roguelike@RolesDefault", RoguelikeCustomType::Roles),
         std::make_tuple(AsstMsg::SubTaskStart, "Roguelike@RecruitMain", RoguelikeCustomType::CoreChar),
+        // 仅开局专用的 RecruitOther 入口；不带 StartExplore 前缀的 Roguelike@RecruitOther 是局内招募，不 hijack
+        std::make_tuple(AsstMsg::SubTaskStart, "StartExplore@Roguelike@RecruitOther", RoguelikeCustomType::CoreChar),
     };
 
     m_waiting_to_run = RoguelikeCustomType::None;
@@ -45,7 +47,8 @@ bool asst::RoguelikeCustomStartTaskPlugin::verify(AsstMsg msg, const json::value
         return false;
     }
     if (m_waiting_to_run == RoguelikeCustomType::Reward) {
-        return true;
+        // 黑流的支援页按策略顺序选，由黑流生命周期插件处理
+        return m_config->get_theme() != RoguelikeTheme::BlackFlow;
     }
     if (m_waiting_to_run == RoguelikeCustomType::Squad) {
         if (m_config->get_run_for_collectible()) { // 烧水分队
@@ -54,31 +57,37 @@ bool asst::RoguelikeCustomStartTaskPlugin::verify(AsstMsg msg, const json::value
         }
         return true;
     }
+    if (m_config->get_mode() == RoguelikeMode::BlackFlowStartRun && !m_config->get_run_for_collectible() &&
+        !m_config->get_blackflow_start_utopia()) {
+        // 目标局在选择支援页由黑流生命周期插件判断后就结束，不选职业组和开局干员；
+        // 凹第一层实托邦时目标局要开局进第一层，照常选。
+        return false;
+    }
     if (m_waiting_to_run == RoguelikeCustomType::CoreChar) {
-        return !m_config->get_core_char().empty();
+        // 点刺投资直接放弃招募，无需按指定干员选择招募券。
+        if (m_config->get_theme() == RoguelikeTheme::Sarkaz && m_config->get_mode() == RoguelikeMode::Investment &&
+            m_config->get_squad() == "点刺成锭分队") {
+            return false;
+        }
+
+        // hijack 在招募入口 SubTaskStart 触发，先于招募插件消耗顺位，当前顺位即本次招募的顺位
+        return m_config->get_current_start_oper() != nullptr;
     }
 
-    // Roles CoreChar
-    if (auto it = m_customs.find(m_waiting_to_run); it == m_customs.cend()) {
-        return false;
-    }
-    else if (it->second.empty()) {
-        return false;
-    }
-
-    return true;
+    // Roles
+    return !m_config->get_start_roles().empty();
 }
 
 bool asst::RoguelikeCustomStartTaskPlugin::load_params(const json::value& params)
 {
     m_squad = params.get("squad", "");
-    if (m_config->get_mode() == RoguelikeMode::Collectible) {
+    if (m_config->get_mode() == RoguelikeMode::Collectible ||
+        m_config->get_mode() == RoguelikeMode::BlackFlowStartRun) {
         m_collectible_mode_squad = params.get("collectible_mode_squad", m_squad);
     }
 
-    m_config->set_core_char(params.get("core_char", ""));                            // 开局干员名
-    set_custom(RoguelikeCustomType::Roles, params.get("roles", ""));                 // 开局职业组
-    m_config->set_use_support(params.get("use_support", false));                     // 开局干员是否为助战干员
+    m_config->set_start_opers(RoguelikeConfig::parse_start_opers(params));           // 开局干员顺位列表
+    m_config->set_start_roles(params.get("roles", ""));                              // 开局职业组
     m_config->set_use_nonfriend_support(params.get("use_nonfriend_support", false)); // 是否可以是非好友助战干员
 
     if (auto select_list = params.find<json::object>("collectible_mode_start_list"); select_list) {
@@ -102,11 +111,6 @@ bool asst::RoguelikeCustomStartTaskPlugin::load_params(const json::value& params
     }
 
     return true;
-}
-
-void asst::RoguelikeCustomStartTaskPlugin::set_custom(RoguelikeCustomType type, std::string custom)
-{
-    m_customs.insert_or_assign(type, std::move(custom));
 }
 
 bool asst::RoguelikeCustomStartTaskPlugin::_run()
@@ -195,7 +199,7 @@ bool asst::RoguelikeCustomStartTaskPlugin::hijack_reward()
 bool asst::RoguelikeCustomStartTaskPlugin::hijack_roles()
 {
     constexpr size_t SwipeTimes = 7;
-    const std::string& required_role = m_customs[RoguelikeCustomType::Roles];
+    const std::string& required_role = m_config->get_start_roles();
 
     for (size_t i = 0; i != SwipeTimes; ++i) {
         if (need_exit()) {
@@ -228,8 +232,11 @@ bool asst::RoguelikeCustomStartTaskPlugin::hijack_core_char()
         { battle::Role::Sniper, "狙击" }, { battle::Role::Special, "特种" }, { battle::Role::Support, "辅助" },
         { battle::Role::Tank, "重装" },   { battle::Role::Warrior, "近卫" }
     };
-    const std::string& char_name = m_config->get_core_char();
-    const auto& role = BattleData.get_role(char_name);
+    // 开局免费招募的干员职业必定互异，每次招募前按当前顺位干员的职业重新选 tab；
+    // 顺位已耗尽或局内招募时不会进入本函数（verify 的启用条件已排除）
+    const RoguelikeStartOper* start_oper = m_config->get_current_start_oper();
+    const std::string& char_name = start_oper->name;
+    const auto& role = BattleData.get_first_role(char_name);
     auto role_iter = RoleOcrNameMap.find(role);
     if (role_iter == RoleOcrNameMap.cend()) {
         Log.error("Unknown role", char_name, static_cast<int>(role));

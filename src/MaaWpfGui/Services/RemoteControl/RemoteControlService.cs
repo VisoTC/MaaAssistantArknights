@@ -1,6 +1,6 @@
 // <copyright file="RemoteControlService.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -24,11 +24,14 @@ using System.Windows.Media.Imaging;
 using MaaWpfGui.Configuration.Factory;
 using MaaWpfGui.Configuration.Single.MaaTask;
 using MaaWpfGui.Constants;
+using MaaWpfGui.Constants.Enums;
 using MaaWpfGui.Helper;
+using MaaWpfGui.Main;
 using MaaWpfGui.States;
 using MaaWpfGui.ViewModels.UI;
 using MaaWpfGui.ViewModels.UserControl.Settings;
 using MaaWpfGui.ViewModels.UserControl.TaskQueue;
+using MaaWpfGui.ViewModels.UserControl.Toolbox;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -40,7 +43,6 @@ namespace MaaWpfGui.Services.RemoteControl;
 /// The view model of remote control.
 /// </summary>
 // 通过 container.Get<RemoteControlService>(); 实例化或获取实例
-// ReSharper disable once ClassNeverInstantiated.Global
 public class RemoteControlService
 {
     private Task _pollJobTask = Task.CompletedTask;
@@ -56,6 +58,8 @@ public class RemoteControlService
 
     private static RemoteControlUserControlModel RemoteSettings => SettingsViewModel.RemoteControlSettings;
 
+    private static readonly ILogger _logger = Log.ForContext<RemoteControlService>();
+
     public RemoteControlService()
     {
         InitializePollJobTask();
@@ -64,6 +68,12 @@ public class RemoteControlService
 
     public void InitializePollJobTask()
     {
+        if (Bootstrapper.IsDemoMode)
+        {
+            // README 截图演示模式：禁止远程控制轮询联网（更新检查类的定时器联网链已由 InitTimer 拦截）
+            return;
+        }
+
         if (_inited)
         {
             return;
@@ -84,7 +94,7 @@ public class RemoteControlService
                 {
                     if (!IsEndpointValid(RemoteSettings.RemoteControlGetTaskEndpointUri))
                     {
-                        Log.Logger.Information("RemoteControlGetTaskEndpointUri is not valid, return");
+                        _logger.Information("RemoteControlGetTaskEndpointUri is not valid, return");
                         _inited = false;
                         return;
                     }
@@ -93,11 +103,9 @@ public class RemoteControlService
                 }
                 catch (Exception ex)
                 {
-                    Log.Logger.Error(ex, "RemoteControl service raises unknown error.");
+                    _logger.Error(ex, "RemoteControl service raises unknown error.");
                 }
             }
-
-            // ReSharper disable once FunctionNeverReturns
         });
 
         _executeSequentialJobTask = _executeSequentialJobTask.ContinueWith(async _ => {
@@ -108,7 +116,7 @@ public class RemoteControlService
                 {
                     if (!IsEndpointValid(RemoteSettings.RemoteControlGetTaskEndpointUri))
                     {
-                        Log.Logger.Information("RemoteControlGetTaskEndpointUri is not valid, return");
+                        _logger.Information("RemoteControlGetTaskEndpointUri is not valid, return");
                         return;
                     }
 
@@ -116,11 +124,9 @@ public class RemoteControlService
                 }
                 catch (Exception ex)
                 {
-                    Log.Logger.Error(ex, "RemoteControl service raises unknown error.");
+                    _logger.Error(ex, "RemoteControl service raises unknown error.");
                 }
             }
-
-            // ReSharper disable once FunctionNeverReturns
         });
 
         _executeInstantJobTask = _executeInstantJobTask.ContinueWith(async _ => {
@@ -131,7 +137,7 @@ public class RemoteControlService
                 {
                     if (!IsEndpointValid(RemoteSettings.RemoteControlGetTaskEndpointUri))
                     {
-                        Log.Logger.Information("RemoteControlGetTaskEndpointUri is not valid, return");
+                        _logger.Information("RemoteControlGetTaskEndpointUri is not valid, return");
                         return;
                     }
 
@@ -139,11 +145,9 @@ public class RemoteControlService
                 }
                 catch (Exception ex)
                 {
-                    Log.Logger.Error(ex, "RemoteControl service raises unknown error.");
+                    _logger.Error(ex, "RemoteControl service raises unknown error.");
                 }
             }
-
-            // ReSharper disable once FunctionNeverReturns
         });
     }
 
@@ -201,27 +205,6 @@ public class RemoteControlService
         return (T)methodInfo.Invoke(instance, null);
     }
 
-    private static async Task<T> InvokeInstanceAsyncFunction<T>(object instance, string methodName)
-    {
-        ArgumentNullException.ThrowIfNull(instance);
-
-        if (string.IsNullOrEmpty(methodName))
-        {
-            throw new ArgumentNullException(nameof(methodName));
-        }
-
-        Type type = instance.GetType();
-        MethodInfo methodInfo = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance) ?? throw new ArgumentException($"Method '{methodName}' not found in type '{type.FullName}'.");
-
-        // 检查方法是否是异步方法 (返回Task或Task<T>)
-        if (!typeof(Task).IsAssignableFrom(methodInfo.ReturnType))
-        {
-            throw new ArgumentException($"Method '{methodName}' is not asynchronous.");
-        }
-
-        return await (Task<T>)methodInfo.Invoke(instance, null);
-    }
-
     private static TResult InvokeStaticFunction<TResult>(Type staticType, string methodName)
     {
         ArgumentNullException.ThrowIfNull(staticType);
@@ -256,7 +239,7 @@ public class RemoteControlService
         var response = await Instances.HttpService.PostAsJsonAsync(new Uri(endpoint), new { user = uid, device = did });
         if (response == null)
         {
-            Log.Logger.Error("RemoteControlService endpoint failed.");
+            _logger.Error("RemoteControlService endpoint failed.");
             return;
         }
 
@@ -293,6 +276,7 @@ public class RemoteControlService
                     case "LinkStart-Mission":
                     case "LinkStart-AutoRoguelike":
                     case "LinkStart-Reclamation":
+                    case "Toolbox-Reclamation":
                     case "Toolbox-GachaOnce":
                     case "Toolbox-GachaTenTimes":
                     case "CaptureImage":
@@ -331,7 +315,7 @@ public class RemoteControlService
                     {
                         // 一键长草特殊任务
                         await _runningState.UntilIdleAsync();
-                        var startLogStr = LocalizationHelper.GetStringFormat("RemoteControlReceivedTask", type, id);
+                        var startLogStr = LocalizationHelper.GetStringFormat("RemoteControl.ReceivedTask", type, id);
 
                         Instances.TaskQueueViewModel.AddLog(startLogStr);
                         await Execute.OnUIThreadAsync(() => {
@@ -339,7 +323,7 @@ public class RemoteControlService
                         });
                         await _runningState.UntilIdleAsync();
 
-                        var stopLogStr = LocalizationHelper.GetStringFormat("RemoteControlCompletedTask", type, id);
+                        var stopLogStr = LocalizationHelper.GetStringFormat("RemoteControl.CompletedTask", type, id);
                         Instances.TaskQueueViewModel.AddLog(stopLogStr);
                         break;
                     }
@@ -351,7 +335,6 @@ public class RemoteControlService
                 case "LinkStart-Mall":
                 case "LinkStart-Mission":
                 case "LinkStart-AutoRoguelike":
-                case "LinkStart-Reclamation":
                     {
                         await LinkStart([type.Split('-')[1]]);
                         break;
@@ -370,6 +353,18 @@ public class RemoteControlService
                     {
                         await _runningState.UntilIdleAsync();
                         await Instances.ToolboxViewModel.GachaTenTimes();
+                        await _runningState.UntilIdleAsync();
+
+                        break;
+                    }
+
+                case "Toolbox-Reclamation":
+                case "LinkStart-Reclamation":
+                    {
+                        // 生息演算无导航、不与其他任务衔接，按工具箱形态完整执行，不进 LinkStart 批处理；
+                        // LinkStart-Reclamation 为兼容旧面板保留的别名
+                        await _runningState.UntilIdleAsync();
+                        await Instances.ToolboxViewModel.StartReclamation();
                         await _runningState.UntilIdleAsync();
 
                         break;
@@ -440,7 +435,7 @@ public class RemoteControlService
                 });
                 if (response == null)
                 {
-                    Log.Logger.Error("RemoteControlService report task failed.");
+                    _logger.Error("RemoteControlService report task failed.");
                 }
             }
 
@@ -470,15 +465,9 @@ public class RemoteControlService
 
                 case "StopTask":
                     {
-                        await Task.Run(() => {
-                            if (!Instances.AsstProxy.AsstStop())
-                            {
-                                // 无法确定当前的界面，找不到借用的UI位置，因此只能Log
-                                Log.Logger.Error("Failed to stop Asst.");
-                            }
-                        });
-
+                        // 远控停止与界面手动停止同语义（结束脚本按当前任务链的开关闭合）；
                         // 无需等待，甩出任务即可返回，远端应该用心跳来确认界面卡死和取消是否成功。
+                        _ = Instances.TaskQueueViewModel.StopManuallyAsync();
                         break;
                     }
 
@@ -531,7 +520,7 @@ public class RemoteControlService
                 });
                 if (response == null)
                 {
-                    Log.Logger.Error("RemoteControlService report task failed.");
+                    _logger.Error("RemoteControlService report task failed.");
                 }
             }
         }
@@ -557,7 +546,14 @@ public class RemoteControlService
     {
         await _runningState.UntilIdleAsync();
 
-        _runningState.SetIdle(false);
+        if (Bootstrapper.TryGetTaskBlockReason() is { } reason)
+        {
+            Instances.TaskQueueViewModel.AddLog(reason, UiLogColor.Error);
+            _logger.Warning("RemoteControl LinkStart blocked");
+            return;
+        }
+
+        _runningState.BeginRun(RunOwner.TaskQueue);
 
         await Execute.OnUIThreadAsync(async () => {
             // 虽然更改时已经保存过了，不过保险起见还是在点击开始之后再保存一次(任务及基建列表)
@@ -565,9 +561,9 @@ public class RemoteControlService
             // TaskQueueViewModel.InfrastTask.InfrastOrderSelectionChanged();
             Instances.TaskQueueViewModel.ClearLog();
 
-            /*await Task.Run(() => Instances.SettingsViewModel.RunScript("StartsWithScript"));*/
+            /*await Task.Run(() => Instances.SettingsViewModel.RunScript(GameSettingsUserControlModel.StartWithScriptKey));*/
 
-            Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("ConnectingToEmulator"));
+            Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("Connection.Connecting"));
 
             // 一般是点了“停止”按钮了
             if (_runningState.GetStopping())
@@ -576,7 +572,7 @@ public class RemoteControlService
                 return;
             }
 
-            if (!await InvokeInstanceAsyncFunction<bool>(Instances.TaskQueueViewModel, "ConnectToEmulator"))
+            if (!await Instances.TaskQueueViewModel.ConnectToConnectionTarget())
             {
                 return;
             }
@@ -603,7 +599,7 @@ public class RemoteControlService
                             var tasks = ConfigFactory.CurrentConfig.TaskQueue.OfType<InfrastTask>().ToList();
                             if (tasks.Count == 1)
                             {
-                                taskRet &= InfrastSettingsUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
+                                taskRet &= InfrastTaskUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
                                 break;
                             }
 
@@ -616,7 +612,7 @@ public class RemoteControlService
                             var tasks = ConfigFactory.CurrentConfig.TaskQueue.OfType<StartUpTask>().ToList();
                             if (tasks.Count == 1)
                             {
-                                taskRet &= StartUpSettingsUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
+                                taskRet &= StartUpTaskUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
                                 break;
                             }
 
@@ -629,7 +625,7 @@ public class RemoteControlService
                             var tasks = ConfigFactory.CurrentConfig.TaskQueue.OfType<FightTask>().ToList();
                             if (tasks.Count == 1)
                             {
-                                taskRet &= FightSettingsUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
+                                taskRet &= FightTaskUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
                                 break;
                             }
 
@@ -642,7 +638,7 @@ public class RemoteControlService
                             var tasks = ConfigFactory.CurrentConfig.TaskQueue.OfType<RecruitTask>().ToList();
                             if (tasks.Count == 1)
                             {
-                                taskRet &= RecruitSettingsUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
+                                taskRet &= RecruitTaskUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
                                 break;
                             }
 
@@ -655,7 +651,7 @@ public class RemoteControlService
                             var tasks = ConfigFactory.CurrentConfig.TaskQueue.OfType<MallTask>().ToList();
                             if (tasks.Count == 1)
                             {
-                                taskRet &= MallSettingsUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
+                                taskRet &= MallTaskUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
                                 break;
                             }
 
@@ -668,7 +664,7 @@ public class RemoteControlService
                             var tasks = ConfigFactory.CurrentConfig.TaskQueue.OfType<AwardTask>().ToList();
                             if (tasks.Count == 1)
                             {
-                                taskRet &= AwardSettingsUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
+                                taskRet &= AwardTaskUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
                                 break;
                             }
 
@@ -681,20 +677,7 @@ public class RemoteControlService
                             var tasks = ConfigFactory.CurrentConfig.TaskQueue.OfType<RoguelikeTask>().ToList();
                             if (tasks.Count == 1)
                             {
-                                taskRet &= RoguelikeSettingsUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
-                                break;
-                            }
-
-                            taskRet = false;
-                            break;
-                        }
-
-                    case "Reclamation":
-                        {
-                            var tasks = ConfigFactory.CurrentConfig.TaskQueue.OfType<ReclamationTask>().ToList();
-                            if (tasks.Count == 1)
-                            {
-                                taskRet &= ReclamationSettingsUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
+                                taskRet &= RoguelikeTaskUserControlModel.Instance.SerializeTask(tasks[0]).IsSuccess ?? false;
                                 break;
                             }
 
@@ -714,15 +697,18 @@ public class RemoteControlService
                     continue;
                 }
 
-                Instances.TaskQueueViewModel.AddLog(item + "Error", UiLogColor.Error);
+                // 仅 CombatError 有译文 key（TaskQueue.CombatError），其余任务名拼接产物
+                // 无对应译文，回退显示拼接原文
+                Instances.TaskQueueViewModel.AddLog(
+                    item == "Combat" ? LocalizationHelper.GetString("TaskQueue.CombatError") : item + "Error",
+                    UiLogColor.Error);
                 taskRet = true;
                 --count;
             }
 
             if (count == 0)
             {
-                Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("UnselectedTask"));
-                _runningState.SetIdle(true);
+                Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("TaskQueue.UnselectedTask"));
                 Instances.TaskQueueViewModel.SetStopped();
                 return;
             }
@@ -731,12 +717,13 @@ public class RemoteControlService
 
             if (taskRet)
             {
-                Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("Running"));
+                Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("TaskQueue.Running"));
                 Instances.AsstProxy.StartTaskTime = DateTimeOffset.Now;
+                Instances.TaskQueueViewModel.SetRunDeadlineFromSettings();
             }
             else
             {
-                Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("UnknownErrorOccurs"));
+                Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("Error.UnknownErrorOccurs"));
                 await Instances.TaskQueueViewModel.Stop();
                 Instances.TaskQueueViewModel.SetStopped();
             }
@@ -771,7 +758,7 @@ public class RemoteControlService
             {
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorMsg = LocalizationHelper.GetStringFormat("RemoteControlConnectionTestFail", response.StatusCode);
+                    var errorMsg = LocalizationHelper.GetStringFormat("RemoteControl.ConnectionTest.Failed", response.StatusCode);
                     ToastNotification.ShowDirect(errorMsg);
                     return;
                 }
@@ -779,13 +766,13 @@ public class RemoteControlService
             else
             {
                 // 一般来说不会走到这里，因为null response一定会报错
-                var errorMsg = LocalizationHelper.GetStringFormat("RemoteControlConnectionTestFail", "Unknown");
+                var errorMsg = LocalizationHelper.GetStringFormat("RemoteControl.ConnectionTest.Failed", "Unknown");
                 ToastNotification.ShowDirect(errorMsg);
                 return;
             }
 
             ToastNotification.ShowDirect(
-                LocalizationHelper.GetString("RemoteControlConnectionTestSuccess"));
+                LocalizationHelper.GetString("RemoteControl.ConnectionTest.Success"));
         }
         catch (Exception e)
         {
@@ -795,7 +782,7 @@ public class RemoteControlService
                 error = e.InnerException.Message;
             }
 
-            var errorMsg = LocalizationHelper.GetStringFormat("RemoteControlConnectionTestFail", error);
+            var errorMsg = LocalizationHelper.GetStringFormat("RemoteControl.ConnectionTest.Failed", error);
             ToastNotification.ShowDirect(errorMsg);
         }
     }
@@ -809,7 +796,7 @@ public class RemoteControlService
     {
         if (string.IsNullOrWhiteSpace(endpoint))
         {
-            ShowToast("RemoteControlConnectionTestFailEmpty", alarm);
+            ShowToast("RemoteControl.ConnectionTest.Failed.Empty", alarm);
             return false;
         }
 
@@ -821,12 +808,12 @@ public class RemoteControlService
         }
         else if (lowerEndpoint.StartsWith("http://"))
         {
-            ShowToast("RemoteControlConnectionTestWarningHttpUnsafe", alarm);
+            ShowToast("RemoteControl.ConnectionTest.WarningHttpUnsafe", alarm);
             return true;
         }
         else
         {
-            ShowToast("RemoteControlConnectionTestFailNotHttpOrHttps", alarm);
+            ShowToast("RemoteControl.ConnectionTest.Failed.NotHttpOrHttps", alarm);
             return false;
         }
     }

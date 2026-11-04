@@ -22,19 +22,25 @@ Appends a task.
 #### Return Value
 
 - `TaskId`  
-   The task ID if the task is successfully appended, for the following configuration;
+  The task ID if the task is successfully appended, for the following configuration;
   0 if the task is not successfully appended.
 
 #### Parameter Description
 
 :::: field-group  
-::: field name="handle" type="AsstHandle" required  
+::: field handle  
+@type AsstHandle  
+@required  
 Instance handle  
 :::  
-::: field name="type" type="const char*" required  
+::: field type  
+@type const char*  
+@required  
 Task type  
 :::  
-::: field name="params" type="const char*" required  
+::: field params  
+@type const char*  
+@required  
 Task parameters, json string  
 :::  
 ::::
@@ -42,28 +48,38 @@ Task parameters, json string
 ##### List of Task Types
 
 - `StartUp`  
-   Start-up
+  Start-up
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="client_type" type="string" required  
-Client version.  
+::: field client_type  
+@type string  
+@required  
+Client version.
 <br>
 Options: `Official` | `Bilibili` | `txwy` | `YoStarEN` | `YoStarJP` | `YoStarKR`  
 :::  
-::: field name="start_game_enabled" type="boolean" optional default="false"  
+::: field start_game_enabled  
+@type boolean  
+@default false  
+@optional  
 Whether to launch client automatically.  
 :::  
-::: field name="account_name" type="string" optional  
-Switch account, don't switch by default.  
+::: field account_name  
+@type string  
+@optional  
+Switch account, don't switch by default.
 <br>
-Only supports switching to already logged-in accounts, using login name for identification, ensure the input content is unique among all logged-in accounts.  
+Only supports switching to already logged-in accounts, using login name for identification, ensure the input content is unique among all logged-in accounts.
 <br>
-Official server: `123****4567`, can input `123****4567`, `4567`, `123`, or `3****4567`  
+Official server: `123****4567`, can input `123****4567`, `4567`, `123`, or `3****4567`
 <br>
-Bilibili server: `Zhang San`, can input `Zhang San`, `Zhang`, or `San`  
+Bilibili server: `Zhang San`, can input `Zhang San`, `Zhang`, or `San`
 <br>
 Traditional Chinese server: Email-based, e.g. `ab****01@gmail.com`. Entering the plain-text portion without asterisks is recommended, e.g. `01@gmail`  
 :::  
@@ -84,14 +100,19 @@ Traditional Chinese server: Email-based, e.g. `ab****01@gmail.com`. Entering the
 </details>
 
 - `CloseDown`  
-   Close Game Client
+  Close Game Client
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="client_type" type="string" required  
-Client version, no execution if left blank.  
+::: field client_type  
+@type string  
+@required  
+Client version, no execution if left blank.
 <br>
 Options: `Official` | `Bilibili` | `txwy` | `YoStarEN` | `YoStarJP` | `YoStarKR`  
 :::  
@@ -110,13 +131,18 @@ Options: `Official` | `Bilibili` | `txwy` | `YoStarEN` | `YoStarJP` | `YoStarKR`
 </details>
 
 - `Fight`  
-   Operation
+  Operation
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="stage" type="string" optional  
+::: field stage  
+@type string  
+@optional  
 Stage name, by default empty, recognizes current/last stage. Editing in run-time is not supported.  
 Currently supported stages for navigation include:
 
@@ -132,67 +158,115 @@ Currently supported stages for navigation include:
 - OF-1 / OF-F3 in side stories.
 - Last three stages of current SS events. Visit [API](https://api.maa.plus/MaaAssistantArknights/api/gui/StageActivityV2.json) for the list of supported stages. Requires additional loading of event stage navigation in [tasks.json](https://api.maa.plus/MaaAssistantArknights/api/resource/tasks.json) file.
 - Rerun SS events. Input `SSReopen-<stage prefix>` to farm XX-1 ~ XX-9 stages at once, e.g. `SSReopen-IC`.
-  :::  
-  ::: field name="medicine" type="number" optional default="0"  
-  Maximum number of Sanity Potions used.  
-  :::  
-  ::: field name="medicine_expire_days" type="number" optional default="0"  
-  Use Sanity Potions that expire within the specified number of days. `0` means no expiring potions will be used.  
-  :::  
-  ::: field name="expiring_medicine" type="number" optional default="0" deprecated  
-  Deprecated since v6.8.0, please use `medicine_expire_days` instead.  
-  :::  
-  ::: field name="stone" type="number" optional default="0"  
-  Maximum number of Originite Prime used.  
-  :::  
-  ::: field name="times" type="number" optional default="2147483647"  
-  Number of battles.  
-  :::  
-  ::: field name="series" type="number" optional  
-  Number of consecutive battles, -1~6.
-  <br>
-  `-1` to disable switching.
-  <br>
-  `0` to automatically switch to the current maximum available times, if current sanity is not enough for 6 times, select the minimum available times.
-  <br>
-  `1~6` to specify number of consecutive battles.  
-  :::  
-  ::: field name="drops" type="object" optional  
-  Specifying the number of drops, no specification by default. key is item_id, value is quantity. key can refer to `resource/item_index.json` file.  
-  <br>
-  Example: `{ "30011": 10, "30062": 5 }`  
-  <br>
-  All above are OR relations, i.e. task stops when any one is reached.  
-  :::  
-  ::: field name="report_to_penguin" type="boolean" optional default="false"  
-  Whether to upload data to Penguin Statistics.  
-  :::  
-  ::: field name="penguin_id" type="string" optional  
-  Penguin Statistics report id, empty by default. Only effective when `report_to_penguin` is true.  
-  :::  
-  :::  
-  ::: field name="report_to_yituliu" type="boolean" optional default="false"  
-  Whether to report to YITULIU.  
-  :::  
-  ::: field name="yituliu_id" type="string" optional  
-  YITULIU report id, empty by default. Only effective when `report_to_yituliu` is true.  
-  :::  
-  ::: field name="server" type="string" optional default="CN"  
-  Server, will affect drop recognition and upload.
-  <br>
-  Options: `CN` | `US` | `JP` | `KR`  
-  :::  
-  ::: field name="client_type" type="string" optional  
-  Client version, empty by default. Used to restart and reconnect after game crash, does not enable this feature if empty.
-  <br>
-  Options: `Official` | `Bilibili` | `txwy` | `YoStarEN` | `YoStarJP` | `YoStarKR`  
-  :::  
-  ::: field name="DrGrandet" type="boolean" optional default="false"  
-  Sanity-saving Originite usage mode, only effective when Originite usage may occur.
-  <br>
-  Wait at the Originite confirmation screen until the current 1 sanity point is restored, then immediately use Originite.  
-  :::  
-  ::::
+
+:::  
+::: field medicine  
+@type number  
+@default 0  
+@optional  
+Maximum number of Sanity Potions used.  
+:::  
+::: field medicine_expire_days  
+@type number  
+@default 0  
+@optional  
+Use Sanity Potions that expire within the specified number of days. `0` means no expiring potions will be used.  
+:::  
+::: field expiring_medicine  
+@type number  
+@default 0  
+@optional  
+@deprecated  
+Deprecated since v6.8.0, please use `medicine_expire_days` instead.  
+:::  
+::: field stone  
+@type number  
+@default 0  
+@optional  
+Maximum number of Originite Prime used.  
+:::  
+::: field times  
+@type number  
+@default 2147483647  
+@optional  
+Number of battles.  
+:::  
+::: field series  
+@type number  
+@default 1  
+@optional  
+Number of consecutive battles, -1~10.
+<br>
+`-1` to disable switching.
+<br>
+`0` to automatically switch to the current maximum available times, if current sanity is not enough for the maximum times, select the minimum available times.
+<br>
+`1~10` to specify number of consecutive battles.
+<br>
+::: info Server Difference  
+Input validation depends on whether the resource contains `FightSeries-OldMethodFlag`:
+<br>
+
+- New list (CN main resources after 2026/8/1, without this flag): accepts `-1~10`
+- Old list (overseas resources with this flag): accepts only `-1~6`; larger values are rejected
+
+Overseas servers are expected to follow in about six months, after which the limit becomes 10 with the resource update. The Windows GUI series dropdown currently always offers up to 10; on overseas clients, manually selecting 7~10 will be rejected by Core when the task is submitted.  
+:::  
+::: field drops  
+@type object  
+@optional  
+Specifying the number of drops, no specification by default. key is item_id, value is quantity. key can refer to `resource/item_index.json` file.
+<br>
+Example: `{ "30011": 10, "30062": 5 }`
+<br>
+All above are OR relations, i.e. task stops when any one is reached.  
+:::  
+::: field report_to_penguin  
+@type boolean  
+@default false  
+@optional  
+Whether to upload data to Penguin Statistics.  
+:::  
+::: field penguin_id  
+@type string  
+@optional  
+Penguin Statistics report id, empty by default. Only effective when `report_to_penguin` is true.  
+:::  
+::: field report_to_yituliu  
+@type boolean  
+@default false  
+@optional  
+Whether to report to YITULIU.  
+:::  
+::: field yituliu_id  
+@type string  
+@optional  
+YITULIU report id, empty by default. Only effective when `report_to_yituliu` is true.  
+:::  
+::: field server  
+@type string  
+@default CN  
+@optional  
+Server, will affect drop recognition and upload.
+<br>
+Options: `CN` | `US` | `JP` | `KR`  
+:::  
+::: field client_type  
+@type string  
+@optional  
+Client version, empty by default. Used to restart and reconnect after game crash, does not enable this feature if empty.
+<br>
+Options: `Official` | `Bilibili` | `txwy` | `YoStarEN` | `YoStarJP` | `YoStarKR`  
+:::  
+::: field DrGrandet  
+@type boolean  
+@default false  
+@optional  
+Sanity-saving Originite usage mode, only effective when Originite usage may occur.
+<br>
+Wait at the Originite confirmation screen until the current 1 sanity point is restored, then immediately use Originite.  
+:::  
+::::
 
 <details>
 <summary>Example</summary>
@@ -222,27 +296,48 @@ Currently supported stages for navigation include:
 </details>
 
 - `Recruit`  
-   Recruitment
+  Recruitment
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="refresh" type="boolean" optional default="false"  
+::: field refresh  
+@type boolean  
+@default false  
+@optional  
 Whether to refresh 3★ tags.  
 :::  
-::: field name="select" type="array<number>" required  
+::: field select  
+@type array<number>  
+@required  
 Tag ★ rarity to click.  
 :::  
-::: field name="confirm" type="array<number>" required  
+::: field confirm  
+@type array<number>  
+@required  
 Tag ★ rarity for confirmation. Can be set to empty array for calculation only.  
 :::  
-::: field name="first_tags" type="array<string>" optional  
+::: field level3_recruitment_permit_reserve  
+@type number  
+@default 0  
+@optional  
+Number of recruitment permits to reserve when automatically confirming 3★ recruitment. MAA skips 3★ recruitment when the current permit count is less than or equal to this value; 4★ and higher recruitment is unaffected. Set to `0` to disable. When enabled, a count recognition failure also skips the current 3★ recruitment to prevent accidental consumption.  
+:::  
+::: field first_tags  
+@type array<string>  
+@optional  
 Preferred Tags, valid only when selecting 3★ tags. Default is empty.
 <br>
 For 3★ recruits, MAA will try to include as many of the listed tags as possible. This is treated as a hard requirement and will override any "don't select 3★ Tags" settings.  
 :::  
-::: field name="extra_tags_mode" type="number" optional default="0"  
+::: field extra_tags_mode  
+@type number  
+@default 0  
+@optional  
 Select more tags.
 <br>
 `0` - default behavior
@@ -251,46 +346,77 @@ Select more tags.
 <br>
 `2` - if possible, select more high star tag combinations even if they might conflict  
 :::  
-::: field name="times" type="number" optional default="0"  
+::: field times  
+@type number  
+@default 0  
+@optional  
 Number of recruitments. Can be set to 0 for calculation only.  
 :::  
-::: field name="set_time" type="boolean" optional default="true"  
+::: field set_time  
+@type boolean  
+@default true  
+@optional  
 Whether to set recruitment time limit. Only effective when `times` is 0.  
 :::  
-::: field name="expedite" type="boolean" optional default="false"  
+::: field expedite  
+@type boolean  
+@default false  
+@optional  
 Whether to use Expedited Plans.  
 :::  
-::: field name="expedite_times" type="number" optional  
-Number of expedites, only effective when `expedite` is true. By default unlimited (until `times` limit is reached).  
+::: field expedite_times  
+@type number  
+@optional  
+Number of expedites, only effective when `expedite` is true. No longer effective in the current version; expedites are unlimited until the `times` limit is reached.  
 :::  
-::: field name="skip_robot" type="boolean" optional default="true"  
-Deprecated and kept only for backward compatibility.  
+::: field skip_robot  
+@type boolean  
+@default true  
+@optional  
+Deprecated and kept only for backward compatibility.
 <br>
 When `preserve_tags` is absent and this value is `true`, MAA skips on `支援机械` only; `元素` is no longer treated as the legacy 1★ tag.  
-:::
-::: field name="preserve_tags" type="array<string>" optional  
-List of tag names that should preserve the current recruitment slot and skip this recruitment. Default is empty.  
+:::  
+::: field preserve_tags  
+@type array<string>  
+@optional  
+List of tag names that should preserve the current recruitment slot and skip this recruitment. Default is empty.
 <br>
 If any specified tag is recognized, MAA will keep that slot untouched and skip the current recruitment.  
 :::  
-::: field name="recruitment_time" type="object" optional  
+::: field recruitment_time  
+@type object  
+@optional  
 Tag ★ rarity (greater than or equal to 3) and corresponding desired recruitment time limit, in minutes, all default to 540 (i.e. 09:00:00).
 <br>
 Example: `{ "3": 540, "4": 540 }`  
 :::  
-::: field name="report_to_penguin" type="boolean" optional default="false"  
+::: field report_to_penguin  
+@type boolean  
+@default false  
+@optional  
 Whether to report to Penguin Statistics.  
 :::  
-::: field name="penguin_id" type="string" optional  
+::: field penguin_id  
+@type string  
+@optional  
 Penguin Statistics report id, empty by default. Only effective when `report_to_penguin` is true.  
 :::  
-::: field name="report_to_yituliu" type="boolean" optional default="false"  
+::: field report_to_yituliu  
+@type boolean  
+@default false  
+@optional  
 Whether to report to YITULIU data.  
 :::  
-::: field name="yituliu_id" type="string" optional  
+::: field yituliu_id  
+@type string  
+@optional  
 YITULIU report id, empty by default. Only effective when `report_to_yituliu` is true.  
 :::  
-::: field name="server" type="string" optional default="CN"  
+::: field server  
+@type string  
+@default CN  
+@optional  
 Server, will affect upload.
 <br>
 Options: `CN` | `US` | `JP` | `KR`  
@@ -306,6 +432,7 @@ Options: `CN` | `US` | `JP` | `KR`
    "refresh": true,
    "select": [5, 4],
    "confirm": [4, 3],
+   "level3_recruitment_permit_reserve": 8,
    "first_tags": ["高级资深干员"],
    "extra_tags_mode": 1,
    "times": 4,
@@ -328,65 +455,147 @@ Options: `CN` | `US` | `JP` | `KR`
 </details>
 
 - `Infrast`  
-   Infrastructure shifting
+  Infrastructure shifting
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="mode" type="number" optional default="0"  
+::: field mode  
+@type number  
+@default 0  
+@optional  
 Shift mode. Editing in run-time is not supported.
 <br>
-`0` - `Default`: Default shift mode, single facility optimal solution.
+`0` - `Default`: Default shift mode, automatically calculates efficient operator combinations within and across facilities.
 <br>
 `10000` - `Custom`: Custom shift mode, reads user configuration, see [Base Scheduling Schema](./base-scheduling-schema.md).
 <br>
-`20000` - `Rotation`: One-key rotation mode, skips control center, power station, dormitory and office, other facilities do not change shifts but retain basic operations (such as using drones, reception room logic).  
+`20000` - `Rotation`: One-key rotation mode, skips control center, power station, dormitory, office and recycling station, other facilities do not change shifts but retain basic operations (such as using drones, reception room logic).  
 :::  
-::: field name="facility" type="array<string>" required  
-Facilities for shifting (ordered). Editing in run-time is not supported.
+::: field facility  
+@type array<string>  
+@required  
+Facilities for shifting. Editing in run-time is not supported.
 <br>
-Facility name: `Mfg` | `Trade` | `Power` | `Control` | `Reception` | `Office` | `Dorm` | `Processing` | `Training`  
+When `mode = 0`, this array acts as an enabled set; the order and duplicates do not affect scheduling (the shift order is planned automatically by the algorithm). When `mode = 10000` / `20000`, facilities are processed in array order.
+<br>
+Facility name: `Mfg` | `Trade` | `Power` | `Control` | `Reception` | `Office` | `Recycle` | `Dorm` | `Processing` | `Training` | `AssistantChange`  
 :::  
-::: field name="drones" type="string" optional default="\_NotUse"  
+::: field drones  
+@type string  
+@default \_NotUse  
+@optional  
 Usage of drones. This field is ignored when `mode = 10000`.
 <br>
 Options: `_NotUse` | `Money` | `SyntheticJade` | `CombatRecord` | `PureGold` | `OriginStone` | `Chip`  
 :::  
-::: field name="threshold" type="number" optional default="0.3"  
+::: field threshold  
+@type number  
+@default 0.3  
+@optional  
 Morale threshold, range [0, 1.0].
 <br>
 When `mode = 10000`, this field is only effective for "autofill".
 <br>
 This field is ignored when `mode = 20000`.  
 :::  
-::: field name="replenish" type="boolean" optional default="false"  
+::: field replenish  
+@type boolean  
+@default false  
+@optional  
 Whether to replenish Originium Shard in trading post.  
 :::  
-::: field name="dorm_notstationed_enabled" type="boolean" optional default="false"  
+::: field dorm_notstationed_enabled  
+@type boolean  
+@default false  
+@optional  
 Whether to enable "Not Stationed in Dorm" option.  
 :::  
-::: field name="dorm_trust_enabled" type="boolean" optional default="false"  
+::: field dorm_trust_enabled  
+@type boolean  
+@default false  
+@optional  
 Whether to fill dormitory with operators not at max trust.  
 :::  
-::: field name="reception_message_board" type="boolean" optional default="true"  
+::: field fiammetta_targets  
+@type array<string>  
+@default ["清流", "可露希尔", "但书"]  
+@optional  
+Fiammetta recovery target list. At the start of a shift change, the target operator with the lowest morale in the list is placed in a dormitory together with Fiammetta to swap moods. Only effective when `mode = 0` and `fiammetta_recovery_enabled` is true.
+<br>
+Options: `清流` | `可露希尔` | `但书` | `巫恋` | `龙舌兰` | `歌蕾蒂娅` | `琴柳` | `承曦格雷伊` | `温蒂` | `槐琥` | `至简` | `旅骨` (entries outside the options or duplicates are ignored)  
+:::  
+::: field fiammetta_recovery_enabled  
+@type boolean  
+@default false  
+@optional  
+Whether to use Fiammetta to restore the target's morale at the start of the shift; when disabled, the shift change skips the dormitory preparation step. Only effective when `mode = 0`.  
+:::  
+::: field use_pinus_sylvestris  
+@type boolean  
+@default false  
+@optional  
+Whether to enable the ｢Pinus Sylvestris Knights｣ cross-facility team. Only effective when `mode = 0`.  
+:::  
+::: field use_perception_information  
+@type boolean  
+@default false  
+@optional  
+Whether to enable the ｢Perception Information｣ cross-facility team, which takes priority over ｢Worldly Plight｣. Only effective when `mode = 0`.  
+:::  
+::: field use_worldly_plight  
+@type boolean  
+@default false  
+@optional  
+Whether to enable the ｢Worldly Plight｣ cross-facility team. Only effective when `mode = 0`.  
+:::  
+::: field use_abyssal_hunter  
+@type boolean  
+@default false  
+@optional  
+Whether to enable the ｢Abyssal Hunters｣ cross-facility team. Only effective when `mode = 0`; when enabled together with ｢Pinus Sylvestris Knights｣, the two teams will not participate in scheduling together.  
+:::  
+::: field reception_message_board  
+@type boolean  
+@default true  
+@optional  
 Whether to collect credits from reception room message board.  
 :::  
-::: field name="reception_clue_exchange" type="boolean" optional default="true"  
+::: field reception_clue_exchange  
+@type boolean  
+@default true  
+@optional  
 Whether to perform clue exchange.  
 :::  
-::: field name="reception_send_clue" type="boolean" optional default="true"  
+::: field reception_send_clue  
+@type boolean  
+@default true  
+@optional  
 Whether to send clues.  
 :::  
-::: field name="filename" type="string" required  
+::: field filename  
+@type string  
+@required  
 Custom config path. Editing in run-time is not supported.
 <br>
 <Badge type="warning" text="Only effective when mode = 10000" />  
 :::  
-::: field name="plan_index" type="number" required  
+::: field plan_index  
+@type number  
+@required  
 Plan index number in the configuration. Editing in run-time is not supported.
 <br>
 <Badge type="warning" text="Only effective when mode = 10000" />  
+:::  
+::: field continue_training  
+@type boolean  
+@default false  
+@optional  
+Whether to continue unfinished skill training in the Training Room.  
 :::  
 ::::
 
@@ -414,38 +623,68 @@ Plan index number in the configuration. Editing in run-time is not supported.
 </details>
 
 - `Mall`  
-   Collecting Credits and auto-purchasing.  
-   Will buy items in order following `buy_first` list, buy other items from left to right ignoring items in `blacklist`, and buy other items from left to right ignoring the `blacklist` while credit overflows.
+  Collecting Credits and auto-purchasing.  
+  Will buy items in order following `buy_first` list, buy other items from left to right ignoring items in `blacklist`, and buy other items from left to right ignoring the `blacklist` while credit overflows.
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="visit_friends" type="boolean" optional default="true"  
+::: field visit_friends  
+@type boolean  
+@default true  
+@optional  
 Whether to visit friends' base to obtain Credits.  
 :::  
-::: field name="shopping" type="boolean" optional default="true"  
+::: field shopping  
+@type boolean  
+@default true  
+@optional  
 Whether to buy items from the store.  
 :::  
-::: field name="buy_first" type="array<string>" optional default="[]"  
+::: field buy_first  
+@type array<string>  
+@default []  
+@optional  
 Items to be purchased with priority. Item name, e.g. `"招聘许可"` (Recruitment Permit), `"龙门币"` (LMD), etc.  
 :::  
-::: field name="blacklist" type="array<string>" optional default="[]"  
+::: field blacklist  
+@type array<string>  
+@default []  
+@optional  
 Blacklist. Item name, e.g. `"加急许可"` (Expedited Plan), `"家具零件"` (Furniture Part), etc.  
 :::  
-::: field name="force_shopping_if_credit_full" type="boolean" optional default="false"  
+::: field force_shopping_if_credit_full  
+@type boolean  
+@default false  
+@optional  
 Whether to ignore the Blacklist if credit overflows.  
 :::  
-::: field name="only_buy_discount" type="boolean" optional default="false"  
+::: field only_buy_discount  
+@type boolean  
+@default false  
+@optional  
 Whether to purchase only discounted items, applicable only on the second round of purchases.  
 :::  
-::: field name="reserve_max_credit" type="boolean" optional default="false"  
+::: field reserve_max_credit  
+@type boolean  
+@default false  
+@optional  
 Whether to stop purchasing when credit points fall below 300, applicable only on the second round of purchases.  
 :::  
-::: field name="credit_fight" type="boolean" optional default="false"  
+::: field credit_fight  
+@type boolean  
+@default false  
+@optional  
 Whether to run one battle of OF-1 to gain more Credits the next day.  
 :::  
-::: field name="formation_index" type="number" optional default="0"  
+::: field formation_index  
+@type number  
+@default 0  
+@optional  
 Formation slot index used for the OF-1 battle.
 <br>
 Integer between 0–4, where 0 = current squad, 1–4 = first, second, third, fourth squad.  
@@ -473,29 +712,53 @@ Integer between 0–4, where 0 = current squad, 1–4 = first, second, third, fo
 </details>
 
 - `Award`  
-   Collecting various rewards
+  Collecting various rewards
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="award" type="boolean" optional default="true"  
+::: field award  
+@type boolean  
+@default true  
+@optional  
 Collect daily/weekly task rewards.  
 :::  
-::: field name="mail" type="boolean" optional default="false"  
+::: field mail  
+@type boolean  
+@default false  
+@optional  
 Collect all mail rewards.  
 :::  
-::: field name="recruit" type="boolean" optional default="false"  
+::: field recruit  
+@type boolean  
+@default false  
+@optional  
 Collect daily free pulls from limited banners.  
 :::  
-::: field name="orundum" type="boolean" optional default="false"  
+::: field orundum  
+@type boolean  
+@default false  
+@optional  
 Collect Orundum from lucky drop wall.  
 :::  
-::: field name="mining" type="boolean" optional default="false"  
+::: field mining  
+@type boolean  
+@default false  
+@optional  
 Collect Orundum from limited mining licenses.  
 :::  
-::: field name="specialaccess" type="boolean" optional default="false"  
+::: field specialaccess  
+@type boolean  
+@default false  
+@optional  
 Collect monthly card rewards from 5th anniversary.  
+:::  
+::: field name="signinevent" type="boolean" optional default="false"  
+Collect rewards from limited-time sign-in events (only standard horizontal layouts are supported).  
 :::  
 ::::
 
@@ -510,20 +773,56 @@ Collect monthly card rewards from 5th anniversary.
    "recruit": true,
    "orundum": false,
    "mining": true,
-   "specialaccess": false
+   "specialaccess": false,
+   "signinevent": false
+}
+```
+
+</details>
+
+- `SwitchTheme`  
+  Switch the game's main interface theme
+
+:::: field-group  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
+Whether to enable this task.  
+:::  
+::: field themes  
+@type string[]  
+@required  
+List of candidate theme names, matching the names shown in the in-game theme list; with multiple entries, one is picked at random each run; an empty array skips the task.  
+:::  
+::::
+
+<details>
+<summary>Example</summary>
+
+```json
+{
+   "enable": true,
+   "themes": ["夜间", "银凇"]
 }
 ```
 
 </details>
 
 - `Roguelike`  
-   Integrated Strategies
+  Integrated Strategies
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="theme" type="string" optional default="Phantom"  
+::: field theme  
+@type string  
+@default Phantom  
+@optional  
 Theme.
 <br>
 `Phantom` - Phantom & Crimson Solitaire
@@ -534,18 +833,23 @@ Theme.
 <br>
 `Sarkaz` - Tales of the Unfathomable
 <br>
-`JieGarden` - Sui's Garden of Grotesqueries  
+`JieGarden` - Sui's Garden of Grotesqueries
+<br>
+`BlackFlow` - 黑流树海 (no official English name yet)  
 :::  
-::: field name="mode" type="number" optional default="0"  
+::: field mode  
+@type number  
+@default 0  
+@optional  
 Mode.
 <br>
 `0` - Score farming/reward points, aiming to consistently reach higher levels.
 <br>
 `1` - Originium Ingot farming, exit after investing in the first layer.
 <br>
-`2` - <Badge type="danger" text="Deprecated" /> Balances modes 0 and 1; continues until the next investment, exits otherwise.
+`2` - <Badge type="danger" text="Removed" /> Originally balanced modes 0 and 1; rejected in the current version.
 <br>
-`3` - Under development...
+`3` - <Badge type="danger" text="Not yet available" /> Rejected when passed.
 <br>
 `4` - Opening reset; first reaches the third layer at difficulty 0, then restarts and switches to the specified difficulty to reset the opening reward. If not the desired item, restart at difficulty 0; in the Phantom theme, retry only in the current difficulty.
 <br>
@@ -554,66 +858,133 @@ Mode.
 `6` - Monthly squad rewards farming, same as mode 0 except for specific mode adaptations.
 <br>
 `7` - Deep Dive rewards farming, same as mode 0 except for specific mode adaptations.
+<br>
+`10001` - Quickly clear the first layer; only available in the Sarkaz theme.
+<br>
+`20001` - Playtime node farming; enter the hollow on the first layer and restart if the required node cannot be found; only available in the JieGarden theme, requires `find_playTime_target`.
+<br>
+`30001` - Swaddled baby animal farming; only available in the BlackFlow theme.
+<br>
+`30003` - Starting reward farming: play a preparation run first, then start the target run. The preparation run is abandoned after obtaining the swaddled animals required by `blackflow_start_animals` and entering floor 3; when the target run's support selection page contains any reward in `blackflow_start_rewards`, no choice is made, the task exits to the theme page keeping the run, and the task ends. The preparation run uses `collectible_mode_squad` and is played at difficulty 0 when `difficulty` is not `-1`; the target run uses `squad` and `difficulty` and ends at the support selection page. `roles` and the starting operators apply to the preparation run; when `collectible_mode_roles` and `collectible_mode_core_char_list` are provided, the preparation run uses them instead. With `blackflow_start_utopia` on, the target run picks a reward and enters floor 1; see that field. Only available in the BlackFlow theme; requires `blackflow_start_animals` and `blackflow_start_rewards`. (machine-translated)  
 :::  
-::: field name="squad" type="string" optional default="指挥分队"  
+::: field squad  
+@type string  
+@default 指挥分队  
+@optional  
 Starting squad name.  
 :::  
-::: field name="roles" type="string" optional default="取长补短"  
+::: field roles  
+@type string  
+@default 取长补短  
+@optional  
 Starting role group.  
 :::  
-::: field name="core_char" type="string" optional  
-Starting operator name. Supports only single operator **Chinese name**, regardless of server; leave empty or set to `""` to auto-select based on level.  
+::: field core_char  
+@type string  
+@optional  
+Starting operator name. Supports only single operator **Chinese name**, regardless of server; leave empty or set to `""` to auto-select based on level. Equivalent to the 1st entry of `core_char_list`; kept only for compatibility with older callers.  
 :::  
-::: field name="use_support" type="boolean" optional default="false"  
-Whether the starting operator is a support operator.  
+::: field core_char_list  
+@type array<object>  
+@optional  
+Starting operator list. Each entry is `{ "name": operator name, "use_support": whether to use support }`, with operator **Chinese name** only, regardless of server; entries correspond to the 1st, 2nd, and 3rd recruitments at the start in array order, and the operators in the three slots must be of different classes. Recruitment only searches the first few pages for the specified operators, so operators with lower hope cost may be missed due to appearing later in the list; if the operator of a slot is not recruited (neither owned nor support one appears), that recruitment falls back to the default priority, so it is recommended to place operators with higher hope cost first. Takes precedence over `core_char` when both are passed.  
 :::  
-::: field name="use_nonfriend_support" type="boolean" optional default="false"  
-Whether non-friend support operators are allowed. Only effective when `use_support` is true.  
+::: field use_support  
+@type boolean  
+@default false  
+@optional  
+Whether the starting operator is a support operator. Equivalent to the support flag of the 1st entry of `core_char_list`; kept only for compatibility with older callers.  
 :::  
-::: field name="starts_count" type="number" optional default="2147483647"  
+::: field use_nonfriend_support  
+@type boolean  
+@default false  
+@optional  
+Whether non-friend support operators are allowed. A global switch that applies to all starting operator slots using support.  
+:::  
+::: field starts_count  
+@type number  
+@default 2147483647  
+@optional  
 Number of times to start exploration. Stops automatically upon reaching limit.  
 :::  
-::: field name="difficulty" type="number" optional default="0"  
-Specified difficulty level. Selects the highest unlocked difficulty if the desired one is not unlocked.  
+::: field difficulty  
+@type number  
+@default -1  
+@optional  
+Specified difficulty level; `-1` means no preference. Selects the highest unlocked difficulty if the specified one is not unlocked.  
 :::  
-::: field name="stop_at_final_boss" type="boolean" optional default="false"  
+::: field stop_at_final_boss  
+@type boolean  
+@default false  
+@optional  
 Whether to stop before the level 5 final boss node. Only applicable to themes **excluding Phantom**.  
 :::  
-::: field name="stop_at_max_level" type="boolean" optional default="false"  
+::: field stop_at_max_level  
+@type boolean  
+@default false  
+@optional  
 Whether to stop if max level for roguelike has been achieved.  
 :::  
-::: field name="investment_enabled" type="boolean" optional default="true"  
+::: field investment_enabled  
+@type boolean  
+@default true  
+@optional  
 Whether to invest Originium Ingots.  
 :::  
-::: field name="investments_count" type="number" optional default="2147483647"  
+::: field investments_count  
+@type number  
+@default 2147483647  
+@optional  
 Number of Originium Ingot investments. Stops automatically upon reaching limit.  
 :::  
-::: field name="stop_when_investment_full" type="boolean" optional default="false"  
+::: field stop_when_investment_full  
+@type boolean  
+@default false  
+@optional  
 Whether to stop automatically when investment limit is reached.  
 :::  
-::: field name="investment_with_more_score" type="boolean" optional default="false"  
+::: field investment_with_more_score  
+@type boolean  
+@default false  
+@optional  
 Whether to try shopping after investment. Only applicable to mode 1.  
 :::  
-::: field name="start_with_elite_two" type="boolean" optional default="false"  
+::: field start_with_elite_two  
+@type boolean  
+@default false  
+@optional  
 Whether to reset for an Elite 2 operator at start. Only applicable to mode 4.  
 :::  
-::: field name="only_start_with_elite_two" type="boolean" optional default="false"  
+::: field only_start_with_elite_two  
+@type boolean  
+@default false  
+@optional  
 Whether to reset only for Elite 2 operator while ignoring other starting conditions. Only effective when mode is 4 and `start_with_elite_two` is true.  
 :::  
-::: field name="refresh_trader_with_dice" type="boolean" optional default="false"  
+::: field refresh_trader_with_dice  
+@type boolean  
+@default false  
+@optional  
 Whether to refresh the shop with dice for special items. Only applicable to the Mizuki theme, used to refresh Scale of Past.  
 :::  
-::: field name="first_floor_foldartal" type="string" optional  
+::: field first_floor_foldartal  
+@type string  
+@optional  
 Desired Foldartal to acquire in the first floor foresight phase. Only applicable to the Sami theme, any mode; task stops once obtained successfully.  
 :::  
-::: field name="start_foldartal_list" type="array<string>" optional default="[]"  
+::: field start_foldartal_list  
+@type array<string>  
+@default []  
+@optional  
 Desired Foldartals for the starting reward phase during opening reset. Effective only for Sami theme and mode 4.
 <br>
 Reset is successful only when all Foldartals in the list are present in the opening rewards.
 <br>
 Note: This parameter must be used with the "生活至上分队" (Life-Sustaining Squad) as other squads do not obtain Foldartals in the opening reward phase.  
 :::  
-::: field name="collectible_mode_start_list" type="object" optional  
+::: field collectible_mode_start_list  
+@type object  
+@optional  
 Desired starting rewards, all false by default. Only valid in mode 4.
 <br>
 `hot_water`: Hot Water reward, typically used to trigger boiling mechanism (universal).
@@ -632,41 +1003,133 @@ Desired starting rewards, all false by default. Only valid in mode 4.
 <br>
 `ideas`: 2 Ideas reward, only available in Sarkaz theme.
 <br>
-`ticket`: Coupon reward, only available in JieGarden theme.
+`ticket`: Coupon reward, only available in JieGarden theme.  
 :::  
-::: field name="use_foldartal" type="boolean" optional  
+::: field use_foldartal  
+@type boolean  
+@optional  
 Whether to use Foldartals. Default is `false` in mode 5 and `true` in other modes. Only applicable to the Sami theme.  
 :::  
-::: field name="check_collapsal_paradigms" type="boolean" optional  
+::: field check_collapsal_paradigms  
+@type boolean  
+@optional  
 Whether to check obtained Collapsal Paradigms. Default is `true` in mode 5 and `false` in other modes.  
 :::  
-::: field name="double_check_collapsal_paradigms" type="boolean" optional default="true"  
+::: field double_check_collapsal_paradigms  
+@type boolean  
+@default true  
+@optional  
 Whether to perform additional checks to prevent missed Collapsal Paradigms. Only effective when theme is Sami and `check_collapsal_paradigms` is true. Default is `true` in mode 5 and `false` in other modes.  
 :::  
-::: field name="expected_collapsal_paradigms" type="array<string>" optional default="['目空一些', '睁眼瞎', '图像损坏', '一抹黑']"  
+::: field expected_collapsal_paradigms  
+@type array<string>  
+@default ['目空一些', '睁眼瞎', '图像损坏', '一抹黑']  
+@optional  
 Desired Collapsal Paradigms to trigger. Only effective when theme is Sami and mode is 5.  
 :::  
-::: field name="monthly_squad_auto_iterate" type="boolean" optional  
+::: field monthly_squad_auto_iterate  
+@type boolean  
+@optional  
 Whether to enable automatic monthly squad rotation.  
 :::  
-::: field name="monthly_squad_check_comms" type="boolean" optional  
+::: field monthly_squad_check_comms  
+@type boolean  
+@optional  
 Whether to also check monthly squad communications as rotation criteria.  
 :::  
-::: field name="deep_exploration_auto_iterate" type="boolean" optional  
+::: field deep_exploration_auto_iterate  
+@type boolean  
+@optional  
 Whether to enable automatic deep exploration rotation.  
 :::  
-::: field name="collectible_mode_shopping" type="boolean" optional default="false"  
+::: field collectible_mode_shopping  
+@type boolean  
+@default false  
+@optional  
 Whether to enable shopping in hot water mode.  
 :::  
-::: field name="collectible_mode_squad" type="string" optional  
-Squad to use in hot water mode, default synced with squad, when squad is empty and collectible_mode_squad not specified, uses 指挥分队.  
+::: field collectible_mode_squad  
+@type string  
+@optional  
+Squad to use in hot water mode, default synced with squad, when squad is empty and collectible_mode_squad not specified, uses 指挥分队 (Leader Squad).
+<br>
+In BlackFlow mode 30003, this is the squad used for the preparation run. (machine-translated)  
 :::  
-::: field name="start_with_seed" type="boolean" optional default="false"  
-Use seed for money farming.
+::: field start_with_seed  
+@type string  
+@optional  
+Fixed seed for seed-based money farming; leave empty to disable.
 <br>
-Only possible to be true in Sarkaz theme, Investment mode, with "点刺成锭分队" (Point-Stab Ingot Squad) or "后勤分队" (Logistics Squad).
+Only effective in Sarkaz theme, Investment mode, with "点刺成锭分队" (Point-Stab Ingot Squad) or "后勤分队" (Logistics Squad).  
+:::  
+::: field blackflow_strategy  
+@type string  
+@optional  
+Strategy for the 黑流树海 (BlackFlow) theme; inferred from `mode` and `investment_enabled` when left empty.
 <br>
-Uses fixed seed.  
+`baby_animal` - Check the general store on floor 1, then explore floors 2 and 3 and enter the 秘境行商 (scrap trader) to cultivate seeds; requires `blackflow_cultivation_target`
+<br>
+`investment` - Reach the fixed general store on floor 1 via the route with the fewest battles and the shortest estimated time
+<br>
+`burn_with_investment` - Complete investment on floor 1, then reach floor 3 as fast as possible and restart upon arrival
+<br>
+`burn` - Reach floor 3 as fast as possible and restart upon arrival
+<br>
+`ending1` - Advance the EXP run toward the first ending
+<br>
+`ending2` - Advance the EXP run toward the second ending
+<br>
+`ending3` - Advance the EXP run toward the third ending
+<br>
+These values apply only to the EXP farming mode (mode 0); whether an ending is available is subject to the in-game state. When an ending is specified, the run recruits operators as usual at the start.
+<br>
+Mode 30003 does not read this field. With an animal requirement, the preparation run cultivates along the `baby_animal` route; without one, the preparation run reaches floor 3 as fast as possible, investing on floor 1 first when `investment_enabled` is true. When the preparation run's starting operator is the Mechanic, `collectible_mode_squad` is 特勤分队 (Special Squad) or 堡垒战术分队 (Tactical Fortification Squad), and the preparation run's roles are 稳扎稳打 (Slow and Steady Wins the Race) or 坚不可摧 (Indestructible), the run is treated as a fully-talented Mechanic start that carries 结构性原理 (Structural Principle): after recruiting the Mechanic, the preparation run skips the remaining opening recruitment and moves with Structural Principle as needed; without an animal requirement, it flies straight to the exit on floor 2. (machine-translated)  
+:::  
+::: field blackflow_cultivation_target  
+@type string  
+@default swaddled_cat  
+@optional  
+Target of the baby animal farming mode. Options: `swaddled_cat` (Swaddled Cat) | `swaddled_feathered_serpent` (Swaddled Feathered Serpent) | `swaddled_dog` (Swaddled Dog) | `swaddled_cerberus` (Swaddled Cerberus); only used when `blackflow_strategy` is `baby_animal`.  
+:::  
+::: field blackflow_start_animals  
+@type array<string>  
+@optional  
+Swaddled animals to cultivate in the preparation run of mode 30003; 0 to 2 entries, duplicates allowed, at most one feathered serpent. Options: `swaddled_cat` | `swaddled_dog` | `swaddled_cerberus` | `swaddled_feathered_serpent`. All entries must be satisfied by count at the same time; for example, two `swaddled_cat` entries require at least two cats, and extra animals of other kinds do not matter. If the set is still incomplete when cultivation ends, the run is abandoned and a new preparation run starts. With an empty array, the preparation run only needs to enter floor 3. Required in mode 30003. (machine-translated)  
+:::  
+::: field blackflow_start_rewards  
+@type number  
+@optional  
+Desired starting rewards for the target run of mode 30003, as a bitmask in the range 0 to 4095. Required in mode 30003. (machine-translated)
+<br>
+`1` 未编号物 (Unnumbered Item); `2` 调查预付款 (Survey Advance); `4` 空间租赁 (Space Lease); `8` 退行补偿 (Regression Compensation); `16` 林间代步 (Forest Ride); `32` 巢寄生 (Brood Parasitism); `64` 襁褓天马 (Swaddled Pegasus); `128` 襁褓骏鹰 (Swaddled Hippogriff); `256` 襁褓巨龙 (Swaddled Dragon); `512` 襁褓九头蛇 (Swaddled Hydra); `1024` 襁褓白泽 (Swaddled Bai Ze); `2048` 襁褓金乌 (Swaddled Golden Crow). The last six are blue rewards brought by the feathered serpent and only take effect when `blackflow_start_animals` includes the feathered serpent; otherwise they are ignored. These names have no official English translation yet.
+<br>
+On the support selection page, the target run first recognizes all rewards on the page, then decides: if any desired reward is present, the task completes; if rewards were recognized but none is desired, the run is abandoned and a new preparation run starts; if no reward could be recognized, or feathered serpent rewards were requested but the blue rewards could not be read, the task stops on the support selection page and saves a screenshot to `debug/roguelike`. With 0 and `blackflow_start_utopia` off, the task completes as soon as the support selection page appears. Progress is reported through the `BlackFlowStartRun` callback of `SubTaskExtraInfo`; see [Callback Schema](./callback-schema.md).  
+:::  
+::: field collectible_mode_roles  
+@type string  
+@optional  
+Roles for the preparation run of mode 30003. When omitted, the preparation run uses `roles`. (machine-translated)  
+:::  
+::: field collectible_mode_core_char_list  
+@type array<object>  
+@optional  
+Starting operator order for the preparation run of mode 30003, in the same format as `core_char_list`. When omitted, the preparation run uses `core_char_list`. (machine-translated)  
+:::  
+::: field blackflow_start_utopia  
+@type boolean  
+@default false  
+@optional  
+Keeps rerolling the target run of mode 30003 until floor 1 is 实托邦 (a floor 1 variant). When true, once the support selection page contains a reward in `blackflow_start_rewards` (no requirement when it is 0), the target run picks a reward by `blackflow_start_reward_priority`, and picks one more when Swaddled Cerberus allows two picks; it then starts with `roles` and the starting operators and enters floor 1. If floor 1 is 实托邦, the task exits to the theme page keeping the run, and the task ends; otherwise the run is abandoned and a new preparation run starts. 实托邦 is detected by the position of the floor 1 name and only appears at difficulty 6 or higher; choosing `difficulty` is up to the caller. (machine-translated)  
+:::  
+::: field blackflow_start_reward_priority  
+@type array<string>  
+@optional  
+Order in which the target run of mode 30003 picks rewards when rerolling for a floor 1 实托邦. Required when `blackflow_start_utopia` is true; must not be empty and entries must not repeat. Options: `unnumbered_item` 未编号物; `survey_advance` 调查预付款; `space_lease` 空间租赁; `regression_compensation` 退行补偿; `forest_ride` 林间代步; `nest_parasitism` 巢寄生; `pegasus` 襁褓天马; `hippogriff` 襁褓骏鹰; `dragon` 襁褓巨龙; `hydra` 襁褓九头蛇; `bai_ze` 襁褓白泽; `golden_crow` 襁褓金乌. Without the 实托邦 check, the target run stays on the support selection page after a hit and keeps the run without picking, so this field is not read. With it, the target run has to enter floor 1 and must pick a card on the support selection page: after `blackflow_start_rewards` is hit, it picks the highest-ranked reward present on the page, and picks one more when Swaddled Cerberus allows two picks. Here the last six feathered serpent rewards are ranked as well, whether or not `blackflow_start_animals` includes the feathered serpent: the preparation run may bring one along even when it is not required, and the blue rewards then still appear in the target run. This differs from `blackflow_start_rewards`, where the last six are hit conditions and only take effect when the feathered serpent is required. When none of the listed rewards is on the page, a normal reward is picked by the strategy's default order. (machine-translated)  
+:::  
+::: field find_playTime_target  
+@type number  
+@optional  
+Target playtime node of the playtime node farming mode. `1` - Ling (掷地有声, Resounding); `2` - Shu (种因得果, Sow the Cause, Reap the Fruit); `3` - Nian (三缺一, Three Out of Four). Only used when the theme is JieGarden and the mode is 20001, required in that mode; other or missing values cause the task parameters to fail to be set.  
 :::  
 ::::
 
@@ -679,9 +1142,12 @@ Uses fixed seed.
    "theme": "Sami",
    "mode": 5,
    "squad": "指挥分队",
-   "roles": "取长补短",
-   "core_char": "塑心",
-   "use_support": false,
+   "roles": "稳扎稳打",
+   "core_char_list": [
+      { "name": "维什戴尔", "use_support": true },
+      { "name": "古米", "use_support": false },
+      { "name": "史都华德", "use_support": false }
+   ],
    "use_nonfriend_support": false,
    "starts_count": 3,
    "difficulty": 8,
@@ -715,7 +1181,7 @@ Uses fixed seed.
    "deep_exploration_auto_iterate": false,
    "collectible_mode_shopping": false,
    "collectible_mode_squad": "指挥分队",
-   "start_with_seed": false
+   "start_with_seed": ""
 }
 ```
 
@@ -724,16 +1190,21 @@ Uses fixed seed.
 For specific information about the Collapsal Paradigm farming feature, please refer to [Integrated Strategy Schema](./integrated-strategy-schema.md#sami-integrated-strategy-collapsal-paradigms)
 
 - `Copilot`  
-   Auto combat feature
+  Auto combat feature
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="filename" type="string"  
+::: field filename  
+@type string  
 Path to a single job JSON file, mutually exclusive with copilot_list (required, choose one); both relative and absolute paths are supported.  
 :::  
-::: field name="copilot_list" type="array<object>"  
+::: field copilot_list  
+@type array`<object>`  
 List of jobs, mutually exclusive with filename (required, choose one); when both filename and copilot_list are present, copilot_list will be ignored; set_params can only be executed once when this parameter is in effect.
 <br>
 Each object contains:
@@ -741,54 +1212,83 @@ Each object contains:
 
 - `filename`: Path to the job JSON file; both relative and absolute paths are supported
   <br>
-- `stage_name`: Stage name, refer to [PRTS.Map](https://map.ark-nights.com) for details
+- `nav_name_override`: Navigation stage name, optional; if omitted or `null`, automatically inferred from the task file
   <br>
 - `is_raid`: Whether to switch to Challenge Mode (Raid), optional, default false
-  :::  
-  ::: field name="loop_times" type="number" optional default="1"  
-  Number of loops. Effective only in single job mode (i.e., when filename is specified); set_params can only be executed once when this parameter is in effect.  
-  :::  
-  ::: field name="use_sanity_potion" type="boolean" optional default="false"  
-  Whether to use sanity potions when sanity is insufficient.  
-  :::  
-  ::: field name="formation" type="boolean" optional default="false"  
-  Whether to enable auto formation.  
-  :::  
-  ::: field name="formation_index" type="number" optional default="0"  
-  The index of the formation slot to use in auto formation. Only effective when formation is true.
-  <br>
-  An integer between 0–4: 0 means the current formation, 1–4 refer to the 1st–4th formations.  
-  :::  
-  ::: field name="user_additional" type="array<object>" optional default="[]"  
-  Custom additional operators list. Only effective when formation is true.
-  <br>
-  Each object contains:
-  <br>
+
+:::  
+::: field loop_times  
+@type number  
+@default 1  
+@optional  
+Number of loops. Effective only in single job mode (i.e., when filename is specified); set_params can only be executed once when this parameter is in effect.  
+:::  
+::: field use_sanity_potion  
+@type boolean  
+@default false  
+@optional  
+Whether to use sanity potions when sanity is insufficient.  
+:::  
+::: field formation  
+@type boolean  
+@default false  
+@optional  
+Whether to enable auto formation.  
+:::  
+::: field formation_index  
+@type number  
+@default 0  
+@optional  
+The index of the formation slot to use in auto formation. Only effective when formation is true.
+<br>
+An integer between 0–4: 0 means the current formation, 1–4 refer to the 1st–4th formations.  
+:::  
+::: field user_additional  
+@type array`<object>`  
+@default []  
+@optional  
+Custom additional operators list. Only effective when formation is true.
+<br>
+Each object contains:
+<br>
+
 - `name`: Operator name, optional, default "", if left empty this operator will be ignored
   <br>
-- `skill`: Skill to bring, optional, default 1; must be an integer between 1–3; otherwise, follows the in-game default
-  :::  
-  ::: field name="add_trust" type="boolean" optional default="false"  
-  Whether to auto-fill empty slots by ascending trust value during auto formation. Only effective when formation is true.  
-  :::  
-  ::: field name="ignore_requirements" type="boolean" optional default="false"  
-  Whether to ignore operator attribute requirements during auto formation. Only effective when formation is true.  
-  :::  
-  ::: field name="support_unit_usage" type="number" optional default="0"  
-  Support operator usage mode. Integer between 0–3. Only effective when formation is true.
-  <br>
-  `0` - Do not use support operators
-  <br>
-  `1` - Use support operator only if exactly one operator is missing; otherwise, do not use support
-  <br>
-  `2` - Use support operator if one is missing; otherwise, use the specified support operator
-  <br>
-  `3` - Use support operator if one is missing; otherwise, use a random support operator
-  :::  
-  ::: field name="support_unit_name" type="string" optional default=""  
-  Specified support operator name. Only effective when support_unit_usage is 2.  
-  :::  
-  ::::
+- `skill`: Skill to bring, optional, default 0 (follows the in-game default skill selection); must be an integer between 1–3; otherwise, also follows the in-game default
+
+:::  
+::: field add_trust  
+@type boolean  
+@default false  
+@optional  
+Whether to auto-fill empty slots by ascending trust value during auto formation. Only effective when formation is true.  
+:::  
+::: field ignore_requirements  
+@type boolean  
+@default false  
+@optional  
+Whether to ignore operator attribute requirements during auto formation. Only effective when formation is true.  
+:::  
+::: field support_unit_usage  
+@type number  
+@default 0  
+@optional  
+Support operator usage mode. Integer between 0–3. Only effective when formation is true.
+<br>
+`0` - Do not use support operators
+<br>
+`1` - Use support operator only if exactly one operator is missing; otherwise, do not use support
+<br>
+`2` - Use support operator if one is missing; otherwise, use the specified support operator
+<br>
+`3` - Use support operator if one is missing; otherwise, use a random support operator  
+:::  
+::: field support_unit_name  
+@type string  
+@optional  
+Specified support operator name. Only effective when support_unit_usage is 2.  
+:::  
+::::
 
 For more details about auto-combat JSON, please refer to [Combat Operation Protocol](./copilot-schema.md)
 
@@ -819,16 +1319,23 @@ For more details about auto-combat JSON, please refer to [Combat Operation Proto
 </details>
 
 - `SSSCopilot`  
-   Auto combat feature for Stationary Security Service
+  Auto combat feature for Stationary Security Service
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="filename" type="string" required  
+::: field filename  
+@type string  
+@required  
 Filename and path of the task JSON, supporting absolute/relative paths. Editing in run-time is not supported.  
 :::  
-::: field name="loop_times" type="number" optional  
+::: field loop_times  
+@type number  
+@optional  
 Number of times to loop execution.  
 :::  
 ::::
@@ -852,14 +1359,23 @@ For more details about Stationary Security Service JSON, please refer to [SSS Sc
   Automatically run Paradox Simulation operations
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="filename" type="string" required  
+::: field filename  
+@type string  
+@required  
 File path of a single operation JSON, supports absolute/relative paths. Runtime editing not supported. Mutually exclusive with list (required, choose one).  
 :::  
-::: field name="list" type="array<string>" required  
-List of operation JSON files, supports absolute/relative paths. Runtime editing not supported. Mutually exclusive with filename (required, choose one).  
+::: field list  
+@type array`<object>` | array`<string>`  
+@required  
+List of jobs. Runtime editing not supported. Mutually exclusive with filename (required, choose one).
+<br>
+Array elements support two forms: an object containing `id` (job identifier, passed as-is to the `CopilotListLoadTaskFileSuccess` callback) and `filename` (path to the job JSON file, both absolute and relative paths supported); or a job path string used directly.  
 :::  
 ::::
 
@@ -880,7 +1396,10 @@ List of operation JSON files, supports absolute/relative paths. Runtime editing 
   Depot recognition
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
 ::::
@@ -897,10 +1416,13 @@ Whether to enable this task.
 </details>
 
 - `OperBox`  
-   Operator box recognition
+  Operator box recognition
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
 ::::
@@ -917,22 +1439,31 @@ Whether to enable this task.
 </details>
 
 - `Reclamation`  
-   Reclamation Algorithm
+  Reclamation Algorithm
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="theme" type="string" optional default="Tales"  
+::: field theme  
+@type string  
+@default Tales  
+@optional  
 Theme.
 <br>
 `Fire` - _Fire Within the Sand_ (Closed)
 <br>
 `Tales` - _Tales Within the Sand_
 <br>
-`RelaunchAnchor` - _Relaunch Anchor_
+`RelaunchAnchor` - _Relaunch Anchor_  
 :::  
-::: field name="mode" type="number" optional default="0"  
+::: field mode  
+@type number  
+@default 0  
+@optional  
 Mode. Supported modes vary by theme:
 <br>
 **Tales:**
@@ -947,19 +1478,34 @@ Mode. Supported modes vary by theme:
 <br>
 `32` (`RA15`) - RA-15, complete the 60-kill mission with Civilight Eterna.
 <br>
-`48` (`RA4`) - RA-4, Use the Gold from Strategy Planning Management to unlock areas, and use Wis'adel to complete the boss elimination mission.
+`48` (`RA4`) - RA-4, Use the Gold from Strategy Planning Management to unlock areas, and use Wis'adel to complete the boss elimination mission.  
 :::  
-::: field name="tools_to_craft" type="array<string>" optional default="[&quot;荧光棒&quot;]"  
-Automatically crafted items. Suggested to fill in the substring. Only effective for Tales theme.  
+::: field tools_to_craft  
+@type array<string>  
+@default []  
+@optional  
+Automatically crafted items. Suggested to fill in the substring; leave empty to craft nothing. Only effective in the Tales theme with a save (mode = 1).  
 :::  
-::: field name="increment_mode" type="number" optional default="0"  
+::: field clear_store  
+@type boolean  
+@default false  
+@optional  
+Whether to purchase (clear out) shop items after the task completes. Only effective in the Tales theme without a save (mode = 0).  
+:::  
+::: field increment_mode  
+@type number  
+@default 0  
+@optional  
 Click type. Only effective for Tales theme.
 <br>
 `0` - Rapid Click
 <br>
-`1` - Long Press
+`1` - Long Press  
 :::  
-::: field name="num_craft_batches" type="number" optional default="16"  
+::: field num_craft_batches  
+@type number  
+@default 16  
+@optional  
 Maximum number of craft batches per session. Only effective for Tales theme.  
 :::  
 ::::
@@ -981,14 +1527,32 @@ Maximum number of craft batches per session. Only effective for Tales theme.
 </details>
 
 - `Custom`  
-   Custom Task
+  Custom Task
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="task_names" type="array<string>" required  
+::: field task_names  
+@type array<string>  
+@required  
 Execute the task on the first match in the array (and subsequent next, etc.). If you want to perform multiple tasks, you can append Custom task multiple times.  
+Supports the Secret Front (`MiniGame@SecretFront`) concatenated form: `MiniGame@SecretFront@Begin@Ending[A-E](@event)?`, where event is optional (支援作战平台 / 游侠 / 诡影迷踪), e.g. `MiniGame@SecretFront@Begin@EndingA@支援作战平台`.  
+:::  
+::: field params  
+@type object  
+@optional  
+Additional task parameters. Currently used by the pixel paint task (`MiniGame@PixelPaint@Begin`), the auto raise potential task (`MiniGame@AutoRaisePotential@Begin`), and the event shop exchange task (`SS@Store@Begin`):
+
+- `params.pixel_paint.groups`: color-grouped cell list. `color` is the palette slot index (0~~39, same order as the in-game right-side palette), `points` is an array of `[x, y]` grid coordinates (0~~23, origin at top-left).
+- `params.pixel_paint.swipe` (bool, optional, default true): consecutive cells of the same color are drawn in a single drag for speed; some touch modes may behave abnormally.
+- `params.pixel_paint.grid_delay` (int, optional, default 0): extra per-cell wait (ms). Applied after clicks and added to drag duration. Each touch mode already has its own base interval; usually no need to adjust. Legacy key `grid_click_delay` is still accepted.
+- `params.auto_raise_potential.use_normal_token` (bool, optional, default false): when tokens are insufficient, the confirmation dialog clicks × to abort by default; set to true to click √ instead and consume normal tokens to continue.
+- `params.event_shop.blacklist` (string array, optional): product name blacklist for the event shop exchange task (`SS@Store@Begin`). A commodity is skipped when its recognized name contains any entry, and the shop keeps swiping to buy the remaining commodities. No effect when empty.
+
 :::  
 ::::
 
@@ -1002,28 +1566,52 @@ Execute the task on the first match in the array (and subsequent next, etc.). If
 }
 ```
 
+```json
+{
+   "enable": true,
+   "task_names": ["MiniGame@PixelPaint@Begin"],
+   "params": {
+      "pixel_paint": {
+         "groups": [
+            { "color": 7, "points": [[0, 1], [3, 4]] }
+         ]
+      }
+   }
+}
+```
+
 </details>
 
 - `SingleStep`  
-   Single-step task (currently only supports copilot)
+  Single-step task (currently only supports copilot)
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="type" type="string" required default="copilot"  
+::: field type  
+@type string  
+@default copilot  
+@required  
 Currently only supports `"copilot"`.  
 :::  
-::: field name="subtask" type="string" required  
+::: field subtype  
+@type string  
+@required  
 Subtask type.
 <br>
-`stage` - Set stage name, requires `"details": { "stage": "xxxx" }`.
+`stage` - Set stage name, requires `"details": { "stage_name": "xxxx" }`.
 <br>
 `start` - Start mission, without details.
 <br>
-`action` - Single battle action, details is single action in Copilot, e.g.: `"details": { "name": "史尔特尔", "location": [ 4, 5 ], "direction": "左" }`, see [Combat Operation Protocol](./copilot-schema.md) for details.
+`action` - Single battle action, details is single action in Copilot, e.g.: `"details": { "name": "史尔特尔", "location": [ 4, 5 ], "direction": "左" }`, see [Combat Operation Protocol](./copilot-schema.md) for details.  
 :::  
-::: field name="details" type="object" optional  
+::: field details  
+@type object  
+@optional  
 Detailed parameters for the subtask.  
 :::  
 ::::
@@ -1035,9 +1623,9 @@ Detailed parameters for the subtask.
 {
    "enable": true,
    "type": "copilot",
-   "subtask": "stage",
+   "subtype": "stage",
    "details": {
-      "stage": "1-7"
+      "stage_name": "1-7"
    }
 }
 ```
@@ -1045,13 +1633,18 @@ Detailed parameters for the subtask.
 </details>
 
 - `VideoRecognition`  
-   Video recognition, currently only supports operation (combat) video
+  Video recognition, currently only supports operation (combat) video
 
 :::: field-group  
-::: field name="enable" type="boolean" optional default="true"  
+::: field enable  
+@type boolean  
+@default true  
+@optional  
 Whether to enable this task.  
 :::  
-::: field name="filename" type="string" required  
+::: field filename  
+@type string  
+@required  
 Video file path, supporting absolute/relative paths. Editing in run-time is not supported.  
 :::  
 ::::
@@ -1073,7 +1666,7 @@ Video file path, supporting absolute/relative paths. Editing in run-time is not 
 #### Prototype
 
 ```cpp
-bool ASSTAPI AsstSetTaskParams(AsstHandle handle, AsstTaskId id, const char* params);
+AsstBool ASSTAPI AsstSetTaskParams(AsstHandle handle, AsstTaskId id, const char* params);
 ```
 
 #### Description
@@ -1082,19 +1675,25 @@ Set task parameters
 
 #### Return Value
 
-- `bool`  
-   Whether the parameters are successfully set.
+- `AsstBool`  
+  Whether the parameters are successfully set.
 
 #### Parameter Description
 
 :::: field-group  
-::: field name="handle" type="AsstHandle" required  
+::: field handle  
+@type AsstHandle  
+@required  
 Instance handle  
 :::  
-::: field name="task" type="AsstTaskId" required  
+::: field id  
+@type AsstTaskId  
+@required  
 Task ID, the return value of `AsstAppendTask`  
 :::  
-::: field name="params" type="const char\*" required  
+::: field params  
+@type const char\*  
+@required  
 Task parameter in JSON, same as `AsstAppendTask`.  
 For those fields that do not mention "Editing in run-time is not supported" can be changed during run-time. Otherwise these changes will be ignored when the task is running.  
 :::  
@@ -1105,7 +1704,7 @@ For those fields that do not mention "Editing in run-time is not supported" can 
 #### Prototype
 
 ```cpp
-bool ASSTAPI AsstSetStaticOption(AsstStaticOptionKey key, const char* value);
+AsstBool ASSTAPI AsstSetStaticOption(AsstStaticOptionKey key, const char* value);
 ```
 
 #### Description
@@ -1114,30 +1713,51 @@ Set process-level parameters
 
 #### Return Value
 
-- `bool`  
-   Is the setup successful
+- `AsstBool`  
+  Is the setup successful
 
 #### Parameter Description
 
 :::: field-group  
-::: field name="key" type="AsstStaticOptionKey" required  
+::: field key  
+@type AsstStaticOptionKey  
+@required  
 key  
 :::  
-::: field name="value" type="const char\*" required  
+::: field value  
+@type const char\*  
+@required  
 value  
 :::  
 ::::
 
 ##### List of Key and value
 
-None currently
+:::: field-group  
+::: field Invalid  
+@type number  
+@default 0  
+@optional  
+Invalid placeholder. Enum value: 0.  
+:::  
+::: field CpuOCR  
+@type boolean  
+@optional  
+Use the CPU for OCR. The value is not parsed. Switching after resources are loaded is not supported. Enum value: 1.  
+:::  
+::: field GpuOCR  
+@type string  
+@optional  
+Use the GPU for OCR. The value is the GPU device index (integer); on Windows, `luid:<hexadecimal LUID>` is also accepted. Switching after resources are loaded is not supported. Enum value: 2.  
+:::  
+::::
 
 ### `AsstSetInstanceOption`
 
 #### Prototype
 
 ```cpp
-bool ASSTAPI AsstSetInstanceOption(AsstHandle handle, AsstInstanceOptionKey key, const char* value);
+AsstBool ASSTAPI AsstSetInstanceOption(AsstHandle handle, AsstInstanceOptionKey key, const char* value);
 ```
 
 #### Description
@@ -1146,19 +1766,25 @@ Set instance-level parameters
 
 #### Return Value
 
-- `bool`  
-   Is the setup successful
+- `AsstBool`  
+  Is the setup successful
 
 #### Parameter Description
 
 :::: field-group  
-::: field name="handle" type="AsstHandle" required  
+::: field handle  
+@type AsstHandle  
+@required  
 handle  
 :::  
-::: field name="key" type="AsstInstanceOptionKey" required  
+::: field key  
+@type AsstInstanceOptionKey  
+@required  
 key  
 :::  
-::: field name="value" type="const char\*" required  
+::: field value  
+@type const char\*  
+@required  
 value  
 :::  
 ::::
@@ -1166,25 +1792,41 @@ value
 ##### List of Key and value
 
 :::: field-group  
-::: field name="Invalid" type="number" optional default="0"  
+::: field Invalid  
+@type number  
+@default 0  
+@optional  
 Invalid placeholder. Enum value: 0.  
 :::  
-::: field name="MinitouchEnabled" type="boolean" optional  
+::: field MinitouchEnabled  
+@type boolean  
+@optional  
 Deprecated. Originally for enabling Minitouch; "1" - on, "0" - off. Note that the device may not support it. Enum value: 1 (deprecated).  
 :::  
-::: field name="TouchMode" type="string" optional default="minitouch"  
-Touch mode setting. Options: minitouch | maatouch | adb | MaaFwAdb. Default minitouch. Enum value: 2.  
+::: field TouchMode  
+@type string  
+@default minitouch  
+@optional  
+Touch mode setting. Options: minitouch | maatouch | adb | MacPlayTools | MaaFwAdb | MumuExtras. Default minitouch. Enum value: 2.  
 :::  
-::: field name="DeploymentWithPause" type="boolean" optional  
+::: field DeploymentWithPause  
+@type boolean  
+@optional  
 Whether to pause when deploying operators (affects IS, Copilot and Stationary Security Service). Options: "1" | "0". Enum value: 3.  
 :::  
-::: field name="AdbLiteEnabled" type="boolean" optional  
+::: field AdbLiteEnabled  
+@type boolean  
+@optional  
 Whether to enable AdbLite or not. Options: "0" | "1". Enum value: 4.  
 :::  
-::: field name="KillAdbOnExit" type="boolean" optional  
+::: field KillAdbOnExit  
+@type boolean  
+@optional  
 Release Adb on exit. Options: "0" | "1". Enum value: 5.  
 :::  
-::: field name="ClientType" type="string" optional  
+::: field ClientType  
+@type string  
+@optional  
 Client channel. Most connection configs do not need this option. Set it before `AsstConnect` / `AsstAsyncConnect` only when the selected `config` uses `[PackageName]` in commands executed during connect. In the built-in configs, only `Androws` and `WSA` currently require it for `displayId` lookup. This does not replace the `client_type` task parameter used by StartUp / CloseDown tasks. Enum value: 6.  
 :::  
 ::::

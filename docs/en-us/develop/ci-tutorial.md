@@ -9,15 +9,14 @@ MAA leverages GitHub Actions to complete a large amount of automation work, incl
 
 Before reading this document, it's best to have a basic understanding of MAA's project structure and components.
 
-::: tip
-You can quickly navigate to the section you want to see by searching for CI file names within this page
+::: tip  
+You can quickly navigate to the section you want to see by searching for CI file names within this page  
 :::
 
 Workflow files are all stored under `.github/workflows`, and each file can be categorized into the following functional parts:
 
 - [Code Testing](#code-testing)
 - [Code Building](#code-building)
-- [Code Security Scanning](#code-security-scanning)
 - [Version Release](#version-release)
 - [Resource Updates](#resource-updates)
 - [Website Building](#website-building)
@@ -44,25 +43,9 @@ Since test cases haven't been updated for a long time, this workflow is now basi
 
 This workflow is responsible for full code building work, including all MAA components. The build artifacts are runnable MAA instances.
 
-In addition to the necessary MaaCore, Windows build artifacts include MaaWpfGui, macOS build artifacts include MaaMacGui, and Linux build artifacts include MaaCLI.
+In addition to the necessary MaaCore, Windows build artifacts include MaaWpfGui, macOS build artifacts include MaaMacGui, Linux build artifacts include maa-cli, and the Android version of MaaCore is also built.
 
-This workflow runs automatically on any new commit and PR. When triggered by a release PR, the build artifacts from this run will be used directly for release and will create a Release.
-
-### Code Security Scanning
-
-Code security scanning uses CodeQL to analyze code and workflows for security vulnerabilities, with the following workflows:
-
-`codeql-core.yml`
-
-This workflow performs security analysis on the C++ and C# code of MaaCore and MaaWpfGui, detecting potential security vulnerabilities.
-
-It runs automatically on PRs that modify relevant source code, and also executes daily scheduled checks at 11:45 UTC.
-
-`codeql-wf.yml`
-
-This workflow performs security analysis on GitHub Actions workflow files themselves, ensuring the security of the CI/CD processes.
-
-It runs automatically on PRs that modify workflow files, and also executes daily scheduled checks at 12:00 UTC.
+This workflow runs automatically on new commits to `dev-v2` that touch source code or build scripts, as well as on PRs. When triggered by a version tag (created by `pr-auto-tag.yml` after the release PR is merged), the build artifacts from this run will be used directly for release and a Release will be created.
 
 ### Version Release
 
@@ -73,8 +56,8 @@ Version release is the necessary operation to publish updates to users, consisti
   - `release-preparation.yml` Generate changelog and prepare release for stable/beta versions
   - `pr-auto-tag.yml` Generate tags for stable/beta versions
 
-::: tip
-The "ota" in the above file names stands for Over-the-Air, which is what we commonly call "incremental update packages". Therefore, MAA's release process actually includes building OTA packages for past versions.
+::: tip  
+The "ota" in the above file names stands for Over-the-Air, which is what we commonly call "incremental update packages". Therefore, MAA's release process actually includes building OTA packages for past versions.  
 :::
 
 #### Nightly Builds
@@ -89,11 +72,11 @@ Note that nightly builds are only released for Windows users; macOS and Linux us
 
 The release process for these two channels is relatively more complex. We'll explain the role of each workflow by simulating a release process:
 
-1. Create a PR from `dev-v2` to `master` branch, and the PR name must be `Release v******`
+1. Create a PR from `dev-v2` to `master-v2` branch, and the PR name must be `Release v******`
 2. `release-preparation.yml` generates a changelog from the most recent stable/beta version to the current version (as a new PR)
 3. Manually adjust the changelog and add brief descriptions
 4. Merge the PR, triggering `pr-auto-tag.yml` to create tags and sync branches
-5. The Release event triggers `release-ota.yml`, which builds OTA packages and uploads attachments after tagging master
+5. The Release event triggers `release-ota.yml`, which builds OTA packages and uploads attachments after tagging master-v2
 
 ### Resource Updates
 
@@ -117,20 +100,21 @@ Please note that website publishing is tightly bound to releases. Regular modifi
 
 Uses regex matching to tag various Issues, categorizing and marking Issue content for easier viewing and management.
 
-`issue-checkbox-checker.yml`
+`issue-review.yml`
 
 Uses regex matching to automatically close Issues that check "I have not read carefully".
 If "I have not read carefully" is not checked, all checkboxes are collapsed.
+New issues that pass the check are automatically analyzed by AI; mentioning @MaaArknightsBot in an issue comment also triggers the analysis.
 
 `stale.yml`
 
-Checks Bug Issues that have had no activity for more than 90 days, marks them and sends notifications, then closes them after 7 more days if still inactive.
+Checks Issues that have had no activity for more than 90 days (excluding Pull Requests, and exempting Issues labeled `keep-open`, `MAA Team`, or `enhancement`), marks them and sends notifications, then closes them after 7 more days if still inactive.
 
 ### Pull Requests Management
 
 `pr-checker.yml`
 
-This workflow checks whether commit messages in PRs conform to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) and whether they contain merge commits, providing reminders if these conditions are met.
+This workflow checks whether commit messages in PRs conform to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) and whether they contain merge commits. If any commit fails to meet the requirements, a comment is posted as a reminder and the check is made to fail.
 
 ### MirrorChyan Related
 

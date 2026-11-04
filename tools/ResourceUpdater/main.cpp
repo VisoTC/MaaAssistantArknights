@@ -1,7 +1,16 @@
+#include <algorithm>
+#include <array>
+#include <cctype>
 #include <chrono>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <map>
+#include <set>
+#include <string_view>
 #include <thread>
+#include <unordered_map>
 #include <unordered_set>
 
 #include <meojson/json.hpp>
@@ -14,6 +23,143 @@
 #include "Utils/StringMisc.hpp"
 
 namespace fs = std::filesystem;
+
+namespace
+{
+const std::unordered_map<std::string, std::string> InfrastRoomTypeMap = {
+    { "POWER", "Power" },       { "CONTROL", "Control" }, { "DORMITORY", "Dorm" },    { "WORKSHOP", "Processing" },
+    { "MANUFACTURE", "Mfg" },   { "TRADING", "Trade" },   { "MEETING", "Reception" }, { "HIRE", "Office" },
+    { "TRAINING", "Training" }, { "RECYCLE", "Recycle" },
+};
+
+constexpr std::array<std::string_view, 10> InfrastRoomTypes = {
+    "Power", "Reception", "Control", "Dorm", "Trade", "Office", "Mfg", "Processing", "Training", "Recycle",
+};
+
+// Size of per-operator avatar images written as template/avatar/<oper_id>.png, must be
+// kept in sync with the WPF consumer (MaaWpfGui/Helper/OperAvatarHelper.cs).
+constexpr int AvatarImageSize = 120;
+
+// Only playable operators get avatar images; tokens, traps and similar entries have
+// no consumer in the GUI and would bloat the resource.
+bool is_playable_oper_profession(std::string profession)
+{
+    static constexpr std::array<std::string_view, 8> OperProfessions = {
+        "CASTER", "MEDIC", "PIONEER", "SNIPER", "SPECIAL", "SUPPORT", "TANK", "WARRIOR",
+    };
+    std::ranges::transform(profession, profession.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::toupper(ch));
+    });
+    return std::ranges::find(OperProfessions, profession) != OperProfessions.end();
+}
+
+std::string normalize_infrast_skill_id(std::string id)
+{
+    std::ranges::transform(id, id.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    return id;
+}
+
+// Resource keys that intentionally differ from the game icon ID they refer to.
+// Each pair records the stable resource key used by infrast.json and the game data
+// skillIcon the icon template is stored under upstream.
+struct InfrastResourceKeyGameIconPair
+{
+    std::string_view resource_key;
+    std::string_view game_icon;
+};
+
+constexpr std::array<InfrastResourceKeyGameIconPair, 1> InfrastResourceKeyGameIconPairs = {
+    // The game data uses exp4 for the same icon as the legacy exp0 skill.
+    // Keep the resource key stable so the two production bonuses remain distinct.
+    { "bskill_man_exp0", "bskill_man_exp4" },
+};
+
+// Maps a game data skillIcon ID to the resource key used in infrast.json.
+std::string canonicalize_infrast_skill_id(std::string id)
+{
+    id = normalize_infrast_skill_id(std::move(id));
+    for (const auto& [resource_key, game_icon] : InfrastResourceKeyGameIconPairs) {
+        if (id == game_icon) {
+            return std::string(resource_key);
+        }
+    }
+    return id;
+}
+
+// Template files are named after the upstream game icon id verbatim, so casing inside
+// the id must be preserved; only the leading letter is normalized to uppercase so
+// icon ids and file stems map onto each other either way.
+std::string infrast_template_filename(std::string skill_id)
+{
+    if (!skill_id.empty()) {
+        skill_id.front() = static_cast<char>(std::toupper(static_cast<unsigned char>(skill_id.front())));
+    }
+    return skill_id + ".png";
+}
+
+// Lower-case stem -> current on-disk file name. Windows clients cannot rename a file
+// that differs only by case, so existing template names are frozen and every consumer
+// (json generation, template sync, validation) must keep using the on-disk name.
+std::unordered_map<std::string, std::string> infrast_templates_by_lower_stem(const fs::path& template_dir)
+{
+    std::unordered_map<std::string, std::string> result;
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(template_dir, ec)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".png") {
+            continue;
+        }
+        const std::string name = entry.path().filename().string();
+        const std::string stem = name.substr(0, name.size() - 4);
+        result.emplace(normalize_infrast_skill_id(stem), name);
+    }
+    return result;
+}
+
+// Canonical template name of a skill icon: the frozen on-disk name when the template
+// already exists (matched case-insensitively), the upstream icon name for new icons.
+std::string resolve_infrast_template_name(
+    const std::unordered_map<std::string, std::string>& templates_by_lower_stem,
+    const std::string& skill_icon)
+{
+    if (auto iter = templates_by_lower_stem.find(normalize_infrast_skill_id(skill_icon));
+        iter != templates_by_lower_stem.cend()) {
+        return iter->second;
+    }
+    return infrast_template_filename(skill_icon);
+}
+
+void normalize_infrast_skill_references(json::value& root)
+{
+    for (const auto& [_, room_type] : InfrastRoomTypeMap) {
+        if (!root.contains(room_type) || !root[room_type].contains("skills")) {
+            continue;
+        }
+
+        auto& skills = root[room_type]["skills"].as_object();
+        json::object normalized_skills;
+        for (auto& [skill_id, skill] : skills) {
+            normalized_skills.emplace(canonicalize_infrast_skill_id(skill_id), std::move(skill));
+        }
+        skills = std::move(normalized_skills);
+
+        if (!root[room_type].contains("skillsGroup")) {
+            continue;
+        }
+        for (auto& group : root[room_type]["skillsGroup"].as_array()) {
+            for (const std::string& category : { std::string("necessary"), std::string("optional") }) {
+                if (!group.contains(category)) {
+                    continue;
+                }
+                for (auto& comb : group[category].as_array()) {
+                    for (auto& skill : comb["skills"].as_array()) {
+                        skill = canonicalize_infrast_skill_id(skill.as_string());
+                    }
+                }
+            }
+        }
+    }
+}
+} // namespace
 
 inline static void ltrim(std::string& s)
 {
@@ -45,9 +191,17 @@ bool update_infrast_data(const fs::path& input_dir, const fs::path& output_dir);
 bool update_stages_data(const fs::path& input_dir, const fs::path& output_dir);
 bool update_roguelike_recruit(const fs::path& input_dir, const fs::path& output_dir, const fs::path& solution_dir);
 bool update_levels_json(const fs::path& input_file, const fs::path& output_dir);
-bool update_infrast_templates(const fs::path& input_dir, const fs::path& output_dir);
+bool
+    update_infrast_templates(const fs::path& input_dir, const fs::path& building_data_file, const fs::path& output_dir);
+bool validate_infrast_resources(const fs::path& resource_dir, const fs::path& building_data_file);
 bool generate_english_roguelike_stage_name_replacement(const fs::path& ch_file, const fs::path& en_file);
-bool update_battle_chars_info(const fs::path& input_dir, const fs::path& overseas_dir, const fs::path& output_dir);
+bool update_battle_chars_info(
+    const fs::path& input_dir,
+    const fs::path& overseas_dir,
+    const fs::path& output_dir,
+    const fs::path& avatar_dir = fs::path());
+bool update_oper_avatars(const fs::path& avatar_dir, const std::set<std::string>& oper_ids, const fs::path& output_dir);
+bool update_oper_avatars_from_battle_data(const fs::path& input_dir, const fs::path& output_dir);
 bool update_recruitment_data(const fs::path& input_dir, const fs::path& output, bool is_base);
 bool ocr_replace_overseas(const fs::path& input_dir, const fs::path& tasks_base_path, const fs::path& base_dir);
 bool update_version_info(const fs::path& input_dir, const fs::path& output_dir);
@@ -57,6 +211,16 @@ int main([[maybe_unused]] int argc, char** argv)
 #if defined(_WIN32)
     SetConsoleOutputCP(CP_UTF8);
 #endif
+
+    if (argc == 4 && std::string_view(argv[1]) == "--infrast-data") {
+        return update_infrast_data(fs::path(argv[2]), fs::path(argv[3])) ? 0 : 1;
+    }
+    if (argc == 4 && std::string_view(argv[1]) == "--items-data") {
+        return update_items_data(fs::path(argv[2]), fs::path(argv[3]), false) ? 0 : 1;
+    }
+    if (argc == 4 && std::string_view(argv[1]) == "--oper-avatar") {
+        return update_oper_avatars_from_battle_data(fs::path(argv[2]), fs::path(argv[3])) ? 0 : 1;
+    }
 
     // ---- PATH DECLARATION ----
 
@@ -162,7 +326,10 @@ bool run_parallel_tasks(
             return;
         }
         std::cout << "------- Update infrast templates -------" << '\n';
-        if (!update_infrast_templates(official_data_dir / "building_skill", resource_dir / "template" / "infrast")) {
+        if (!update_infrast_templates(
+                official_data_dir / "building_skill",
+                official_data_dir / "gamedata" / "excel" / "building_data.json",
+                resource_dir / "template" / "infrast")) {
             std::cerr << "update_infrast_templates failed" << '\n';
             error_occurred.store(true);
         }
@@ -176,7 +343,11 @@ bool run_parallel_tasks(
             return;
         }
         std::cout << "------- Update battle chars info -------" << '\n';
-        if (!update_battle_chars_info(official_data_dir / "gamedata" / "excel", overseas_data_dir, resource_dir)) {
+        if (!update_battle_chars_info(
+                official_data_dir / "gamedata" / "excel",
+                overseas_data_dir,
+                resource_dir,
+                official_data_dir / "avatar")) {
             std::cerr << "update_battle_chars_info failed" << '\n';
             error_occurred.store(true);
         }
@@ -333,21 +504,86 @@ bool run_parallel_tasks(
     recruit_thread.join();
     items_data_thread.join();
 
+    if (!error_occurred.load() &&
+        !validate_infrast_resources(resource_dir, official_data_dir / "gamedata" / "excel" / "building_data.json")) {
+        std::cerr << "validate_infrast_resources failed" << '\n';
+        error_occurred.store(true);
+    }
+
     return error_occurred.load() ? false : true;
 }
 
 bool update_items_data(const fs::path& input_dir, const fs::path& output_dir, bool with_imgs)
 {
-    const auto input_json_path =
-        with_imgs ? input_dir / "gamedata" / "excel" / "item_table.json" : input_dir / "item_table.json";
+    const auto input_excel_dir = with_imgs ? input_dir / "gamedata" / "excel" : input_dir;
+    const auto input_json_path = input_excel_dir / "item_table.json";
 
     auto parse_ret = json::open(input_json_path);
     if (!parse_ret) {
-        std::cerr << "parse json failed" << '\n';
+        std::cerr << input_json_path << " parse error" << '\n';
         return false;
     }
 
     auto& input_json = parse_ret.value();
+    const auto building_data_path = input_excel_dir / "building_data.json";
+    auto building_data_ret = json::open(building_data_path);
+    if (!building_data_ret || !building_data_ret->contains("workshopFormulas") ||
+        !building_data_ret->contains("manufactFormulas")) {
+        std::cerr << building_data_path << " parse error or has no required formulas" << '\n';
+        return false;
+    }
+
+    std::unordered_set<std::string> rarity_item_ids;
+    std::unordered_map<std::string, json::value> formula_by_item_id;
+    for (const std::string& formulas_name : { std::string("workshopFormulas"), std::string("manufactFormulas") }) {
+        for (const auto& [formula_id, formula_data] : building_data_ret.value()[formulas_name].as_object()) {
+            const std::string formula_type = formula_data.get("formulaType", std::string());
+            const bool is_evolve_or_skill = formula_type == "F_EVOLVE" || formula_type == "F_SKILL";
+            const bool is_asc = formula_type == "F_ASC";
+            const bool should_collect_rarity = is_evolve_or_skill || is_asc;
+            if (!should_collect_rarity) {
+                continue;
+            }
+            const bool has_formula = formulas_name == "workshopFormulas" ? is_evolve_or_skill : is_asc;
+
+            const std::string item_id = formula_data.get("itemId", std::string());
+            const int output_count = formula_data.get("count", 0);
+            const auto costs_opt = formula_data.find<json::array>("costs");
+            if (item_id.empty() || (has_formula && output_count != 1) || !costs_opt || costs_opt->empty()) {
+                std::cerr << "Invalid item formula: " << formulas_name << ' ' << formula_id << '\n';
+                return false;
+            }
+            if (!input_json["items"].contains(item_id)) {
+                std::cerr << "Formula product is absent from item_table: " << formulas_name << ' ' << formula_id << ' '
+                          << item_id << '\n';
+                return false;
+            }
+            rarity_item_ids.emplace(item_id);
+
+            json::value formula_costs;
+            for (const auto& cost : costs_opt.value()) {
+                const std::string ingredient_id = cost.get("id", std::string());
+                const int ingredient_count = cost.get("count", 0);
+                const std::string ingredient_type = cost.get("type", std::string());
+                if (ingredient_id.empty() || ingredient_count <= 0 || ingredient_type != "MATERIAL" ||
+                    formula_costs.contains(ingredient_id) || !input_json["items"].contains(ingredient_id)) {
+                    std::cerr << "Invalid item formula cost: " << formulas_name << ' ' << formula_id << ' '
+                              << ingredient_id << '\n';
+                    return false;
+                }
+                rarity_item_ids.emplace(ingredient_id);
+                formula_costs[ingredient_id] = ingredient_count;
+            }
+            if (!has_formula) {
+                continue;
+            }
+            if (!formula_by_item_id.emplace(item_id, std::move(formula_costs)).second) {
+                std::cerr << "Duplicate item formula product: " << item_id << '\n';
+                return false;
+            }
+        }
+    }
+
     json::value output_json;
     for (auto&& [item_id, item_info] : input_json["items"].as_object()) {
         static const std::vector<std::string> BlackListPrefix = {
@@ -418,6 +654,16 @@ bool update_items_data(const fs::path& input_dir, const fs::path& output_dir, bo
         output["description"] = item_info["description"];
         output["sortId"] = item_info["sortId"];
         output["classifyType"] = item_info["classifyType"];
+        if (rarity_item_ids.contains(item_id)) {
+            // Official rarity is an integer, overseas is a "TIER_n" string; ItemConfig reads integers only.
+            const auto& rarity = item_info["rarity"];
+            output["rarity"] = rarity.is_string()
+                                   ? std::stoi(rarity.as_string().substr(std::string_view("TIER_").size())) - 1
+                                   : rarity.as_integer();
+        }
+        if (auto formula_iter = formula_by_item_id.find(item_id); formula_iter != formula_by_item_id.cend()) {
+            output["formula"] = formula_iter->second;
+        }
     }
     auto output_json_path = output_dir / "item_index.json";
     std::ofstream ofs(output_json_path, std::ios::out);
@@ -570,40 +816,74 @@ bool update_infrast_data(const fs::path& input_dir, const fs::path& output_dir)
     }
     auto& buffs = buffs_opt.value();
 
+    const auto existing_templates = infrast_templates_by_lower_stem(output_dir / "template" / "infrast");
+
+    std::unordered_map<std::string, std::string> skill_icon_by_buff_id;
+    for (const auto& [_, buff] : buffs) {
+        const std::string buff_id = buff.get("buffId", std::string());
+        const std::string skill_icon = canonicalize_infrast_skill_id(buff.get("skillIcon", std::string()));
+        if (!buff_id.empty() && !skill_icon.empty()) {
+            skill_icon_by_buff_id.insert_or_assign(buff_id, skill_icon);
+        }
+    }
+
+    std::unordered_map<std::string, std::set<std::string>> operator_ids_by_skill;
+    if (auto chars_opt = input_json.find<json::object>("chars")) {
+        for (const auto& [char_id, char_json] : chars_opt.value()) {
+            if (auto buff_chars_opt = char_json.find<json::array>("buffChar")) {
+                for (const auto& buff_char : buff_chars_opt.value()) {
+                    if (auto buff_data_opt = buff_char.find<json::array>("buffData")) {
+                        for (const auto& buff_data : buff_data_opt.value()) {
+                            const std::string buff_id = buff_data.get("buffId", std::string());
+                            if (buff_id.empty()) {
+                                continue;
+                            }
+
+                            if (auto skill_icon_iter = skill_icon_by_buff_id.find(buff_id);
+                                skill_icon_iter != skill_icon_by_buff_id.cend()) {
+                                operator_ids_by_skill[skill_icon_iter->second].emplace(char_id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // 维护资源可能先于输入数据包含新技能。已确认唯一归属的技能在此补齐稳定身份，
+    // 输入数据后续包含相同归属时，集合会自然去重。
+    operator_ids_by_skill["bskill_ctrl_hire_tmoris"].emplace("char_4186_tmoris");
+    operator_ids_by_skill["bskill_ctrl_t_limit&spd_tmoris"].emplace("char_4186_tmoris");
+
     // 这里面有些是手动修改的，要保留
     json::value& root = old_json;
+    normalize_infrast_skill_references(root);
     std::unordered_set<std::string> rooms;
-
-    static const std::unordered_map<std::string, std::string> RoomTypeMap = {
-        { "POWER", "Power" },       { "CONTROL", "Control" }, { "DORMITORY", "Dorm" },
-        { "WORKSHOP", "" },         { "MANUFACTURE", "Mfg" }, { "TRADING", "Trade" },
-        { "MEETING", "Reception" }, { "HIRE", "Office" },     { "TRAINING", "" },
-    };
+    std::unordered_map<std::string, std::unordered_set<std::string>> skill_ids_by_room;
 
     for (auto& [key, val] : buffs) {
         std::ignore = key;
         auto& buff_obj = val;
 
         std::string raw_room_type = buff_obj["roomType"].as_string();
-        std::string room_type = RoomTypeMap.at(raw_room_type);
-
-        if (room_type.empty()) {
+        auto room_iter = InfrastRoomTypeMap.find(raw_room_type);
+        if (room_iter == InfrastRoomTypeMap.end()) {
             continue;
         }
+        const std::string& room_type = room_iter->second;
 
         rooms.emplace(room_type);
 
-        std::string raw_key = static_cast<std::string>(buff_obj["skillIcon"]);
+        const std::string raw_skill_id = static_cast<std::string>(buff_obj["skillIcon"]);
+        std::string json_key = canonicalize_infrast_skill_id(raw_skill_id);
+        if (json_key.empty()) {
+            continue;
+        }
+        skill_ids_by_room[room_type].emplace(json_key);
         std::string name = static_cast<std::string>(buff_obj["buffName"]);
         // 这玩意里面有类似 xml 的东西，全删一下
         std::string desc = static_cast<std::string>(buff_obj["description"]);
         remove_xml(desc);
 
-        std::string json_key = raw_key;
-        // https://github.com/MaaAssistantArknights/MaaAssistantArknights/issues/5123#issuecomment-1589425675
-        if (json_key == "bskill_man_exp4") {
-            json_key = "bskill_man_exp0";
-        }
         auto& skill = root[room_type]["skills"][json_key];
         auto& name_arr = skill["name"].as_array();
         bool new_name = true;
@@ -618,14 +898,48 @@ bool update_infrast_data(const fs::path& input_dir, const fs::path& output_dir)
             skill["desc"].emplace(desc);
         }
 
-        // 历史遗留问题，以前的图片是从wiki上爬的，都是大写开头
-        // Windows下不区分大小写，现在新的小写文件名图片没法覆盖
-        // 所以干脆全用大写开头算了
-        std::string filename = raw_key + ".png";
-        filename[0] -= 32;
-        skill["template"] = std::move(filename);
+        skill["template"] = resolve_infrast_template_name(existing_templates, raw_skill_id);
     }
-    root["roomType"] = json::array(rooms);
+
+    for (const auto& room_type : rooms) {
+        auto& skills = root[room_type]["skills"].as_object();
+        for (auto iter = skills.begin(); iter != skills.end();) {
+            auto& [skill_id, skill] = *iter;
+            if (!skill_ids_by_room.at(room_type).contains(skill_id)) {
+                auto stale = iter++;
+                skills.erase(stale);
+                continue;
+            }
+            auto& desc = skill["desc"].as_array();
+            if (desc.size() > 1) {
+                json::value first_desc = desc.at(0);
+                desc = json::array();
+                desc.emplace_back(std::move(first_desc));
+            }
+            if (auto operator_iter = operator_ids_by_skill.find(skill_id);
+                operator_iter != operator_ids_by_skill.cend()) {
+                skill["operatorIds"] = json::array(operator_iter->second);
+            }
+            else {
+                skill["operatorIds"] = json::array();
+            }
+            ++iter;
+        }
+    }
+    json::array room_types;
+    for (const auto& room : root["roomType"].as_array()) {
+        const std::string room_type = room.as_string();
+        if (rooms.erase(room_type) != 0) {
+            room_types.emplace_back(room_type);
+        }
+    }
+    for (const std::string_view room_type : InfrastRoomTypes) {
+        const std::string room_type_string(room_type);
+        if (rooms.erase(room_type_string) != 0) {
+            room_types.emplace_back(room_type_string);
+        }
+    }
+    root["roomType"] = std::move(room_types);
 
     std::ofstream ofs(output_file, std::ios::out);
     ofs << root.format();
@@ -710,26 +1024,84 @@ bool update_stages_data(const fs::path& input_dir, const fs::path& output_dir)
     return true;
 }
 
-bool update_infrast_templates(const fs::path& input_dir, const fs::path& output_dir)
+bool update_infrast_templates(const fs::path& input_dir, const fs::path& building_data_file, const fs::path& output_dir)
 {
+    std::unordered_set<std::string> icon_ids;
+    auto building_data_opt = json::open(building_data_file);
+    if (!building_data_opt) {
+        std::cerr << building_data_file << " parse error" << '\n';
+        return false;
+    }
+    const auto buffs_opt = building_data_opt->find<json::object>("buffs");
+    if (!buffs_opt) {
+        std::cerr << building_data_file << " has no buffs" << '\n';
+        return false;
+    }
+    // infrast.json 只收录映射表内房间的技能，模板侧按同一口径收集，未知房间的技能不写模板
+    for (const auto& [_, buff] : buffs_opt.value()) {
+        const std::string room_type = buff.get("roomType", std::string());
+        if (!InfrastRoomTypeMap.contains(room_type)) {
+            continue;
+        }
+        const std::string skill_icon = buff.get("skillIcon", std::string());
+        if (!skill_icon.empty()) {
+            icon_ids.emplace(skill_icon);
+        }
+    }
+
+    // Upstream availability is matched on the lower-cased stem: the upstream file name
+    // carries the same id as the game data skillIcon, possibly with different casing.
+    std::unordered_set<std::string> expected_lower_stems;
+    for (const auto& icon : icon_ids) {
+        expected_lower_stems.emplace(normalize_infrast_skill_id(icon));
+    }
+    std::unordered_set<std::string> available_lower_stems;
+    for (const auto& entry : fs::directory_iterator(input_dir)) {
+        if (entry.path().extension() != ".png") {
+            continue;
+        }
+        const std::string stem = entry.path().stem().string();
+        if (stem.find("[style]") == std::string::npos) {
+            available_lower_stems.emplace(normalize_infrast_skill_id(stem));
+        }
+    }
+    for (const auto& stem : expected_lower_stems) {
+        if (!available_lower_stems.contains(stem)) {
+            std::cerr << "Missing infrast template: " << infrast_template_filename(stem) << '\n';
+            return false;
+        }
+    }
+
+    // Existing template names are frozen: an icon resolves to its current on-disk name,
+    // never to a re-cased variant of it.
+    const auto existing_templates = infrast_templates_by_lower_stem(output_dir);
+
+    for (const auto& entry : fs::directory_iterator(output_dir)) {
+        if (entry.path().extension() != ".png") {
+            continue;
+        }
+        const std::string stem = entry.path().stem().string();
+        if (!expected_lower_stems.contains(normalize_infrast_skill_id(stem))) {
+            fs::remove(entry.path());
+            std::cout << "Remove stale infrast templ: " << fs::relative(entry.path()) << '\n';
+        }
+    }
+
     for (auto&& entry : fs::directory_iterator(input_dir)) {
         if (entry.path().extension() != ".png") {
             continue;
         }
-        const std::string& stem = entry.path().stem().string();
+        const std::string stem = entry.path().stem().string();
 
-        const std::vector<std::string> BlackList = { "[style]", "bskill_dorm", "bskill_train", "bskill_ws" };
-
-        bool is_blacklist = false;
-        for (const auto& bl : BlackList) {
-            if (stem.find(bl) != std::string::npos) {
-                is_blacklist = true;
-                break;
-            }
-        }
-        if (is_blacklist) {
+        // Style assets are UI decorations rather than infrastructure skill icons.
+        if (stem.find("[style]") != std::string::npos) {
             continue;
         }
+        if (!expected_lower_stems.contains(normalize_infrast_skill_id(stem))) {
+            continue;
+        }
+
+        const std::string filename = resolve_infrast_template_name(existing_templates, stem);
 
         cv::Mat image = cv::imread(entry.path().string(), -1);
         cv::Mat dst;
@@ -742,11 +1114,6 @@ bool update_infrast_templates(const fs::path& input_dir, const fs::path& output_
                 }
             }
         }
-        std::string filename = entry.path().filename().string();
-        // 历史遗留问题，以前的图片是从wiki上爬的，都是大写开头
-        // Windows下不区分大小写，现在新的小写文件名图片没法覆盖
-        // 所以干脆全用大写开头算了
-        filename[0] -= 32;
         std::string out_file = (output_dir / filename).string();
 
         if (fs::exists(out_file)) {
@@ -777,6 +1144,105 @@ bool update_infrast_templates(const fs::path& input_dir, const fs::path& output_
             std::cout << "New infrast templ: " << fs::relative(out_file) << '\n';
         }
         cv::imwrite(out_file, dst);
+    }
+    return true;
+}
+
+bool validate_infrast_resources(const fs::path& resource_dir, const fs::path& building_data_file)
+{
+    auto infrast_opt = json::open(resource_dir / "infrast.json");
+    if (!infrast_opt) {
+        return false;
+    }
+
+    // The expected template name of each key is derived the same way as in
+    // update_infrast_data: game icon -> resource key, resolved against existing
+    // template files so frozen on-disk names win over re-cased derivations.
+    auto building_data_opt = json::open(building_data_file);
+    if (!building_data_opt) {
+        std::cerr << building_data_file << " parse error" << '\n';
+        return false;
+    }
+    auto buffs_opt = building_data_opt->find<json::object>("buffs");
+    if (!buffs_opt) {
+        std::cerr << building_data_file << " has no buffs" << '\n';
+        return false;
+    }
+    std::unordered_map<std::string, std::string> expected_template_by_key;
+    const auto existing_templates = infrast_templates_by_lower_stem(resource_dir / "template" / "infrast");
+    for (const auto& [_, buff] : buffs_opt.value()) {
+        const std::string skill_icon = buff.get("skillIcon", std::string());
+        if (skill_icon.empty()) {
+            continue;
+        }
+        expected_template_by_key.insert_or_assign(
+            canonicalize_infrast_skill_id(skill_icon),
+            resolve_infrast_template_name(existing_templates, skill_icon));
+    }
+
+    std::unordered_set<std::string> skill_ids;
+    std::unordered_set<std::string> expected_templates;
+    const auto& infrast = infrast_opt.value();
+    for (const auto& room : infrast.at("roomType").as_array()) {
+        const std::string room_type = room.as_string();
+        const auto& room_data = infrast.at(room_type);
+        std::unordered_set<std::string> room_skill_ids;
+        for (const auto& [skill_id, skill] : room_data.at("skills").as_object()) {
+            if (skill_id != normalize_infrast_skill_id(skill_id)) {
+                std::cerr << "Infrastructure skill ID is not lowercase: " << skill_id << '\n';
+                return false;
+            }
+            if (!skill_ids.emplace(skill_id).second) {
+                std::cerr << "Duplicate infrastructure skill ID: " << skill_id << '\n';
+                return false;
+            }
+            room_skill_ids.emplace(skill_id);
+            // Skills maintained ahead of the game data fall back to the resource key,
+            // resolved against existing template names the same way.
+            const std::string expected_template = expected_template_by_key.contains(skill_id)
+                                                      ? expected_template_by_key.at(skill_id)
+                                                      : resolve_infrast_template_name(existing_templates, skill_id);
+            if (skill.at("template").as_string() != expected_template) {
+                std::cerr << "Infrastructure template field differs for " << skill_id << ": expected "
+                          << expected_template << '\n';
+                return false;
+            }
+            expected_templates.emplace(expected_template);
+        }
+
+        if (!room_data.contains("skillsGroup")) {
+            continue;
+        }
+        for (const auto& group : room_data.at("skillsGroup").as_array()) {
+            for (const std::string& category : { std::string("necessary"), std::string("optional") }) {
+                if (!group.contains(category)) {
+                    continue;
+                }
+                for (const auto& combination : group.at(category).as_array()) {
+                    for (const auto& skill : combination.at("skills").as_array()) {
+                        const std::string skill_id = skill.as_string();
+                        if (!room_skill_ids.contains(skill_id)) {
+                            std::cerr << "Infrastructure skillsGroup references missing skill in " << room_type << ": "
+                                      << skill_id << '\n';
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    std::unordered_set<std::string> templates;
+    for (const auto& entry : fs::directory_iterator(resource_dir / "template" / "infrast")) {
+        if (entry.is_regular_file() && entry.path().extension() == ".png") {
+            templates.emplace(entry.path().filename().string());
+        }
+    }
+
+    if (expected_templates != templates) {
+        std::cerr << "Infrastructure skill IDs and templates differ: " << skill_ids.size() << " IDs, "
+                  << templates.size() << " templates" << '\n';
+        return false;
     }
     return true;
 }
@@ -884,7 +1350,162 @@ bool generate_english_roguelike_stage_name_replacement(const fs::path& ch_file, 
     return true;
 }
 
-bool update_battle_chars_info(const fs::path& official_dir, const fs::path& overseas_dir, const fs::path& output_dir)
+bool mat_pixels_equal(const cv::Mat& lhs, const cv::Mat& rhs)
+{
+    if (lhs.size() != rhs.size() || lhs.type() != rhs.type()) {
+        return false;
+    }
+    for (int row = 0; row != lhs.rows; ++row) {
+        if (std::memcmp(lhs.ptr(row), rhs.ptr(row), lhs.cols * lhs.elemSize()) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool update_oper_avatars(const fs::path& avatar_dir, const std::set<std::string>& oper_ids, const fs::path& output_dir)
+{
+    std::error_code ec;
+    std::vector<std::string> avatar_ids;
+    for (const auto& entry : fs::directory_iterator(avatar_dir, ec)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".png") {
+            continue;
+        }
+        std::string id = entry.path().stem().string();
+        if (oper_ids.contains(id)) {
+            avatar_ids.emplace_back(std::move(id));
+        }
+    }
+    if (ec) {
+        std::cerr << "Failed to iterate avatar dir: " << avatar_dir.string() << '\n';
+        return false;
+    }
+
+    std::error_code create_ec;
+    fs::create_directories(output_dir, create_ec);
+    if (create_ec) {
+        std::cerr << "Failed to create dir: " << output_dir.string() << '\n';
+        return false;
+    }
+
+    int written = 0;
+    std::set<std::string> kept_ids;
+    for (const auto& id : avatar_ids) {
+        const cv::Mat avatar = cv::imread((avatar_dir / (id + ".png")).string(), -1);
+        if (avatar.empty()) {
+            std::cerr << "Failed to read avatar: " << id << '\n';
+            continue;
+        }
+        cv::Mat bgra;
+        switch (avatar.channels()) {
+        case 4:
+            bgra = avatar;
+            break;
+        case 3:
+            cv::cvtColor(avatar, bgra, cv::COLOR_BGR2BGRA);
+            break;
+        case 1:
+            cv::cvtColor(avatar, bgra, cv::COLOR_GRAY2BGRA);
+            break;
+        default:
+            std::cerr << "Unsupported channel count " << avatar.channels() << " for avatar: " << id << '\n';
+            continue;
+        }
+        cv::Mat resized;
+        cv::resize(bgra, resized, cv::Size(AvatarImageSize, AvatarImageSize), 0, 0, cv::INTER_AREA);
+
+        std::vector<unsigned char> encoded;
+        if (!cv::imencode(".png", resized, encoded)) {
+            std::cerr << "Failed to encode avatar: " << id << '\n';
+            continue;
+        }
+
+        const auto output_file = output_dir / (id + ".png");
+        // 仓库文件已被 CI 的 oxipng 优化，压缩形态与 imencode 输出天然不同，按字节比较会
+        // 误判全部头像为已变化而重写，因此比较解码后的像素
+        bool unchanged = false;
+        if (fs::exists(output_file)) {
+            const cv::Mat existing = cv::imread(output_file.string(), -1);
+            unchanged = mat_pixels_equal(existing, resized);
+        }
+
+        kept_ids.emplace(id);
+        if (unchanged) {
+            continue;
+        }
+
+        std::ofstream ofs(output_file, std::ios::binary);
+        if (!ofs) {
+            std::cerr << "Failed to open for write: " << output_file.string() << '\n';
+            continue;
+        }
+        ofs.write(reinterpret_cast<const char*>(encoded.data()), static_cast<std::streamsize>(encoded.size()));
+        if (!ofs.good()) {
+            std::cerr << "Failed to write: " << output_file.string() << '\n';
+            continue;
+        }
+        ++written;
+    }
+
+    // 上游已不存在的干员头像一并移除，避免资源目录残留
+    // kept 为空或删除量达到保留量时判定上游数据异常，中止并报错，防止把大量正常头像当孤儿误删
+    if (kept_ids.empty()) {
+        std::cerr << "No valid operator avatars kept, upstream data may be broken, aborting orphan removal\n";
+        return false;
+    }
+    int removed = 0;
+    for (const auto& entry : fs::directory_iterator(output_dir)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".png") {
+            continue;
+        }
+        if (!kept_ids.contains(entry.path().stem().string())) {
+            if (removed >= static_cast<int>(kept_ids.size())) {
+                std::cerr << "Orphan avatar removal reached kept avatar count (" << kept_ids.size()
+                          << "), upstream data may be broken, aborting orphan removal\n";
+                return false;
+            }
+            std::error_code remove_ec;
+            if (fs::remove(entry.path(), remove_ec) && !remove_ec) {
+                ++removed;
+            }
+        }
+    }
+
+    std::cout << "Operator avatars done: " << kept_ids.size() << " kept, " << written << " written, " << removed
+              << " removed" << '\n';
+    return true;
+}
+
+bool update_oper_avatars_from_battle_data(const fs::path& input_dir, const fs::path& output_dir)
+{
+    const auto battle_data_file = output_dir / "battle_data.json";
+    auto battle_data_opt = json::open(battle_data_file);
+    if (!battle_data_opt) {
+        std::cerr << "Failed to open " << battle_data_file.string() << '\n';
+        return false;
+    }
+
+    auto& result = battle_data_opt.value();
+    if (!result.contains("chars")) {
+        std::cerr << "chars not found in " << battle_data_file.string() << '\n';
+        return false;
+    }
+    auto& chars = result["chars"];
+    std::set<std::string> oper_ids;
+    for (const auto& [id, _] : chars.as_object()) {
+        if (is_playable_oper_profession(chars.get(id, "profession", std::string()))) {
+            oper_ids.emplace(id);
+        }
+    }
+
+    return update_oper_avatars(input_dir / "avatar", oper_ids, output_dir / "template" / "avatar");
+}
+
+bool update_battle_chars_info(
+    const fs::path& official_dir,
+    const fs::path& overseas_dir,
+    const fs::path& output_dir,
+    const fs::path& avatar_dir)
 {
     std::string to_char_json = "gamedata/excel/character_table.json";
 
@@ -894,8 +1515,10 @@ bool update_battle_chars_info(const fs::path& official_dir, const fs::path& over
     auto chars_jp_opt = json::open(overseas_dir / "jp" / to_char_json);
     auto chars_kr_opt = json::open(overseas_dir / "kr" / to_char_json);
     auto chars_tw_opt = json::open(overseas_dir / "tw" / to_char_json);
+    auto chars_patch_opt = json::open(official_dir / "char_patch_table.json");
 
-    if (!chars_cn_opt || !chars_en_opt || !chars_jp_opt || !chars_kr_opt || !chars_tw_opt || !range_opt) {
+    if (!chars_cn_opt || !chars_en_opt || !chars_jp_opt || !chars_kr_opt || !chars_tw_opt || !range_opt ||
+        !chars_patch_opt) {
         return false;
     }
 
@@ -936,12 +1559,14 @@ bool update_battle_chars_info(const fs::path& official_dir, const fs::path& over
         }
 
         char_new_data["profession"] = char_data["profession"];
+        char_new_data["subProfessionId"] = char_data["subProfessionId"];
         const std::string& default_range = char_data.get("phases", 0, "rangeId", "0-1");
         char_new_data["rangeId"] = json::array {
             default_range,
             char_data.get("phases", 1, "rangeId", default_range),
             char_data.get("phases", 2, "rangeId", default_range),
         };
+        char_new_data["sortIndex"] = static_cast<int>(char_data["sortIndex"]);
         char_new_data["rarity"] = static_cast<int>(char_data["rarity"]) + 1;
         char_new_data["position"] = char_data["position"];
 
@@ -968,29 +1593,65 @@ bool update_battle_chars_info(const fs::path& official_dir, const fs::path& over
         chars[oper_id]["tokens"] = json::array(token_names_list);
     }
 
+    const auto& patch_json = chars_patch_opt.value()["patchChars"].as_object();
     json::value Amiya_data;
-    Amiya_data["name"] = "阿米娅-WARRIOR";
-    Amiya_data["name_en"] = "Amiya-WARRIOR";
-    Amiya_data["name_jp"] = "アーミヤ-WARRIOR";
-    Amiya_data["name_kr"] = "아미야-WARRIOR";
-    Amiya_data["name_tw"] = "阿米婭-WARRIOR";
-    Amiya_data["profession"] = "WARRIOR";
-    Amiya_data["rangeId"] = json::array { "1-1", "1-1", "1-1" };
-    Amiya_data["rarity"] = 5;
-    Amiya_data["position"] = "MELEE";
+    Amiya_data["name"] = "阿米娅";
+    Amiya_data["name_en"] = "Amiya";
+    Amiya_data["name_jp"] = "アーミヤ";
+    Amiya_data["name_kr"] = "아미야";
+    Amiya_data["name_tw"] = "阿米婭";
+    if (auto amiya2_opt = patch_json.find<json::object>("char_1001_amiya2")) {
+        Amiya_data["profession"] = amiya2_opt->at("profession");
+        Amiya_data["rarity"] = static_cast<int>(amiya2_opt->at("rarity")) + 1;
+        Amiya_data["position"] = amiya2_opt->at("position");
+        Amiya_data["sortIndex"] = 17; // yj 给升变的 sortIndex 设了0，暂时使用主角色的 sortIndex
+        Amiya_data["subProfessionId"] = amiya2_opt->at("subProfessionId");
+        const std::string& default_range = amiya2_opt->get("phases", 0, "rangeId", "0-1");
+        Amiya_data["rangeId"] = json::array {
+            default_range,
+            amiya2_opt->get("phases", 1, "rangeId", default_range),
+            amiya2_opt->get("phases", 2, "rangeId", default_range),
+        };
+    }
     chars.emplace("char_1001_amiya2", std::move(Amiya_data));
 
     json::value Amiya_data3;
-    Amiya_data3["name"] = "阿米娅-MEDIC";
-    Amiya_data3["name_en"] = "Amiya-MEDIC";
-    Amiya_data3["name_jp"] = "アーミヤ-MEDIC";
-    Amiya_data3["name_kr"] = "아미야-MEDIC";
-    Amiya_data3["name_tw"] = "阿米婭-MEDIC";
-    Amiya_data3["profession"] = "MEDIC";
-    Amiya_data3["rangeId"] = json::array { "3-1", "3-3", "3-3" };
-    Amiya_data3["rarity"] = 5;
-    Amiya_data3["position"] = "RANGED";
+    Amiya_data3["name"] = "阿米娅";
+    Amiya_data3["name_en"] = "Amiya";
+    Amiya_data3["name_jp"] = "アーミヤ";
+    Amiya_data3["name_kr"] = "아미야";
+    Amiya_data3["name_tw"] = "阿米婭";
+    if (auto amiya3_opt = patch_json.find<json::object>("char_1037_amiya3")) {
+        Amiya_data3["profession"] = amiya3_opt->at("profession");
+        Amiya_data3["rarity"] = static_cast<int>(amiya3_opt->at("rarity")) + 1;
+        Amiya_data3["position"] = amiya3_opt->at("position");
+        Amiya_data3["sortIndex"] = 17;
+        Amiya_data3["subProfessionId"] = amiya3_opt->at("subProfessionId");
+        const std::string& default_range = amiya3_opt->get("phases", 0, "rangeId", "0-1");
+        Amiya_data3["rangeId"] = json::array {
+            default_range,
+            amiya3_opt->get("phases", 1, "rangeId", default_range),
+            amiya3_opt->get("phases", 2, "rangeId", default_range),
+        };
+    }
     chars.emplace("char_1037_amiya3", std::move(Amiya_data3));
+
+    if (!avatar_dir.empty()) {
+        if (fs::exists(avatar_dir)) {
+            std::set<std::string> oper_ids;
+            for (const auto& [id, _] : chars.as_object()) {
+                if (is_playable_oper_profession(chars.get(id, "profession", std::string()))) {
+                    oper_ids.emplace(id);
+                }
+            }
+            if (!update_oper_avatars(avatar_dir, oper_ids, output_dir / "template" / "avatar")) {
+                return false;
+            }
+        }
+        else {
+            std::cout << "Avatar dir not found, skip operator avatars: " << avatar_dir.string() << '\n';
+        }
+    }
 
     const auto& out_file = output_dir / "battle_data.json";
     std::ofstream ofs(out_file, std::ios::out);
@@ -1002,8 +1663,8 @@ bool update_battle_chars_info(const fs::path& official_dir, const fs::path& over
 
 bool update_recruitment_data(const fs::path& input_dir, const fs::path& output, bool is_base)
 {
-    using std::ranges::find_if, std::ranges::range;
     using asst::utils::string_replace_all_in_place;
+    using std::ranges::find_if, std::ranges::range;
     using std::views::filter, std::views::split, std::views::transform, std::views::drop_while;
 
     auto not_empty = []<range Rng>(Rng str) -> bool {
@@ -1345,13 +2006,14 @@ bool ocr_replace_overseas(const fs::path& input_dir, const fs::path& tasks_base_
         char_names.emplace(id, name_buffer);
     }
 
-    auto tasks_path = tasks_base_path / "tasks.json";
-    auto tasks_opt = json::open(tasks_path);
-    if (!tasks_opt) {
-        std::cerr << "Failed to open tasks file: " << tasks_path << '\n';
+    // CharsNameOcrReplace / BattleStageName 的数据体在 hotfix/ocr_replace.json（随资源更新分发），tasks.json 只留转发
+    auto ocr_replace_path = tasks_base_path / "hotfix" / "ocr_replace.json";
+    auto ocr_replace_opt = json::open(ocr_replace_path);
+    if (!ocr_replace_opt) {
+        std::cerr << "Failed to open ocr replace hotfix file: " << ocr_replace_path << '\n';
         return false;
     }
-    auto& tasks_json = tasks_opt.value();
+    auto& ocr_replace_json = ocr_replace_opt.value();
 
     auto roguelike_path = tasks_base_path / "Roguelike" / "base.json";
     auto roguelike_opt = json::open(roguelike_path);
@@ -1395,8 +2057,8 @@ bool ocr_replace_overseas(const fs::path& input_dir, const fs::path& tasks_base_
         }
     };
 
-    proc(tasks_json["BattleStageName"]["ocrReplace"].as_array(), base_stage_names, stage_names);
-    proc(tasks_json["CharsNameOcrReplace"]["ocrReplace"].as_array(), base_char_names, char_names);
+    proc(ocr_replace_json["BattleStageNameHotfix"]["ocrReplace"].as_array(), base_stage_names, stage_names);
+    proc(ocr_replace_json["CharsNameOcrReplaceHotfix"]["ocrReplace"].as_array(), base_char_names, char_names);
 
     proc(roguelike_json["RoguelikeTraderShoppingOcr"]["ocrReplace"].as_array(), base_item_names, item_names);
     proc(
@@ -1406,9 +2068,9 @@ bool ocr_replace_overseas(const fs::path& input_dir, const fs::path& tasks_base_
     proc(roguelike_sami_json["Sami@Roguelike@FoldartalUseOcr"]["ocrReplace"].as_array(), base_totem_names, totem_names);
     proc(roguelike_json["Roguelike@StageEncounterOcr"]["ocrReplace"].as_array(), base_encounter_names, encounter_names);
 
-    std::ofstream tasks_ofs(tasks_path, std::ios::out);
-    tasks_ofs << tasks_json.format() << '\n';
-    tasks_ofs.close();
+    std::ofstream ocr_replace_ofs(ocr_replace_path, std::ios::out);
+    ocr_replace_ofs << ocr_replace_json.format() << '\n';
+    ocr_replace_ofs.close();
 
     std::ofstream roguelike_ofs(roguelike_path, std::ios::out);
     roguelike_ofs << roguelike_json.format() << '\n';
@@ -1494,4 +2156,3 @@ bool update_version_info(const fs::path& input_dir, const fs::path& output_dir)
 
     return true;
 }
-

@@ -1,6 +1,6 @@
 // <copyright file="MaaApiService.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -24,7 +24,7 @@ namespace MaaWpfGui.Services.Web;
 
 public class MaaApiService : IMaaApiService
 {
-    private static readonly string CacheDir = PathsHelper.CacheDir;
+    private static readonly string _cacheDir = PathsHelper.CacheDir;
 
     public async Task<(bool Cached, JObject? Response)> RequestMaaApiWithCache(string api, bool allowFallbackToCache = true)
     {
@@ -43,14 +43,14 @@ public class MaaApiService : IMaaApiService
         return await TryRequest(api, fallbackBaseUrl, allowFallbackToCache);
     }
 
-    private async Task<(bool Cached, JObject? Response)> TryRequest(string api, string baseUrl, bool allowFallbackToCache = true)
+    private static async Task<(bool Cached, JObject? Response)> TryRequest(string api, string baseUrl, bool allowFallbackToCache = true)
     {
         var url = baseUrl + api;
-        var cachePath = Path.Combine(CacheDir, api);
-        var response = await ETagCache.FetchResponseWithEtag(url, !File.Exists(cachePath));
+        var cachePath = GetCachePath(api, baseUrl);
+        using var response = await ETagCache.FetchResponseWithEtag(url, !File.Exists(cachePath));
         if (response?.StatusCode == System.Net.HttpStatusCode.NotModified)
         {
-            var cache = LoadApiCache(api);
+            var cache = LoadApiCacheFile(cachePath);
             return (cache != null, cache);
         }
 
@@ -61,14 +61,14 @@ public class MaaApiService : IMaaApiService
                 return (false, null);
             }
 
-            var cache = LoadApiCache(api);
+            var cache = LoadApiCacheFile(cachePath);
             return (cache != null, cache);
         }
 
         var body = await HttpResponseHelper.GetStringAsync(response);
         if (string.IsNullOrEmpty(body))
         {
-            var cache = LoadApiCache(api);
+            var cache = LoadApiCacheFile(cachePath);
             return (cache != null, cache);
         }
 
@@ -95,7 +95,17 @@ public class MaaApiService : IMaaApiService
 
     public JObject? LoadApiCache(string api)
     {
-        var cache = Path.Combine(CacheDir, api);
+        return LoadApiCacheFile(GetCachePath(api, MaaUrls.MaaApi));
+    }
+
+    private static string GetCachePath(string api, string baseUrl)
+    {
+        var path = Path.Combine(_cacheDir, api);
+        return baseUrl == MaaUrls.MaaApi ? path : path + ".api2";
+    }
+
+    private static JObject? LoadApiCacheFile(string cache)
+    {
         if (!File.Exists(cache))
         {
             return null;

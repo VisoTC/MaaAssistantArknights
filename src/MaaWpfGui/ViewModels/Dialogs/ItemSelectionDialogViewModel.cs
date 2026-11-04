@@ -1,6 +1,6 @@
 // <copyright file="ItemSelectionDialogViewModel.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -34,8 +34,8 @@ public class ItemSelectionDialogViewModel : PropertyChangedBase
     {
         var itemsList = availableItems.ToList();
         Items = itemsList;
-        WindowTitle = windowTitle ?? Helper.LocalizationHelper.GetString("SelectItem");
-        PromptMessage = promptMessage ?? Helper.LocalizationHelper.GetString("PleaseSelectItem");
+        WindowTitle = windowTitle ?? Helper.LocalizationHelper.GetString("Connection.SelectItem");
+        PromptMessage = promptMessage ?? Helper.LocalizationHelper.GetString("Connection.PleaseSelectItem");
         if (itemsList.Count > 0)
         {
             SelectedItem = itemsList.First();

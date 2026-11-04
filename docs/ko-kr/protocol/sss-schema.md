@@ -5,8 +5,8 @@ icon: game-icons:prisoner
 
 # 보안 파견 프로토콜
 
-::: tip
-주의: JSON 파일은 주석을 지원하지 않으므로, 텍스트 내의 주석은 예시용입니다. 직접 복사하여 사용하지 마세요.
+::: tip  
+주의: JSON 파일은 주석을 지원하지 않으므로, 텍스트 내의 주석은 예시용입니다. 직접 복사하여 사용하지 마세요.  
 :::
 
 ```json5
@@ -35,7 +35,7 @@ icon: game-icons:prisoner
             "skill_usage": 1
         }
     ],
-    "tool_men": {                          // 필요한 직군별 나머지 인원 수, 코스트 순 정렬, 선택 사항
+    "tool_men": {                          // 필요한 직군별 나머지 인원 수, 코스트 순 정렬, 필수
                                            // 현재 버전 미구현, UI에만 표시됨
         "Pioneer": 13,
         "近卫": 2,                         // 중/영문 모두 가능
@@ -115,7 +115,7 @@ icon: game-icons:prisoner
                     "direction": "Left"
                 }
             ],
-            "draw_as_possible": true,   // "오퍼레이터 배치"(패순환) 버튼. 쿨 돌면 바로 누를지 여부. 선택 사항, 기본값 true.
+            "draw_as_possible": true,   // "오퍼레이터 배치"(패순환) 버튼. 쿨 돌면 바로 누를지 여부. 필수.
             "actions": [                // 선택 사항
                                         // 자동지휘 로직 재사용
                                         // action 조건 만족 시 action 실행, 아니면 위 strategies 실행
@@ -140,7 +140,7 @@ icon: game-icons:prisoner
                     "name": "桃金娘"
                 }
             ],
-            "retry_times": 3 // 전투 실패 시 재시도 횟수. 초과 시 해당 판 포기.
+            "retry_times": 3 // 전투 실패 시 재시도 횟수. 선택 사항, 기본값 0. 초과 시 해당 판 포기.
         },
         {
             "stage_name": "见者有份"
@@ -153,4 +153,4 @@ icon: game-icons:prisoner
 
 ## 예시 파일
 
-<https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/master/resource/copilot/>
+<https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/resource/copilot/>

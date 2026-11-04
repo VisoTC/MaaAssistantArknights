@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "Common/AsstMsg.h"
+#include "Config/Miscellaneous/BattleDataConfig.h"
 #include "Config/TaskData.h"
 #include "Controller/Controller.h"
 #include "Status.h"
@@ -30,6 +31,32 @@ asst::InfrastAbstractTask& asst::InfrastAbstractTask::set_mood_threshold(double 
 {
     m_mood_threshold = mood_thres;
     return *this;
+}
+
+asst::InfrastAbstractTask& asst::InfrastAbstractTask::set_task_data(std::shared_ptr<infrast::TaskData> data) noexcept
+{
+    m_task_data = std::move(data);
+    return *this;
+}
+
+void asst::InfrastAbstractTask::stage_operator_selection(const std::string& operator_id)
+{
+    if (operator_id.empty()) {
+        return;
+    }
+    LogTrace << __FUNCTION__ << "infrastructure operator staged" << facility_name() << operator_id;
+    m_pending_operator_ids.emplace(operator_id);
+    if (m_task_data) {
+        m_task_data->pending_operator_ids.emplace(operator_id);
+    }
+}
+
+void asst::InfrastAbstractTask::discard_pending_selection()
+{
+    m_pending_operator_ids.clear();
+    if (m_task_data) {
+        m_task_data->discard_pending();
+    }
 }
 
 json::value asst::InfrastAbstractTask::basic_info() const
@@ -71,8 +98,14 @@ void asst::InfrastAbstractTask::clear_custom_config() noexcept
     m_custom_config.clear();
 }
 
-asst::infrast::CustomRoomConfig& asst::InfrastAbstractTask::current_room_config()
+void asst::InfrastAbstractTask::set_suppress_unconfigured_notice(bool suppress) noexcept
 {
+    m_suppress_unconfigured_notice = suppress;
+}
+
+const asst::infrast::CustomRoomConfig& asst::InfrastAbstractTask::current_room_config() const
+{
+    // 非 const 以便非常量重载返回可写引用；无配置与越界时的共享占位，禁止写入
     static infrast::CustomRoomConfig empty;
     if (!m_is_custom) [[unlikely]] {
         Log.warn(__FUNCTION__, "custom is not enabled");
@@ -88,29 +121,59 @@ asst::infrast::CustomRoomConfig& asst::InfrastAbstractTask::current_room_config(
     }
 }
 
-bool asst::InfrastAbstractTask::match_operator_groups()
+asst::infrast::CustomRoomConfig& asst::InfrastAbstractTask::current_room_config()
 {
+    return const_cast<infrast::CustomRoomConfig&>(std::as_const(*this).current_room_config());
+}
+
+asst::GroupMatchResult asst::InfrastAbstractTask::match_operator_groups()
+{
+    // names 里存的是引用的编组名，须在 clear 前拷出，防御回调靠它展示哪些组名未在 groups 定义
+    std::vector<std::string> referenced_group_names = current_room_config().names;
     current_room_config().names.clear();
+
+    // 引用的组名均未在 groups 定义（含 operators 缺失或为空），视同编组不可用，
+    // 由调用方按编组不可用处理，不静默回落自动选人
+    if (current_room_config().operator_groups.empty()) {
+        LogWarn << __FUNCTION__ << " no operator group defined for this room";
+        json::value info = basic_info_with_what("CustomInfrastRoomGroupsMatchFailed");
+        info["details"]["reason"] = "group_not_defined";
+        info["details"]["groups"] = json::array(std::move(referenced_group_names));
+        callback(AsstMsg::SubTaskExtraInfo, info);
+        return GroupMatchResult::AllUnavailable;
+    }
+
     int swipe_times = 0;
     bool pre_result_no_changes = false, retried = false;
+    int recog_failed_times = 0;
 
     auto opers = get_available_oper_for_group();
     if (opers.size() == 0) {
-        Log.info(__FUNCTION__, "available operator for group is empty");
+        LogInfo << __FUNCTION__ << "available operator for group is empty";
         std::vector<std::string> temp, pre_temp;
         while (true) {
             if (need_exit()) {
-                return false;
+                // need_exit 中止同走 RecogFailed：调用方以 need_exit 挡住回调与保持原样分支，
+                // 由后续选人循环开头的既有检查接管中止
+                return GroupMatchResult::RecogFailed;
             }
             temp.clear();
             if (!get_opers(temp, m_mood_threshold)) {
-                return false;
+                // 干员收集识别失败在函数内重试，轮数与选人循环一致，耗尽后交由调用方按识别失败处理
+                if (recog_failed_times >= OperSelectRetryTimes) {
+                    LogError << __FUNCTION__ << "failed to collect available operators after retries";
+                    return GroupMatchResult::RecogFailed;
+                }
+                ++recog_failed_times;
+                // 重试节奏对齐选人循环的失败处理：先回滑到列表最左侧再重新识别
+                swipe_to_the_left_of_operlist();
+                continue;
             }
             if (pre_temp == temp) {
                 if (pre_result_no_changes) {
-                    Log.warn("partial result is not changed, reset the page");
+                    LogWarn << "partial result is not changed, reset the page";
                     if (retried) {
-                        Log.error("already retried");
+                        LogError << "already retried";
                         break;
                     }
                     swipe_to_the_left_of_operlist(swipe_times + 1);
@@ -132,13 +195,15 @@ bool asst::InfrastAbstractTask::match_operator_groups()
     }
     swipe_to_the_left_of_operlist(swipe_times + 1);
     swipe_times = 0;
-    Log.info(__FUNCTION__, "available operators for group size:", opers.size());
+    LogInfo << __FUNCTION__ << "available operators for group size:" << opers.size();
     // 筛选第一个满足要求的干员组
     for (const auto& oper_group_pair : current_room_config().operator_groups) {
         if (std::ranges::all_of(oper_group_pair.second, [opers](const std::string& oper) {
                 return opers.contains(oper);
             })) {
             std::ranges::for_each(oper_group_pair.second, [&opers](const std::string& oper) { opers.erase(oper); });
+            // 成员移除发生在写回缓存之前，先记下名单，选人未确认失败的整任务重试靠它回补缓存
+            m_last_matched_group_opers = oper_group_pair.second;
             current_room_config().names.insert(
                 current_room_config().names.end(),
                 oper_group_pair.second.begin(),
@@ -154,15 +219,16 @@ bool asst::InfrastAbstractTask::match_operator_groups()
     // 匹配失败，无分组可用
     if (current_room_config().names.empty() && !current_room_config().operator_groups.empty()) {
         json::value info = basic_info_with_what("CustomInfrastRoomGroupsMatchFailed");
+        info["details"]["reason"] = "all_unavailable";
         std::vector<std::string> names;
         std::ranges::for_each(
             current_room_config().operator_groups,
-            [&names](std::pair<const std::string, std::vector<std::string>>& pair) { names.emplace_back(pair.first); });
+            [&names](const std::pair<std::string, std::vector<std::string>>& pair) { names.emplace_back(pair.first); });
         info["details"]["groups"] = json::array(std::move(names));
         callback(AsstMsg::SubTaskExtraInfo, info);
-        return false;
+        return GroupMatchResult::AllUnavailable;
     }
-    return true;
+    return GroupMatchResult::Matched;
 }
 
 std::set<std::string> asst::InfrastAbstractTask::get_available_oper_for_group()
@@ -188,34 +254,53 @@ void asst::InfrastAbstractTask::set_available_oper_for_group(std::set<std::strin
     status()->set_str(Status::InfrastAvailableOpersForGroup, value.dumps());
 }
 
+void asst::InfrastAbstractTask::restore_last_matched_group_opers()
+{
+    // 回补的是最近一次已匹配但未确认的编组消耗；确认成功后记录已在各确认点清空，此处再清一次防止同名记录重复回补
+    if (m_last_matched_group_opers.empty()) {
+        return;
+    }
+    auto opers = get_available_oper_for_group();
+    opers.insert(m_last_matched_group_opers.cbegin(), m_last_matched_group_opers.cend());
+    set_available_oper_for_group(std::move(opers));
+    m_last_matched_group_opers.clear();
+}
+
 bool asst::InfrastAbstractTask::on_run_fails()
 {
     LogTraceFunction;
+
+    discard_pending_selection();
 
     ProcessTask return_task(*this, { "InfrastBegin" });
     return return_task.run();
 }
 
-bool asst::InfrastAbstractTask::enter_facility(int index)
+bool asst::InfrastAbstractTask::enter_facility(int index, bool save_on_failure)
 {
     LogTraceFunction;
 
-    if (m_is_custom && static_cast<size_t>(m_cur_facility_index) >= m_custom_config.size()) {
-        Log.warn("index out of range:", index, m_custom_config.size());
+    // 房间数组为空时放行进设施：整设施不换班由各任务自身的空数组拦截处理，会客室还需要进设施做线索等设施级操作
+    if (m_is_custom && !m_custom_config.empty() && static_cast<size_t>(index) >= m_custom_config.size()) {
+        LogWarn << "index out of range:" << index << m_custom_config.size();
         return false;
     }
 
     InfrastFacilityImageAnalyzer analyzer(ctrler()->get_image());
     analyzer.set_to_be_analyzed({ facility_name() });
     if (!analyzer.analyze()) {
-        Log.info("result is empty");
-        analyzer.save_img(utils::path("debug") / utils::path("infrast") / utils::path("enter_facility"));
+        LogInfo << "result is empty";
+        if (save_on_failure) {
+            analyzer.save_img(utils::path("debug") / utils::path("infrast") / utils::path("enter_facility"));
+        }
         return false;
     }
     Rect rect = analyzer.get_rect(facility_name(), index);
     if (rect.empty()) {
-        Log.info("facility index is out of range");
-        analyzer.save_img(utils::path("debug") / utils::path("infrast") / utils::path("enter_facility"));
+        LogInfo << "facility index is out of range";
+        if (save_on_failure) {
+            analyzer.save_img(utils::path("debug") / utils::path("infrast") / utils::path("enter_facility"));
+        }
         return false;
     }
     ctrler()->click(rect);
@@ -225,6 +310,12 @@ bool asst::InfrastAbstractTask::enter_facility(int index)
     sleep(Task.get("InfrastEnterFacility")->post_delay);
 
     return true;
+}
+
+bool asst::InfrastAbstractTask::is_index_within_recognized_count(int index) const
+{
+    const auto count = status()->get_number("NumOf" + facility_name());
+    return !count || index < *count;
 }
 
 bool asst::InfrastAbstractTask::enter_oper_list_page()
@@ -240,15 +331,84 @@ bool asst::InfrastAbstractTask::is_use_custom_opers()
     return m_is_custom && (!current_room_config().names.empty() || !current_room_config().candidates.empty());
 }
 
+bool asst::InfrastAbstractTask::is_room_config_specified() const
+{
+    return m_is_custom && static_cast<size_t>(m_cur_facility_index) < m_custom_config.size();
+}
+
+bool asst::InfrastAbstractTask::is_room_config_without_intent() const
+{
+    // trainee_names / assistant_names 仅由训练室解析（见 InfrastTask 的配置解析），
+    // 任一非空即视为有换人意图；其余设施这两个字段恒空，不影响判定
+    return is_room_config_specified() && !current_room_config().skip && current_room_config().names.empty() &&
+           current_room_config().candidates.empty() && current_room_config().trainee_names.empty() &&
+           current_room_config().assistant_names.empty() && !current_room_config().autofill;
+}
+
+asst::RoomShiftIntent asst::InfrastAbstractTask::check_room_shift_intent()
+{
+    // 判定顺序固定为 空数组 → skip → 空意图；GUI 按回调 reason 自带设施名与序号自行分卡
+    if (is_facility_config_empty()) {
+        LogInfo << "custom room array is empty, keep facility unchanged";
+        notify_room_kept_unchanged("facility_empty");
+        return RoomShiftIntent::KeepUnchanged;
+    }
+    if (m_is_custom && current_room_config().skip) {
+        LogInfo << "skip this room";
+        return RoomShiftIntent::Skip;
+    }
+    if (is_room_config_without_intent()) {
+        notify_room_kept_unchanged("room_no_intent");
+        return RoomShiftIntent::KeepUnchanged;
+    }
+    return RoomShiftIntent::Shift;
+}
+
+void asst::InfrastAbstractTask::notify_room_kept_unchanged(std::string_view reason)
+{
+    LogInfo << "room kept unchanged, reason:" << reason << facility_name() << m_cur_facility_index;
+    json::value info = basic_info_with_what("CustomInfrastRoomKeptUnchanged");
+    info["details"]["reason"] = std::string(reason);
+    callback(AsstMsg::SubTaskExtraInfo, info);
+}
+
+void asst::InfrastAbstractTask::notify_rooms_not_configured()
+{
+    LogInfo << "rooms shorter than facility count, remaining rooms from index" << m_cur_facility_index
+            << "left unchanged" << facility_name() << m_custom_config.size();
+    // 内部短配置子任务以越界 break 为正常终止方式，抑制时只保留日志，不发面向用户的未配置提示
+    if (m_suppress_unconfigured_notice) {
+        return;
+    }
+    // GUI 按回调自带设施名与序号自行分卡，核心侧不补发 EnterFacility
+    callback(AsstMsg::SubTaskExtraInfo, basic_info_with_what("CustomInfrastRoomsNotConfigured"));
+}
+
+bool asst::InfrastAbstractTask::is_facility_config_empty() const
+{
+    return m_is_custom && m_custom_config.empty();
+}
+
 /// @brief 按技能排序->清空干员->选择定制干员->按指定顺序排序
 /// @param is_dorm_order 当前房间是不是宿舍
-bool asst::InfrastAbstractTask::swipe_and_select_custom_opers(bool is_dorm_order)
+bool asst::InfrastAbstractTask::swipe_and_select_custom_opers(
+    bool is_dorm_order,
+    bool is_assistant_select,
+    bool* room_kept_unchanged)
 {
     LogTraceFunction;
 
+    // 点名名单里的干员可能正在其他设施工作，先把筛选恢复为“全部”再扫描，
+    // 避免上一流程留下的“未进驻”筛选把点名干员藏掉导致选不中
+    if (!ensure_notstationed_filter_off()) {
+        return false;
+    }
+    m_working_excluded_candidates.clear();
+    m_low_mood_excluded_candidates.clear();
+
     auto& room_config = current_room_config();
     auto origin_room_config = room_config;
-    {
+    if (!is_assistant_select) {
         json::value cb_info = basic_info_with_what("CustomInfrastRoomOperators");
         auto& details = cb_info["details"];
         details["names"] = json::array(room_config.names);
@@ -280,8 +440,8 @@ bool asst::InfrastAbstractTask::swipe_and_select_custom_opers(bool is_dorm_order
             return false;
         }
         std::vector<std::string> partial_result;
-        // 选择自定义干员，同时输出每一页的干员列表
-        if (!select_custom_opers(partial_result)) {
+        // 选择自定义干员，同时输出每一页的干员列表；宿舍候补的心情过滤方向与其余设施相反
+        if (!select_custom_opers(partial_result, is_dorm_order)) {
             return false;
         }
         // 选完人 / 名单已空
@@ -291,9 +451,9 @@ bool asst::InfrastAbstractTask::swipe_and_select_custom_opers(bool is_dorm_order
         }
         if (partial_result == pre_partial_result) {
             if (pre_result_no_changes) {
-                Log.warn("partial result is not changed, reset the page");
+                LogWarn << "partial result is not changed, reset the page";
                 if (retried) {
-                    Log.error("already retring");
+                    LogError << "already retring";
                     break;
                 }
                 swipe_to_the_left_of_operlist(swipe_times + 1);
@@ -308,8 +468,19 @@ bool asst::InfrastAbstractTask::swipe_and_select_custom_opers(bool is_dorm_order
             pre_result_no_changes = false;
         }
         pre_partial_result = partial_result;
+        // 阶段一页数上限：名单全命中时已提前退出，本上限只决定还要为未命中目标翻几页。
+        // 头部高效率点名干员聚集在前两页；扫过仍未命中的，位于技能段中后部时翻页与切职业页签耗时相近，
+        // 无技能沉底时（体系干员、宿舍挂件）切页签必省，故不再继续翻页
+        if (swipe_times + 1 >= CustomPhaseOneMaxPages) {
+            break;
+        }
         swipe_of_operlist();
         ++swipe_times;
+    }
+
+    // 阶段二：剩余目标按职业分桶定位。结束时已切回 ALL 第一页
+    if (!select_custom_opers_by_role(is_dorm_order)) {
+        return false;
     }
 
     // 先按任意其他的tab排序，游戏会自动把已经选中的人放到最前面
@@ -323,16 +494,42 @@ bool asst::InfrastAbstractTask::swipe_and_select_custom_opers(bool is_dorm_order
         ProcessTask(*this, { "InfrastOperListTabWorkStatusUnClicked" }).run();
     }
 
-    if (swipe_times) {
-        swipe_to_the_left_of_operlist(swipe_times + 1);
-        swipe_times = 0;
-    }
     // 如果只选了一个人没必要排序
     if (room_config.sort && room_config.selected > 1) {
         click_clear_button();
         order_opers_selection(opers_order);
     }
 
+    // 纯候补配置（names 为空、candidates 非空）选上 0 人，即全部候补正在其他设施工作，属计划内不可用；
+    // 与编组全部不可用一致地保持房间原样，还原配置、退出选人界面（不确认，未确认的选择不生效）、
+    // 发 CustomInfrastRoomKeptUnchanged 回调，不当失败重试，避免反复卡同一间与宿舍确认成空房间。
+    // 训练室协助者场景（is_assistant_select）0 人是设计行为（空选确认关闭面板保持现任协助者），须排除
+    const bool pure_candidates_selected_none = !is_assistant_select && origin_room_config.names.empty() &&
+                                               !origin_room_config.candidates.empty() && room_config.selected == 0;
+    if (pure_candidates_selected_none) {
+        // 0 人选出的原因细分：全部在班、全部心情不满足（生产类不足/宿舍不够低）、
+        // 或名单有误（拼错、未拥有），前两者是计划内不可用，后者提示用户排查配置
+        const auto all_candidates_in = [&origin_room_config](const std::vector<std::string>& excluded) {
+            return std::ranges::all_of(origin_room_config.candidates, [&excluded](const std::string& name) {
+                return std::ranges::find(excluded, name) != excluded.cend();
+            });
+        };
+        std::string_view reason = "candidates_unavailable";
+        if (all_candidates_in(m_working_excluded_candidates)) {
+            reason = "candidates_working";
+        }
+        else if (all_candidates_in(m_low_mood_excluded_candidates)) {
+            reason = "candidates_low_mood";
+        }
+        LogInfo << "all candidates unavailable, reason:" << reason << facility_name() << m_cur_facility_index;
+        current_room_config() = std::move(origin_room_config);
+        click_return_button();
+        notify_room_kept_unchanged(reason);
+        if (room_kept_unchanged) {
+            *room_kept_unchanged = true;
+        }
+        return false;
+    }
     if (!room_config.names.empty() || (!is_dorm_order && !select_opers_review(origin_room_config))) {
         // 复核失败，说明current_room_config与OCR识别是不符的，current_room_config是无效信息，还原到用户原来的配置，重选
         current_room_config() = std::move(origin_room_config);
@@ -424,7 +621,7 @@ bool asst::InfrastAbstractTask::select_opers_review(
     return true;
 }
 
-bool asst::InfrastAbstractTask::select_custom_opers(std::vector<std::string>& partial_result)
+bool asst::InfrastAbstractTask::select_custom_opers(std::vector<std::string>& partial_result, bool is_dorm_order)
 {
     LogTraceFunction;
 
@@ -440,7 +637,8 @@ bool asst::InfrastAbstractTask::select_custom_opers(std::vector<std::string>& pa
     // 预检查循环
     auto image = ctrler()->get_image();
     InfrastOperImageAnalyzer oper_analyzer(image);
-    oper_analyzer.set_to_be_calced(InfrastOperImageAnalyzer::ToBeCalced::Selected);
+    oper_analyzer.set_to_be_calced(
+        InfrastOperImageAnalyzer::ToBeCalced::Selected | InfrastOperImageAnalyzer::ToBeCalced::Doing);
     if (!oper_analyzer.analyze()) {
         Log.warn("No oper");
         return false;
@@ -487,7 +685,9 @@ bool asst::InfrastAbstractTask::select_custom_opers(std::vector<std::string>& pa
 
     image = ctrler()->get_image();
     InfrastOperImageAnalyzer oper_analyzer2(image);
-    oper_analyzer2.set_to_be_calced(InfrastOperImageAnalyzer::ToBeCalced::Selected);
+    oper_analyzer2.set_to_be_calced(
+        InfrastOperImageAnalyzer::ToBeCalced::Selected | InfrastOperImageAnalyzer::ToBeCalced::Doing |
+        InfrastOperImageAnalyzer::ToBeCalced::Mood);
     if (!oper_analyzer2.analyze()) {
         Log.warn("No oper");
         return false;
@@ -512,6 +712,26 @@ bool asst::InfrastAbstractTask::select_custom_opers(std::vector<std::string>& pa
             // names中的数量，比剩余的空位多，就可以选备选的
             if (auto candd_iter = std::ranges::find(room_config.candidates, name);
                 candd_iter != room_config.candidates.end()) {
+                // 候补在选人阶段即排除工作中的干员：点选后要等复核才发现并整体失败，重试也不会顺延到下一个候选。
+                // 跳过不删名，翻页与回滑重扫会再次识别到，收名单前查重避免同一干员重复计入
+                if (oper.doing == infrast::Doing::Working) {
+                    if (std::ranges::find(m_working_excluded_candidates, name) == m_working_excluded_candidates.end()) {
+                        m_working_excluded_candidates.emplace_back(name);
+                    }
+                    continue;
+                }
+                // 候补按设施语义过滤心情，方向相反：宿舍是休息设施，只在心情已满时跳过
+                // （回满让位，对齐常规模式休息到满的语义；未满的含正在本宿舍休息的都可选，
+                // 避免清空重选时把还没休息够的候补请出去）；生产类设施跳过低于阈值的
+                // （低效乃至停工）。跳过同样不删名顺延下一个候选，计入名单供保持原样回调区分原因
+                if (is_dorm_order ? oper.mood_ratio >= infrast::FullMoodThreshold
+                                  : oper.mood_ratio < m_mood_threshold) {
+                    if (std::ranges::find(m_low_mood_excluded_candidates, name) ==
+                        m_low_mood_excluded_candidates.end()) {
+                        m_low_mood_excluded_candidates.emplace_back(name);
+                    }
+                    continue;
+                }
                 room_config.candidates.erase(candd_iter);
             }
             else {
@@ -528,6 +748,190 @@ bool asst::InfrastAbstractTask::select_custom_opers(std::vector<std::string>& pa
             break;
         }
     }
+    return true;
+}
+
+bool asst::InfrastAbstractTask::select_custom_opers_by_role(bool is_dorm_order)
+{
+    auto& room_config = current_room_config();
+
+    const auto is_excluded = [this](const std::string& name) {
+        return std::ranges::find(m_working_excluded_candidates, name) != m_working_excluded_candidates.cend() ||
+               std::ranges::find(m_low_mood_excluded_candidates, name) != m_low_mood_excluded_candidates.cend();
+    };
+    // 目标处理完毕 = 已从名单删名（必选只有删名一种移除方式），或候补仍在名单但已因在班/心情被排除
+    const auto targets_done = [&](const std::vector<std::string>& targets) {
+        return std::ranges::all_of(targets, [&](const std::string& name) {
+            if (std::ranges::find(room_config.names, name) != room_config.names.cend()) {
+                return false;
+            }
+            const bool in_candidates = std::ranges::find(room_config.candidates, name) != room_config.candidates.cend();
+            return !in_candidates || is_excluded(name);
+        });
+    };
+
+    const auto is_full = [&]() {
+        return static_cast<size_t>(room_config.selected) >= max_num_of_opers();
+    };
+    const auto has_pending_candidates = [&]() {
+        return std::ranges::any_of(room_config.candidates, [&](const std::string& name) { return !is_excluded(name); });
+    };
+    if (is_full() || (room_config.names.empty() && !has_pending_candidates())) {
+        // 无需职业分桶时也须回到 ALL 首页
+        swipe_to_the_left_of_operlist();
+        return true; // 满员，或剩余名单全是已排除的候补，无事可做
+    }
+
+    // 必选与备选独立分桶，桶序各取名单中的首现序；查不到职业的（名字拼错、数据未收录）留在 ALL 兜底
+    const auto build_buckets =
+        [&](const std::vector<std::string>& names, bool skip_excluded, auto& buckets, auto& fallback) {
+            for (const auto& name : names) {
+                if (skip_excluded && is_excluded(name)) {
+                    continue; // 阶段一已确认在班/心情不符的候补，不再为其翻页
+                }
+                const auto roles = BattleData.get_roles(name, true);
+                if (roles.size() != 1) {
+                    fallback.emplace_back(name);
+                    continue;
+                }
+                const battle::Role role = *roles.begin();
+                auto iter = std::ranges::find_if(buckets, [&](const auto& pair) { return pair.first == role; });
+                if (iter == buckets.end()) {
+                    buckets.emplace_back(role, std::vector<std::string> {});
+                    iter = buckets.end() - 1;
+                }
+                iter->second.emplace_back(name);
+            }
+        };
+    std::vector<std::pair<battle::Role, std::vector<std::string>>> required_buckets;
+    std::vector<std::pair<battle::Role, std::vector<std::string>>> candidate_buckets;
+    std::vector<std::string> all_fallback_targets;
+    build_buckets(room_config.names, false, required_buckets, all_fallback_targets);
+    build_buckets(room_config.candidates, true, candidate_buckets, all_fallback_targets);
+
+    // 兜底目标不切页签，在 ALL 列表从当前位置继续翻页；到底即止不重试（查不到职业属配置异常，
+    // 漏识别由收尾复核与选人重试兜底），避免为罕见路径引入回正复杂度
+    if (!all_fallback_targets.empty()) {
+        std::vector<std::string> pre_partial_result;
+        bool pre_result_no_changes = false;
+        while (true) {
+            if (need_exit()) {
+                return false;
+            }
+            std::vector<std::string> partial_result;
+            if (!select_custom_opers(partial_result, is_dorm_order)) {
+                return false;
+            }
+            if (is_full() || targets_done(all_fallback_targets)) {
+                break;
+            }
+            if (partial_result == pre_partial_result) {
+                if (pre_result_no_changes) {
+                    break; // ALL 列表已到底
+                }
+                pre_result_no_changes = true;
+            }
+            else {
+                pre_result_no_changes = false;
+            }
+            pre_partial_result = partial_result;
+            swipe_of_operlist();
+        }
+    }
+
+    // 切换职业页签。先回 ALL 再点目标职业，重置该职业列表保留的滚动位置
+    const auto switch_role_tab = [&](battle::Role role) {
+        ProcessTask(*this, { "BattleQuickFormationRole-All", "BattleQuickFormationRole-All-OCR" }).run();
+        ProcessTask(*this, { "BattleQuickFormationRole-" + enum_to_string(role, true) }).run();
+        sleep(CustomRoleSwitchDelayMs);
+    };
+
+    // 单桶扫描：目标找齐/满员/列表到底即结束，到底 = 连续两页识别不变。
+    // immediate_retry 为真时到底先回切页签重置滚动重扫一轮（必选误判缺席会触发整房重选，代价高）；
+    // 为假时直接结束并置 stalled，由调用方决定是否延迟重试
+    const auto scan_bucket =
+        [&](battle::Role role, const std::vector<std::string>& targets, bool immediate_retry, bool& stalled) -> bool {
+        stalled = false;
+        switch_role_tab(role);
+        std::vector<std::string> pre_partial_result;
+        bool pre_result_no_changes = false;
+        bool retried = false;
+        while (true) {
+            if (need_exit()) {
+                return false;
+            }
+            std::vector<std::string> partial_result;
+            if (!select_custom_opers(partial_result, is_dorm_order)) {
+                return false;
+            }
+            if (is_full() || targets_done(targets)) {
+                return true;
+            }
+            if (partial_result == pre_partial_result) {
+                if (pre_result_no_changes) {
+                    if (retried || !immediate_retry) {
+                        stalled = true; // 列表到底仍有目标未处理，确认缺席
+                        return true;
+                    }
+                    switch_role_tab(role); // 回切页签重置滚动，重扫一轮排除偶发漏识别
+                    retried = true;
+                    pre_result_no_changes = false;
+                    pre_partial_result.clear();
+                    continue;
+                }
+                pre_result_no_changes = true;
+            }
+            else {
+                pre_result_no_changes = false;
+            }
+            pre_partial_result = partial_result;
+            swipe_of_operlist();
+        }
+    };
+
+    // 基建选人界面职业栏默认收起，进入职业分桶扫描前展开
+    ProcessTask(*this, { "BattleQuickFormationExpandRole" }).set_retry_times(3).run();
+
+    // 必选层：桶内目标找齐即切下一桶
+    for (const auto& [role, targets] : required_buckets) {
+        if (is_full()) {
+            break;
+        }
+        bool stalled = false;
+        if (!scan_bucket(role, targets, true, stalled)) {
+            return false;
+        }
+    }
+
+    // 备选层：必选落座后按空位补人，补满即停，剩余桶不再扫
+    std::vector<std::pair<battle::Role, std::vector<std::string>>> stalled_buckets;
+    for (const auto& [role, targets] : candidate_buckets) {
+        if (is_full()) {
+            break;
+        }
+        bool stalled = false;
+        if (!scan_bucket(role, targets, false, stalled)) {
+            return false;
+        }
+        if (stalled) {
+            stalled_buckets.emplace_back(role, targets);
+        }
+    }
+    // 席位未满时对到底未命中的备选桶统一重扫一轮，兜住第一遍的偶发漏识别；重试轮内仍到底即确认缺席
+    if (!is_full() && !stalled_buckets.empty()) {
+        for (const auto& [role, targets] : stalled_buckets) {
+            if (is_full()) {
+                break;
+            }
+            bool stalled = false;
+            if (!scan_bucket(role, targets, true, stalled)) {
+                return false;
+            }
+        }
+    }
+
+    // 回正函数切页签重置列表滚动后回到 ALL 并收起职业栏，回到与阶段一结束一致的界面状态供收尾排序与复核
+    swipe_to_the_left_of_operlist();
     return true;
 }
 
@@ -690,6 +1094,73 @@ bool asst::InfrastAbstractTask::click_filter_menu_cancel_not_stationed_button()
     return task.run() && task.get_last_task_name() == "Stop";
 }
 
+bool asst::InfrastAbstractTask::ensure_notstationed_filter_off()
+{
+    // 探测顶部筛选按钮的“未进驻”选中态即可判断当前筛选：选中说明列表被过滤为
+    // 未进驻干员，点名与常规算法会看不到在班干员，需走取消链纠偏；非选中态即
+    // “全部”。刚进列表页画面可能还在过场，单帧匹配不到不等于没有筛选，连续
+    // 多帧都没有选中态才按“全部”放行（漏取消会导致点名选不中，多等几帧只是
+    // 延迟，误判代价不对称）。筛选状态一律以界面实际状态为准，不维护内存镜像：
+    // 任务中途意外退出再重进基建时游戏会丢失筛选设置，跨任务运行也可能继承
+    // 上一流程或用户手动留下的筛选
+    for (int attempt = 0; attempt < FilterProbeRetryTimes; ++attempt) {
+        Matcher analyzer(ctrler()->get_image());
+        analyzer.set_task_info("InfrastFilterMenuNotStationedSelected");
+        if (analyzer.analyze()) {
+            return click_filter_menu_cancel_not_stationed_button();
+        }
+        sleep(FilterProbeRetryDelayMs);
+    }
+    return true;
+}
+
+void asst::InfrastAbstractTask::detect_current_facility_number()
+{
+    m_current_facility_number.clear();
+    InfrastOperImageAnalyzer analyzer(ctrler()->get_image());
+    analyzer.set_to_be_calced(InfrastOperImageAnalyzer::ToBeCalced::Selected);
+    if (!analyzer.analyze()) {
+        return; // 识别失败按无现任处理，编号留空
+    }
+    analyzer.sort_by_loc();
+    for (const auto& oper : analyzer.get_result()) {
+        if (!oper.selected) {
+            continue;
+        }
+        // 置顶机制下首个选中者即本设施现任；编号读取失败同样留空，不阻塞选人
+        m_current_facility_number = read_facility_number(oper);
+        LogTrace << "current facility number:" << m_current_facility_number;
+        break;
+    }
+}
+
+std::string asst::InfrastAbstractTask::read_facility_number(const infrast::Oper& oper)
+{
+    RegionOCRer facility_analyzer(oper.facility_img);
+    facility_analyzer.set_use_char_model(true);
+    if (!facility_analyzer.analyze()) {
+        return {};
+    }
+    std::string facility_name = facility_analyzer.get_result().text;
+    static const boost::regex facility_rule("[^BF0-9]");
+    return boost::regex_replace(facility_name, facility_rule, "");
+}
+
+bool asst::InfrastAbstractTask::stationed_in_production_facility(const infrast::Oper& oper) const
+{
+    // 空白驻扎栏的 OCR 噪声剔除后通常为空，按未进驻处理不排除；恰好凑成四位
+    // 编号的噪声会误杀单个候选，属可接受的低概率边角
+    const std::string facility_name = read_facility_number(oper);
+
+    const bool is_dorm =
+        facility_name == "B104" || facility_name == "B204" || facility_name == "B304" || facility_name == "B401";
+    const bool stationed = !facility_name.empty() && !is_dorm && facility_name != m_current_facility_number;
+    if (stationed) {
+        LogTrace << "operator stationed in" << facility_name;
+    }
+    return stationed;
+}
+
 bool asst::InfrastAbstractTask::click_confirm_button()
 {
     LogTraceFunction;
@@ -697,7 +1168,17 @@ bool asst::InfrastAbstractTask::click_confirm_button()
     ProcessTask task(*this, { "InfrastDormConfirmButton" });
     bool ret = task.run();
     if (ret) {
+        for (const auto& operator_id : m_pending_operator_ids) {
+            Log.trace("infrastructure operator committed", facility_name(), operator_id);
+        }
+        if (m_task_data) {
+            m_task_data->commit_pending();
+        }
+        discard_pending_selection();
         callback(AsstMsg::SubTaskExtraInfo, basic_info_with_what("InfrastConfirmButton"));
+    }
+    else {
+        discard_pending_selection();
     }
     return ret;
 }
@@ -710,7 +1191,9 @@ void asst::InfrastAbstractTask::swipe_of_operlist()
 void asst::InfrastAbstractTask::swipe_to_the_left_of_operlist(int loop_times)
 {
     // 通过切换职业栏来实现回正
-    bool ret = ProcessTask(*this, { "BattleQuickFormationExpandRole" }).set_retry_times(3).run();
+    bool ret = ProcessTask(*this, { "BattleQuickFormationRoleExpanded", "BattleQuickFormationExpandRole" })
+                   .set_retry_times(3)
+                   .run();
     if (ret) {
         ProcessTask(
             *this,

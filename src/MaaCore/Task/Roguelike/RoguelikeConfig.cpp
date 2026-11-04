@@ -1,5 +1,8 @@
 #include "RoguelikeConfig.h"
 
+#include <algorithm>
+#include <array>
+
 #include "Config/TaskData.h"
 #include "Utils/Logger.hpp"
 
@@ -18,6 +21,87 @@ bool asst::RoguelikeConfig::verify_and_load_params(const json::value& params)
         return false;
     }
 
+    m_blackflow_start_animals.clear();
+    m_blackflow_start_rewards = 0;
+    m_blackflow_start_utopia = false;
+    m_blackflow_start_reward_priority.clear();
+    m_blackflow_preparation_roles.reset();
+    m_blackflow_preparation_opers.reset();
+    if (mode == RoguelikeMode::BlackFlowStartRun) {
+        const auto animals = params.find<json::array>("blackflow_start_animals");
+        const auto rewards = params.find<int>("blackflow_start_rewards");
+        if (!animals || animals->size() > 2 || !rewards || *rewards < 0 || *rewards > 0xFFF) {
+            LogError << "Invalid BlackFlow start-run animals or rewards";
+            return false;
+        }
+        constexpr std::array<std::string_view, 4> allowed { "swaddled_cat",
+                                                            "swaddled_dog",
+                                                            "swaddled_cerberus",
+                                                            "swaddled_feathered_serpent" };
+        for (const auto& animal : *animals) {
+            if (!animal.is_string() || std::ranges::find(allowed, animal.as_string()) == allowed.end()) {
+                LogError << "Invalid BlackFlow start-run animal";
+                return false;
+            }
+            m_blackflow_start_animals.emplace_back(animal.as_string());
+        }
+        const auto serpents = std::ranges::count(m_blackflow_start_animals, "swaddled_feathered_serpent");
+        if (serpents > 1) {
+            LogError << "BlackFlow start-run permits at most one feathered serpent";
+            return false;
+        }
+        m_blackflow_start_rewards = serpents == 0 ? *rewards & 0x3F : *rewards;
+        if ((m_blackflow_start_rewards & ~0x3F) != 0 &&
+            Task.get<OcrTaskInfo>("BlackFlow@Roguelike@StartRunSerpentRewardNames") == nullptr) {
+            LogError << "Missing BlackFlow start-run reward recognition resource:"
+                     << "BlackFlow@Roguelike@StartRunSerpentRewardNames";
+            return false;
+        }
+
+        m_blackflow_start_utopia = params.get("blackflow_start_utopia", false);
+        if (m_blackflow_start_utopia) {
+            // 下标与 blackflow_start_rewards 的位一致。顺序和开局动物无关：准备局没要求羽蛇也可能带上，
+            // 目标局照样会出蓝色奖励
+            constexpr std::array<std::string_view, 12> reward_ids {
+                "unnumbered_item", "survey_advance",  "space_lease", "regression_compensation",
+                "forest_ride",     "nest_parasitism", "pegasus",     "hippogriff",
+                "dragon",          "hydra",           "bai_ze",      "golden_crow",
+            };
+            const auto priority = params.find<json::array>("blackflow_start_reward_priority");
+            if (!priority) {
+                LogError << "Missing BlackFlow start-run reward priority";
+                return false;
+            }
+            for (const auto& reward : *priority) {
+                const auto found =
+                    reward.is_string() ? std::ranges::find(reward_ids, reward.as_string()) : reward_ids.end();
+                const int index = static_cast<int>(std::distance(reward_ids.begin(), found));
+                if (found == reward_ids.end() || std::ranges::count(m_blackflow_start_reward_priority, index) != 0) {
+                    LogError << "Invalid BlackFlow start-run reward priority";
+                    return false;
+                }
+                m_blackflow_start_reward_priority.emplace_back(index);
+            }
+            if (m_blackflow_start_reward_priority.empty()) {
+                LogError << "BlackFlow start-run reward priority is empty";
+                return false;
+            }
+        }
+
+        // 准备局另配的职业组和开局干员（准备局快速飞三层），只在准备局生效
+        if (params.contains("collectible_mode_roles")) {
+            m_blackflow_preparation_roles = params.get("collectible_mode_roles", std::string());
+        }
+        if (const auto list = params.find<json::array>("collectible_mode_core_char_list")) {
+            m_blackflow_preparation_opers = parse_start_oper_list(*list);
+        }
+    }
+
+    // 此时 m_mode 仍是上一次设参的模式：同一个未开始的任务从刷开局改设为其他模式时，
+    // 清掉刷开局留下的准备局标记，免得难度插件继续按准备局难度选择
+    if (m_mode == RoguelikeMode::BlackFlowStartRun) {
+        m_run_for_collectible = false;
+    }
     m_theme = theme;
     m_mode = mode;
     m_difficulty = params.get("difficulty", -1);
@@ -101,6 +185,9 @@ bool asst::RoguelikeConfig::verify_and_load_params(const json::value& params)
         m_invest_with_more_score = (investment_with_more_score);
     }
 
+    if (m_mode == RoguelikeMode::BlackFlowStartRun) {
+        m_run_for_collectible = true;
+    }
     if (m_mode == RoguelikeMode::Collectible && !m_only_start_with_elite_two) {
         m_run_for_collectible = true; // 烧开水模式下，如果不是只凹直升，第一轮游戏先烧水
     }
@@ -125,3 +212,31 @@ void asst::RoguelikeConfig::clear()
     m_squad = std::string();
 }
 
+std::vector<asst::RoguelikeStartOper> asst::RoguelikeConfig::parse_start_opers(const json::value& params)
+{
+    if (auto list_opt = params.find<json::array>("core_char_list")) {
+        // 字段存在即以本字段为准：空列表表示无自选干员，不回落旧参数
+        return parse_start_oper_list(list_opt.value());
+    }
+    std::vector<RoguelikeStartOper> opers;
+    // 旧版单干员参数，等价于第 1 顺位
+    std::string core_char = params.get("core_char", std::string {});
+    if (!core_char.empty()) {
+        opers.push_back({ .name = std::move(core_char), .use_support = params.get("use_support", false) });
+    }
+    return opers;
+}
+
+std::vector<asst::RoguelikeStartOper> asst::RoguelikeConfig::parse_start_oper_list(const json::array& list)
+{
+    std::vector<RoguelikeStartOper> opers;
+    for (const auto& item : list) {
+        RoguelikeStartOper oper;
+        oper.name = item.get("name", std::string {});
+        oper.use_support = item.get("use_support", false);
+        if (!oper.name.empty()) {
+            opers.emplace_back(std::move(oper));
+        }
+    }
+    return opers;
+}

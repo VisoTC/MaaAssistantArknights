@@ -1,0 +1,61 @@
+// <copyright file="TimerSettings.cs" company="MaaAssistantArknights">
+// Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License v3.0 only as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY
+// </copyright>
+
+#nullable enable
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Linq;
+using System.Text.Json.Serialization;
+using MaaWpfGui.Models;
+using static MaaWpfGui.Configuration.Factory.ConfigFactory;
+
+namespace MaaWpfGui.Configuration.Global;
+
+/// <summary>
+/// 定时运行设置
+/// </summary>
+public partial class TimerSettings : NotifyPropertyChangedWithValue
+{
+    public void EventBinding(string prefix)
+    {
+        PropertyChanged += Handler.OnPropertyChangedFactory(prefix + nameof(TimerSettings) + ".");
+        List.CollectionChanged += (sender, e) => {
+            if (e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Replace)
+            {
+                e.NewItems?.OfType<Timer>().ToList().ForEach(item => {
+                    item.PropertyChanged += Handler.OnPropertyChangedFactory(prefix + nameof(TimerSettings) + "." + nameof(List) + ".");
+                });
+            }
+        };
+        List.CollectionChanged += Handler.OnCollectionChangedFactory<Timer>(prefix + nameof(TimerSettings) + "." + nameof(List) + ".");
+        foreach (Timer timer in List)
+        {
+            timer.PropertyChanged += Handler.OnPropertyChangedFactory(prefix + nameof(TimerSettings) + "." + nameof(List) + "." + timer.Config + ".");
+        }
+    }
+
+    public bool ForceScheduledStart { get; set; }
+
+    public bool ShowWindowBeforeForceScheduledStart { get; set; }
+
+    public bool CustomConfig { get; set; }
+
+    public bool NotifyBeforeScheduledStart { get; set; }
+
+    public int ScheduledStartNotificationMinutes { get; set; } = 5;
+
+    public bool ScheduledWakeUp { get; set; }
+
+    [JsonInclude]
+    public ObservableCollection<Timer> List { get; private set; } = [];
+}

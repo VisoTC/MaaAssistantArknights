@@ -16,7 +16,7 @@
     },
     "RA@Navigation-FromMainInterface": {
         "action": "DoNothing",
-        "template": "SwitchTheme@ToggleSettingsMenu.png",
+        "template": ["SwitchTheme@ToggleSettingsMenu.png", "SwitchTheme@ToggleSettingsMenu-v2.png"],
         "roi": [227, 327, 159, 152],
         "sub": ["Terminal-Entry"],
         "next": ["RA@Navigation-FromTodoList", "RA@Navigation-LongTermExploration", "RA@Navigation@ReturnButtons#next"]
@@ -118,7 +118,7 @@
     },
     "RA@Store@PurchasedConfirm": {
         "baseTask": "CreditShop-Bought",
-        "template": "CreditShop-Bought.png",
+        "template": "ItemObtainedIcon.png",
         "next": ["RA@Store@PurchasedConfirm", "RA@Store@ClickItem", "RA@Store@Swipe"]
     },
     "RA@Store@Swipe": {

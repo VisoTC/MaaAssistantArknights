@@ -34,15 +34,15 @@ enum class StaticOptionKey
 {
     Invalid = 0,
     CpuOCR = 1, // use CPU to OCR, no value. It does not support switching after the resource is loaded.
-    GpuOCR = 2, // use GPU to OCR, value is gpu_id int to string. It does not support switching after the resource
-                // is loaded.
+    GpuOCR = 2, // use GPU to OCR. value is a device id integer, or "luid:<hex>" on Windows. It does not support
+                // switching after the resource is loaded.
 };
 
 enum class InstanceOptionKey
 {
     Invalid = 0,
     /* Deprecated */         // MinitouchEnabled = 1,
-    TouchMode = 2,           // 触控模式设置， "minitouch" | "maatouch" | "adb"
+    TouchMode = 2,           // 触控模式设置， "minitouch" | "maatouch" | "adb" | "MaaFwAdb" | "MumuExtras"
     DeploymentWithPause = 3, // 自动战斗、肉鸽、保全 是否使用 暂停下干员， "0" | "1"
     AdbLiteEnabled = 4,      // 是否使用 AdbLite， "0" | "1"
     KillAdbOnExit = 5,       // 退出时是否杀掉 Adb 进程， "0" | "1"
@@ -58,7 +58,53 @@ enum class TouchMode
     MacPlayTools = 3,
     MaaFwAdb = 4,
     Android = 5,
+    MumuExtras = 6, // MuMu external renderer IPC，不可用时自动降级为 Minitouch
 };
+
+// Swipe 任务 specialParams[1] 的额外滑动方向。json 协议层仍为 int：0 不启用，1/2/3/4 为上/下/左/右
+enum class SwipeExtraDirection : int
+{
+    None = 0,
+    Up = 1,
+    Down = 2,
+    Left = 3,
+    Right = 4,
+};
+
+// 域外值（如 json 里误写的 5/-1）一律收敛为 None，避免零位移的空 extra 滑动
+inline SwipeExtraDirection to_swipe_extra_direction(int direction)
+{
+    switch (direction) {
+    case 1:
+        return SwipeExtraDirection::Up;
+    case 2:
+        return SwipeExtraDirection::Down;
+    case 3:
+        return SwipeExtraDirection::Left;
+    case 4:
+        return SwipeExtraDirection::Right;
+    default:
+        return SwipeExtraDirection::None;
+    }
+}
+
+inline std::string enum_to_string(SwipeExtraDirection direction)
+{
+    switch (direction) {
+    case SwipeExtraDirection::None:
+        return "None";
+    case SwipeExtraDirection::Up:
+        return "Up";
+    case SwipeExtraDirection::Down:
+        return "Down";
+    case SwipeExtraDirection::Left:
+        return "Left";
+    case SwipeExtraDirection::Right:
+        return "Right";
+    default:
+        return std::format("Unknown({})", static_cast<int>(direction));
+    }
+}
 
 #ifdef _WIN32
 
@@ -91,6 +137,10 @@ constexpr Win32InputMethod SendMessageWithCursorPos = 1ULL << 5;
 constexpr Win32InputMethod PostMessageWithCursorPos = 1ULL << 6;
 constexpr Win32InputMethod SendMessageWithWindowPos = 1ULL << 7;
 constexpr Win32InputMethod PostMessageWithWindowPos = 1ULL << 8;
+// 与 MaaFramework 的 MaaWin32InputMethod_Interception 对应，本仓库未使用，仅为占位对齐
+constexpr Win32InputMethod Interception = 1ULL << 9;
+// 合成触控注入（Win10 1809+），仅实现点击与滑动，键盘需另选输入方式
+constexpr Win32InputMethod AnchoredTouch = 1ULL << 10;
 } // namespace Win32Input
 
 #endif // _WIN32
@@ -391,6 +441,28 @@ struct FeatureMatchRect : public AnalyzerResult
 };
 } // namespace asst
 
+namespace json::ext
+{
+template <>
+class jsonization<asst::Rect>
+{
+public:
+    json::value to_json(const asst::Rect& t) const { return json::array { t.x, t.y, t.width, t.height }; }
+
+    bool check_json(const json::value& j) const { return j.is<std::array<int, 4>>(); }
+
+    bool from_json(const json::value& j, asst::Rect& out) const
+    {
+        const auto& arr = j.as<std::array<int, 4>>();
+        out.x = arr[0];
+        out.y = arr[1];
+        out.width = arr[2];
+        out.height = arr[3];
+        return true;
+    }
+};
+} // namespace json::ext
+
 namespace std
 {
 template <>
@@ -685,6 +757,15 @@ struct TaskInfo : public TaskPipelineInfo
 using TaskPtr = std::shared_ptr<TaskInfo>;
 using TaskConstPtr = std::shared_ptr<const TaskInfo>;
 
+// 多个匹配时的结果排序方式（参考 MaaFramework order_by）
+enum class ResultOrderBy
+{
+    None,       // 默认：按识别顺序，不重排
+    Horizontal, // 行优先（行内从左到右）
+    Vertical,   // 列优先（列内从上到下）
+    Score,      // 按分数从高到低
+};
+
 // 文字识别任务的信息
 struct OcrTaskInfo : public TaskInfo
 {
@@ -703,6 +784,7 @@ struct OcrTaskInfo : public TaskInfo
     std::vector<std::pair<std::string, std::string>>
         replace_map;                                 // 部分文字容易识别错，字符串强制replace之后，再进行匹配
     std::array<int, 2> bin_threshold = { 140, 255 }; // 二值化灰度上阈值
+    ResultOrderBy order_by = ResultOrderBy::None;    // 多个匹配时的结果排序方式，默认按识别顺序
 };
 
 using OcrTaskPtr = std::shared_ptr<OcrTaskInfo>;
@@ -728,6 +810,7 @@ struct MatchTaskInfo : public TaskInfo
     Ranges color_scales;                  // 数色掩码范围
     bool color_close = true;              // 数色时是否使用闭运算处理
     bool pure_color = false;              // 数色时是否忽略模板匹配结果
+    int nms_distance = 0;                 // 多匹配去重半径，0 时按模板短边的一半取值
 };
 
 using MatchTaskPtr = std::shared_ptr<MatchTaskInfo>;

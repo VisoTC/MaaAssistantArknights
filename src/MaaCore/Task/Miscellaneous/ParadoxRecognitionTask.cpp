@@ -1,5 +1,7 @@
 #include "ParadoxRecognitionTask.h"
 
+#include <algorithm>
+
 #include "Config/Miscellaneous/BattleDataConfig.h"
 #include "Config/Miscellaneous/CopilotConfig.h"
 #include "Controller/Controller.h"
@@ -54,13 +56,15 @@ bool asst::ParadoxRecognitionTask::_run()
     // 设置技能
     m_skill_num = 1;
     auto* groups = &Copilot.get_data().groups;
-    for (const auto& opers_vec : *groups | std::views::values) {
+    for (const auto& [_, __, ___, opers_vec] : *groups) {
         if (opers_vec.empty()) {
             continue;
         }
         for (const auto& oper : opers_vec) {
             if (match_oper(oper.name)) {
-                m_skill_num = oper.skill;
+                // 作业文件的 skill 值可能非法（解析层将非法值归零），ParadoxChooseSkill 模板任务只定义了
+                // 1-3，钳制到合法范围
+                m_skill_num = std::clamp(oper.skill, 1, 3);
             }
         }
     }

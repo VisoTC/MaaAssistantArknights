@@ -1,11 +1,15 @@
 #include "InfrastProductionTask.h"
+#include "InfrastScore.h"
+#include "ReplenishOriginiumShardTaskPlugin.h"
 
 #include <algorithm>
+#include <array>
 #include <ranges>
 
 #include <calculator/calculator.hpp>
 
 #include "Common/AsstTypes.h"
+#include "Config/Miscellaneous/BattleDataConfig.h"
 #include "Config/Miscellaneous/InfrastConfig.h"
 #include "Config/TaskData.h"
 #include "Controller/Controller.h"
@@ -16,6 +20,7 @@
 #include "Vision/Infrast/InfrastOperImageAnalyzer.h"
 #include "Vision/Matcher.h"
 #include "Vision/MultiMatcher.h"
+#include "Vision/OCRer.h"
 #include "Vision/RegionOCRer.h"
 
 asst::InfrastProductionTask& asst::InfrastProductionTask::set_drones_usage_from_params(std::string usage) noexcept
@@ -244,17 +249,13 @@ bool asst::InfrastProductionTask::shift_facility_list()
         if (need_exit()) {
             return false;
         }
+        // rooms 数组短于实际房间数时，从未配置的第一个房间起不再换班，整设施发一条未配置提示
+        if (m_is_custom && static_cast<size_t>(m_cur_facility_index) >= m_custom_config.size()) {
+            notify_rooms_not_configured();
+            break;
+        }
         if (m_cur_facility_index != 0) {
             callback(AsstMsg::SubTaskExtraInfo, basic_info_with_what("EnterFacility"));
-            if (m_is_custom) {
-                if (static_cast<size_t>(m_cur_facility_index) < m_custom_config.size()) {
-                    current_room_config() = m_custom_config.at(m_cur_facility_index);
-                }
-                else {
-                    Log.warn("index out of range:", m_cur_facility_index, m_custom_config.size());
-                    break;
-                }
-            }
         }
 
         // 最近总是出现设施没选中，导致干员放错房间，多点一次，观察一段时间。最好是改为图像识别是几号。
@@ -266,13 +267,41 @@ bool asst::InfrastProductionTask::shift_facility_list()
         ctrler()->click(tab);
         sleep(tab_task_ptr->post_delay);
 
+        // 上一个设施留有未执行的制造计划时，切换页签会被 ｢尚未执行新的制造计划｣ 弹窗拦下，确认离开后重新点击页签。
+        // 该弹窗只可能由制造站的补货（确认按钮未弹或未被点中时）或换产物失败留下，贸易站与
+        // 两者都没发生的轮次没有此弹窗，直接用 OCRer 探测前先按此收紧，避免整块 OCR 白跑；
+        // 正常切换时没有弹窗，裸探测也避免 ProcessTask 未命中上报 SubTaskError
+        bool plan_may_be_unexecuted = m_plan_may_be_unexecuted;
+        if (facility_name() == "Mfg" && !plan_may_be_unexecuted) {
+            for (const auto& plugin : get_plugins()) {
+                if (auto replenish = std::dynamic_pointer_cast<ReplenishOriginiumShardTaskPlugin>(plugin)) {
+                    plan_may_be_unexecuted = replenish->ran_this_run();
+                    break;
+                }
+            }
+        }
+        if (plan_may_be_unexecuted) {
+            OCRer leave_analyzer(ctrler()->get_image());
+            leave_analyzer.set_task_info("InfrastUnexecutedPlanLeaveConfirm");
+            if (leave_analyzer.analyze()) {
+                LogWarn << __FUNCTION__ << "left facility with unexecuted production plan, index"
+                        << m_cur_facility_index;
+                const auto leave_task_ptr = Task.get("InfrastUnexecutedPlanLeaveConfirm");
+                ctrler()->click(leave_task_ptr->specific_rect);
+                sleep(leave_task_ptr->post_delay);
+                sleep(tab_task_ptr->pre_delay);
+                ctrler()->click(tab);
+                sleep(tab_task_ptr->post_delay);
+            }
+        }
+
         /* 识别当前制造/贸易站有没有添加干员按钮，没有就不换班 */
         const auto image = ctrler()->get_image();
         Matcher add_analyzer(image);
         const auto add_task_ptr = Task.get("InfrastAddOperator" + facility_name() + m_work_mode_name);
         add_analyzer.set_task_info(add_task_ptr);
         if (!add_analyzer.analyze()) {
-            Log.error("no add button, just continue");
+            LogError << "no add button, just continue";
             continue;
         }
         Rect add_button = add_analyzer.get_result().rect;
@@ -296,14 +325,18 @@ bool asst::InfrastProductionTask::shift_facility_list()
             use_drone();
         }
 
+        // skip 在此处直接判定而非调用 check_room_shift_intent：该函数会连带判定空意图并发出通知，
+        // 空意图房间须先完成下方产物识别与换产物再拦截（含 mfg_info 巡检轮，巡检轮现状不发该通知）
         if (m_is_custom && current_room_config().skip) {
-            Log.info("skip this room");
+            // skip 房间不换班，Post 无人机没有相对换班的时序意义，配置命中时照常使用
+            LogInfo << "skip this room";
+            try_use_custom_post_drone();
             continue;
         }
 
         /* 产物识别紧靠换产物/换人：`ProductOfFacility` 与 Replenish / Shamare（仅贸易）监听该时点，早于 Pre。
-           可信度：须达到对应 InfrastFlag* 模板的 templThreshold，避免出现「最高分仍不可靠」却仍选
-           all_products.at(0)」。 */
+           可信度：须达到对应 InfrastFlag* 模板的 templThreshold，避免出现 ｢最高分仍不可靠｣ 却仍选
+           all_products.at(0)｣ 。 */
         // 识别产物时添加守卫，对后续逻辑没有本质影响
         const auto image_facility_products = ctrler()->get_image();
         Matcher product_analyzer(image_facility_products);
@@ -327,7 +360,7 @@ bool asst::InfrastProductionTask::shift_facility_list()
         if (!best_product.empty() && best_score > 0) {
             auto templ_ptr = Task.get<MatchTaskInfo>("InfrastFlag" + best_product);
             if (templ_ptr == nullptr) {
-                Log.warn(__FUNCTION__, "| missing product task config:", "InfrastFlag" + best_product);
+                LogWarn << __FUNCTION__ << "| missing product task config:" << "InfrastFlag" + best_product;
             }
             else {
                 const double thresh =
@@ -341,29 +374,36 @@ bool asst::InfrastProductionTask::shift_facility_list()
         }
 
         if (!cur_product_detection_valid) {
-            Log.warn(
-                __FUNCTION__,
-                "| product unrecognized or weak match, skip unreliable product:",
-                facility_name(),
-                "| index",
-                m_cur_facility_index,
-                "| best",
-                best_product,
-                "| score",
-                best_score);
+            LogWarn << __FUNCTION__
+                    << "| product unrecognized or weak match, skip unreliable product:" << facility_name() << "| index"
+                    << m_cur_facility_index << "| best" << best_product << "| score" << best_score;
             m_product.clear();
             m_is_product_incorrect = false;
             cur_product_for_non_custom_drone.clear();
+        }
+
+        if (m_default_mode && m_task_data && facility_name() == "Mfg") {
+            if (cur_product_detection_valid && m_product == "PureGold") {
+                m_task_data->gold_station_indices.emplace(m_cur_facility_index);
+            }
+            else {
+                m_task_data->gold_station_indices.erase(m_cur_facility_index);
+            }
+            m_task_data->gold_station_num = static_cast<int>(m_task_data->gold_station_indices.size());
+        }
+
+        if (m_inspect_only) {
+            continue;
         }
 
         /*启用自定义基建时，如果产物不一致则直接更换产物*/
         if (m_is_custom && m_is_product_incorrect) {
             if (!change_product()) {
                 // 产物失败只报错，不阻断换人，尽量保证干员心情和恢复轴按排班推进。
-                Log.warn(
-                    "change_product failed after retries, proceed with staffing",
-                    facility_name(),
-                    m_cur_facility_index);
+                // 产物计划可能已改但未确认执行，标记后切页签时仍探测未执行计划弹窗
+                m_plan_may_be_unexecuted = true;
+                LogWarn << "change_product failed after retries, proceed with staffing" << facility_name()
+                        << m_cur_facility_index;
             }
             else {
                 cur_product_for_non_custom_drone = m_product;
@@ -373,32 +413,70 @@ bool asst::InfrastProductionTask::shift_facility_list()
 
         /* 进入干员选择页面 */
         if (!m_skip_shift) {
+            // 产物等其他字段的处理已在上方完成，空意图拦截不影响它们；
+            // 空数组与 skip 已在先前位置消费，此处结果只可能 Shift 或 KeepUnchanged（空意图）
+            if (check_room_shift_intent() == RoomShiftIntent::KeepUnchanged) {
+                try_use_custom_post_drone();
+                continue;
+            }
+
             ctrler()->click(add_button);
             sleep(add_task_ptr->post_delay);
 
             close_quick_formation_expand_role();
 
             // 如果是使用了编队组来排班
+            // 全部编组不可用时，候补名单非空则照常走候补选人，仅无候补且无 autofill 时保持房间原样，
+            // 退出选人界面后跳过该房间，不回落默认算法自动选人，避免拆走后续设施点名/编组指定的干员；
+            // 识别失败不是排班计划内的降级，不启用候补，同样保持房间原样并上报原因；
+            // need_exit 场景留给选人循环开头的既有检查中止
             if (current_room_config().use_operator_groups) {
-                match_operator_groups();
+                const GroupMatchResult group_match_result = match_operator_groups();
+                if (group_match_result == GroupMatchResult::AllUnavailable &&
+                    current_room_config().candidates.empty() && !current_room_config().autofill && !need_exit()) {
+                    LogInfo << "all operator groups unavailable with no candidates or autofill, keep room unchanged"
+                            << facility_name() << m_cur_facility_index;
+                    click_return_button();
+                    try_use_custom_post_drone();
+                    continue;
+                }
+                if (group_match_result == GroupMatchResult::RecogFailed && !need_exit()) {
+                    LogInfo << "failed to recognize operators for group matching, keep room unchanged"
+                            << facility_name() << m_cur_facility_index;
+                    json::value info = basic_info_with_what("CustomInfrastRoomGroupsMatchFailed");
+                    info["details"]["reason"] = "recognition_failed";
+                    callback(AsstMsg::SubTaskExtraInfo, info);
+                    click_return_button();
+                    try_use_custom_post_drone();
+                    continue;
+                }
             }
 
+            bool selection_ready = false;
+            bool room_kept_unchanged = false;
             for (int i = 0; i <= OperSelectRetryTimes; ++i) {
                 if (need_exit()) {
                     return false;
                 }
 
                 if (is_use_custom_opers()) {
-                    bool name_select_ret = swipe_and_select_custom_opers();
-                    if (name_select_ret) {
+                    if (swipe_and_select_custom_opers(false, false, &room_kept_unchanged)) {
+                        selection_ready = true;
                         break;
                     }
-                    else {
-                        swipe_to_the_left_of_operlist();
-                        continue;
+                    // 计划内不可用（纯候补全部在其他设施工作）已在函数内保持原样退出选人界面（不确认），
+                    // 不再重试，跳出后跳过确认继续下一间，处置对齐编组全部不可用分支
+                    if (room_kept_unchanged) {
+                        break;
                     }
+                    swipe_to_the_left_of_operlist();
+                    continue;
                 }
 
+                // 常规算法从包括在班干员在内的完整列表里挑人，先把筛选恢复为“全部”
+                if (!ensure_notstationed_filter_off()) {
+                    return false;
+                }
                 if (m_all_available_opers.empty()) {
                     if (!opers_detect_with_swipe()) {
                         return false;
@@ -418,25 +496,33 @@ bool asst::InfrastProductionTask::shift_facility_list()
                     swipe_to_the_left_of_operlist();
                     continue;
                 }
+                selection_ready = true;
                 break;
             }
-            click_confirm_button();
+            if (room_kept_unchanged) {
+                // 保持原样的房间跳过确认，Post 无人机不依赖换班结果，配置命中时照常使用，继续下一间
+                try_use_custom_post_drone();
+                continue;
+            }
+            if (!selection_ready) {
+                restore_last_matched_group_opers();
+                discard_pending_selection();
+                return false;
+            }
+            if (!click_confirm_button()) {
+                // 选人未生效即失败，编组可用集回补，重试轮该组仍可重新匹配；
+                // 断点续跑从失败间接续，已成功房间不受影响
+                restore_last_matched_group_opers();
+                return false;
+            }
+            m_last_matched_group_opers.clear();
         }
-        else {
-            Log.info("skip shift in rotation mode");
+        else if (m_skip_shift) {
+            LogInfo << "skip shift in rotation mode";
         }
 
-        // 自定义基建 Post 无人机
-        if (m_is_use_drones_from_custom) {
-            if (m_custom_drones_config.order == infrast::CustomDronesConfig::Order::Post &&
-                m_custom_drones_config.index == m_cur_facility_index) {
-                use_drone();
-            }
-        }
-        else if (
-            // 普通 params 无人机只在非自定义模式下使用
-            // 自定义模式下不使用该分支
-            !m_is_custom && cur_product_detection_valid &&
+        // 自定义基建 Post 无人机（含空意图/编组失败保持原样的房间）
+        if (!try_use_custom_post_drone() && !m_is_custom && cur_product_detection_valid &&
             cur_product_for_non_custom_drone == m_drones_usage_from_params && m_drones_usage_from_params != "_NotUse" &&
             m_drones_usage_from_params != "_Used") {
             if (use_drone()) {
@@ -491,9 +577,6 @@ size_t asst::InfrastProductionTask::opers_detect()
     const int face_hash_thres = Task.get("InfrastOperFace")->special_params[0];
     const size_t pre_size = m_all_available_opers.size();
     for (const auto& cur_oper : cur_all_opers) {
-        if (cur_oper.skills.empty()) {
-            continue;
-        }
         {
             std::string skills_str = "[";
             for (const auto& skill : cur_oper.skills) {
@@ -507,6 +590,7 @@ size_t asst::InfrastProductionTask::opers_detect()
             //--cur_available_num;
             continue;
         }
+
         auto find_iter = std::ranges::find_if(m_all_available_opers, [&](const infrast::Oper& oper) -> bool {
             if (oper.skills != cur_oper.skills) {
                 return false;
@@ -520,9 +604,60 @@ size_t asst::InfrastProductionTask::opers_detect()
         if (find_iter != m_all_available_opers.cend()) {
             continue;
         }
-        m_all_available_opers.emplace_back(cur_oper);
+
+        auto resolved_oper = cur_oper;
+
+        // 技能集合无法唯一确定身份时，通过姓名确认具体干员。身份仍有歧义时只计算通用技能效果，
+        // 不触发依赖具体干员的特殊加成和跨设施联动。
+        if (m_default_mode && resolved_oper.operator_id.empty() &&
+            (!resolved_oper.skills.empty() || facility_name() == "Control")) {
+            resolve_operator_identity(resolved_oper);
+        }
+
+        if (resolved_oper.skills.empty()) {
+            const bool swire = facility_name() == "Control" && resolved_oper.operator_id == "char_308_swire";
+            if (!swire) {
+                continue;
+            }
+        }
+
+        if (!resolved_oper.operator_id.empty()) {
+            Log.trace("infrastructure operator candidate", facility_name(), resolved_oper.operator_id);
+        }
+        m_all_available_opers.emplace_back(std::move(resolved_oper));
     }
     return m_all_available_opers.size() - pre_size;
+}
+
+bool asst::InfrastProductionTask::resolve_operator_identity(infrast::Oper& oper) const
+{
+    if (!oper.operator_id.empty()) {
+        return true;
+    }
+
+    RegionOCRer name_analyzer(oper.name_img);
+    const auto& replace_task = Task.get<OcrTaskInfo>("CharsNameOcrReplace");
+    name_analyzer.set_replace(replace_task->replace_map, replace_task->replace_full);
+    name_analyzer.set_bin_expansion(0);
+    const auto name = name_analyzer.analyze();
+    if (!name) {
+        return false;
+    }
+
+    const std::string& operator_id =
+        BattleData.get_first_id(battle::Role::Unknown, name->text, true).value_or(std::string());
+    if (!infrast::operator_id_matches_candidates(oper.operator_ids, operator_id)) {
+        if (!operator_id.empty()) {
+            LogWarn << __FUNCTION__ << "infrastructure operator identity conflicts with skills" << name->text
+                    << operator_id;
+        }
+        return false;
+    }
+
+    oper.operator_ids = { operator_id };
+    oper.operator_id = operator_id;
+    LogTrace << __FUNCTION__ << "infrastructure operator identity" << facility_name() << name->text << operator_id;
+    return true;
 }
 
 bool asst::InfrastProductionTask::optimal_calc()
@@ -536,6 +671,68 @@ bool asst::InfrastProductionTask::optimal_calc()
     if (cur_max_num_of_opers == 0) {
         Log.warn("no need select opers");
         m_optimal_combs.clear();
+        return true;
+    }
+
+    if (m_default_mode) {
+        infrast::ScoreContext context;
+        context.facility = facility_name();
+        context.product = m_product;
+        context.slots = cur_max_num_of_opers;
+        context.level = cur_max_num_of_opers;
+        context.mood_threshold = m_mood_threshold;
+        if (m_task_data) {
+            context.dormitory_capacity = m_task_data->dormitory_capacity;
+            context.dormitory_level_sum = m_task_data->dormitory_level_sum;
+            context.gold_station_num = m_task_data->gold_station_num;
+            context.trading_station_num = m_task_data->trading_station_num;
+            context.power_station_num = m_task_data->power_station_num;
+            context.virtual_power_station_num = m_task_data->virtual_power_station_num;
+            context.total_station_level = m_task_data->total_station_level;
+            context.workbench_num = m_task_data->workbench_num;
+            context.selected_operator_ids = m_task_data->operator_ids;
+        }
+        context.use_pinus_sylvestris = m_pinus_sylvestris_enabled;
+        context.use_perception_information = m_perception_information_enabled;
+        context.use_worldly_plight = m_worldly_plight_enabled;
+        context.use_abyssal_hunter = m_abyssal_hunter_enabled;
+
+        std::vector<infrast::ScoreOper> score_opers;
+        score_opers.reserve(m_all_available_opers.size());
+        for (const auto& oper : m_all_available_opers) {
+            infrast::ScoreOper score_oper;
+            for (const auto& skill : oper.skills) {
+                score_oper.skills.emplace(skill.id);
+            }
+            score_oper.operator_id = oper.operator_id;
+            score_oper.face_hash = oper.face_hash;
+            score_oper.mood_ratio = oper.mood_ratio;
+            score_opers.emplace_back(std::move(score_oper));
+        }
+        infrast::append_abyssal_hunter_candidates(score_opers, context);
+
+        const auto result = infrast::select_best_opers(score_opers, context);
+        m_optimal_combs.clear();
+        m_optimal_combs.reserve(result.indices.size());
+        for (const size_t index : result.indices) {
+            infrast::SkillsComb comb;
+            if (index < m_all_available_opers.size()) {
+                const auto& oper = m_all_available_opers.at(index);
+                comb = efficient_regex_calc(oper.skills);
+                comb.face_hash = oper.face_hash;
+                comb.operator_ids = oper.operator_ids;
+                comb.operator_id = oper.operator_id;
+                comb.name_img = oper.name_img;
+            }
+            else {
+                const auto& oper = score_opers.at(index);
+                comb.operator_ids = { oper.operator_id };
+                comb.operator_id = oper.operator_id;
+                comb.desc = std::string(infrast::AbyssalHunterSkill);
+            }
+            m_optimal_combs.emplace_back(std::move(comb));
+        }
+        Log.info("infrastructure optimal score", facility_name(), result.score, "operators", result.indices.size());
         return true;
     }
 
@@ -603,7 +800,7 @@ bool asst::InfrastProductionTask::optimal_calc()
             log_str += "; ";
         }
         log_str += "]";
-        Log.trace("Single comb efficient", max_efficient, " , skills:", log_str);
+        LogTrace << __FUNCTION__ << "Single comb efficient" << max_efficient << ", skills:" << log_str;
     }
 
     // 需要选的人和当前房间最大人数不想等，组合就不启用。
@@ -616,7 +813,7 @@ bool asst::InfrastProductionTask::optimal_calc()
     // 遍历所有组合，找到效率最高的
     auto& all_group = InfrastData.get_skills_group(facility_name());
     for (const infrast::SkillsGroup& group : all_group) {
-        Log.trace(group.desc);
+        LogTrace << group.desc;
         auto cur_available_opers = all_available_combs;
         bool group_unavailable = false;
         std::vector<infrast::SkillsComb> cur_combs;
@@ -698,7 +895,7 @@ bool asst::InfrastProductionTask::optimal_calc()
                         name_analyzer.set_replace(
                             Task.get<OcrTaskInfo>("CharsNameOcrReplace")->replace_map,
                             Task.get<OcrTaskInfo>("CharsNameOcrReplace")->replace_full);
-                        Log.trace("Analyze name filter");
+                        LogTrace << "Analyze name filter";
                         if (name_analyzer.analyze()) {
                             std::string name = name_analyzer.get_result().text;
                             hash_matched = std::ranges::find(opt.name_filter, name) != opt.name_filter.cend();
@@ -746,7 +943,7 @@ bool asst::InfrastProductionTask::optimal_calc()
                 log_str += "; ";
             }
             log_str += "]";
-            Log.trace(group.desc, "efficient", cur_efficient, " , skills:", log_str);
+            LogTrace << group.desc << "efficient" << cur_efficient << ", skills:" << log_str;
         }
 
         if (cur_efficient > max_efficient) {
@@ -761,7 +958,7 @@ bool asst::InfrastProductionTask::optimal_calc()
             log_str += "; ";
         }
         log_str += "]";
-        Log.trace("optimal efficient", max_efficient, " , skills:", log_str);
+        LogTrace << __FUNCTION__ << "optimal efficient" << max_efficient << ", skills:" << log_str;
     }
 
     m_optimal_combs = std::move(optimal_combs);
@@ -769,9 +966,101 @@ bool asst::InfrastProductionTask::optimal_calc()
     return true;
 }
 
+size_t asst::InfrastProductionTask::select_abyssal_hunters(const std::vector<std::string>& operator_ids)
+{
+    LogTraceFunction;
+    if (operator_ids.empty()) {
+        return 0;
+    }
+
+    std::unordered_set<std::string> remaining(operator_ids.begin(), operator_ids.end());
+    const auto& ocr_replace = Task.get<OcrTaskInfo>("CharsNameOcrReplace");
+    size_t selected = 0;
+    const auto& candidates = infrast::get_abyssal_hunter_candidates();
+
+    const bool expanded = ProcessTask(*this, { "BattleQuickFormationExpandRole" }).set_retry_times(3).run();
+    if (expanded) {
+        constexpr std::array<battle::Role, 2> Roles = { battle::Role::Warrior, battle::Role::Sniper };
+        for (const battle::Role role : Roles) {
+            const std::string role_name = enum_to_string(role, true);
+            const bool has_target = std::ranges::any_of(candidates, [&](const auto& candidate) {
+                return candidate.role == role && remaining.contains(candidate.operator_id);
+            });
+            if (!has_target) {
+                continue;
+            }
+
+            ProcessTask(*this, { "BattleQuickFormationRole-All", "BattleQuickFormationRole-All-OCR" })
+                .set_retry_times(0)
+                .run();
+            const std::string task_name = "BattleQuickFormationRole-" + role_name;
+            if (!ProcessTask(*this, { task_name }).set_retry_times(0).run()) {
+                LogWarn << __FUNCTION__ << "failed to select abyssal hunter role" << role_name;
+                continue;
+            }
+            sleep(200);
+
+            for (int page = 0; page < 18 && !remaining.empty() && !need_exit(); ++page) {
+                const auto image = ctrler()->get_image();
+                InfrastOperImageAnalyzer oper_analyzer(image);
+                oper_analyzer.set_to_be_calced(InfrastOperImageAnalyzer::ToBeCalced::Selected);
+                if (oper_analyzer.analyze()) {
+                    oper_analyzer.sort_by_loc();
+                    for (const auto& oper : oper_analyzer.get_result()) {
+                        RegionOCRer name_analyzer(oper.name_img);
+                        name_analyzer.set_replace(ocr_replace->replace_map, ocr_replace->replace_full);
+                        name_analyzer.set_bin_expansion(0);
+                        const auto name = name_analyzer.analyze();
+                        if (!name) {
+                            continue;
+                        }
+
+                        const auto& oper_ids = BattleData.get_ids(battle::Role::Unknown, name->text);
+                        const auto& operator_id = oper_ids.empty() ? "" : oper_ids.front();
+                        const auto candidate = std::ranges::find_if(candidates, [&](const auto& info) {
+                            return info.operator_id == operator_id && info.role == role;
+                        });
+                        if (candidate == candidates.end() || !remaining.contains(operator_id)) {
+                            continue;
+                        }
+
+                        if (!oper.selected) {
+                            ctrler()->click(oper.rect);
+                            sleep(100);
+                        }
+                        stage_operator_selection(operator_id);
+                        remaining.erase(operator_id);
+                        ++selected;
+                    }
+                }
+
+                const bool role_complete = std::ranges::none_of(candidates, [&](const auto& candidate) {
+                    return candidate.role == role && remaining.contains(candidate.operator_id);
+                });
+                if (role_complete) {
+                    break;
+                }
+                swipe_of_operlist();
+            }
+        }
+    }
+    else {
+        LogWarn << __FUNCTION__ << "failed to expand role list for abyssal hunter selection";
+    }
+
+    ProcessTask(*this, { "BattleQuickFormationRole-All", "BattleQuickFormationRole-All-OCR" }).set_retry_times(0).run();
+    close_quick_formation_expand_role();
+
+    for (const auto& operator_id : remaining) {
+        LogWarn << __FUNCTION__ << "abyssal hunter operator not found, skip" << operator_id;
+    }
+    return selected;
+}
+
 bool asst::InfrastProductionTask::opers_choose()
 {
     LogTraceFunction;
+    discard_pending_selection();
     bool has_error = false;
 
     auto& facility_info = InfrastData.get_facility_info(facility_name());
@@ -782,7 +1071,16 @@ bool asst::InfrastProductionTask::opers_choose()
     int count = 0;
     int swipe_times = 0;
 
-    while (true) {
+    std::vector<std::string> abyssal_hunter_ids;
+    std::erase_if(m_optimal_combs, [&](const infrast::SkillsComb& comb) {
+        if (facility_name() != "Mfg" || !infrast::is_abyssal_hunter(comb.operator_id)) {
+            return false;
+        }
+        abyssal_hunter_ids.emplace_back(comb.operator_id);
+        return true;
+    });
+
+    while (!m_optimal_combs.empty()) {
         if (need_exit()) {
             return false;
         }
@@ -809,17 +1107,25 @@ bool asst::InfrastProductionTask::opers_choose()
             }
         }
         auto cur_all_opers = oper_analyzer.get_result();
-        Log.trace("before mood filter, opers size:", cur_all_opers.size());
+        LogTrace << __FUNCTION__ << "before mood filter, opers size:" << cur_all_opers.size();
         // 小于心情阈值的干员则不可用
         std::erase_if(cur_all_opers, [&](const infrast::Oper& rhs) -> bool {
             return rhs.mood_ratio < m_mood_threshold;
         });
-        Log.trace("after mood filter, opers size:", cur_all_opers.size());
+        LogTrace << __FUNCTION__ << "after mood filter, opers size:" << cur_all_opers.size();
         for (auto opt_iter = m_optimal_combs.begin(); opt_iter != m_optimal_combs.end();) {
-            Log.trace("to find", opt_iter->skills.begin()->names.front());
+            LogTrace << __FUNCTION__ << "to find"
+                     << (opt_iter->skills.empty() ? opt_iter->operator_id : opt_iter->skills.begin()->names.front());
             auto find_iter = std::ranges::find_if(cur_all_opers, [&](const infrast::Oper& lhs) -> bool {
                 if (lhs.skills != opt_iter->skills) {
                     return false;
+                }
+                if (!opt_iter->face_hash.empty()) {
+                    const int dist = Hasher::hamming(lhs.face_hash, opt_iter->face_hash);
+                    LogDebug << __FUNCTION__ << "opers_choose | expected face hash dist" << dist;
+                    if (dist >= face_hash_thres) {
+                        return false;
+                    }
                 }
                 if (opt_iter->name_filter.empty()) {
                     return true;
@@ -829,7 +1135,7 @@ bool asst::InfrastProductionTask::opers_choose()
                     name_analyzer.set_replace(
                         Task.get<OcrTaskInfo>("CharsNameOcrReplace")->replace_map,
                         Task.get<OcrTaskInfo>("CharsNameOcrReplace")->replace_full);
-                    Log.trace("Analyze name filter");
+                    LogTrace << __FUNCTION__ << "Analyze name filter";
                     if (!name_analyzer.analyze()) {
                         return false;
                     }
@@ -841,15 +1147,15 @@ bool asst::InfrastProductionTask::opers_choose()
 
             if (find_iter == cur_all_opers.cend()) {
                 ++opt_iter;
-                Log.trace("not found in this page");
+                LogTrace << __FUNCTION__ << "not found in this page";
                 continue;
             }
-            Log.trace("found in this page");
+            LogTrace << __FUNCTION__ << "found in this page";
             // 这种情况可能是需要选择两个同样的技能，上一次循环选了一个，但是没有把滑出当前页面，本次又识别到了这个已选择的人
             if (find_iter->selected == true) {
                 if (cur_max_num_of_opers != 1) {
                     cur_all_opers.erase(find_iter);
-                    Log.trace("skill matched, but it's selected, pass");
+                    LogTrace << __FUNCTION__ << "skill matched, but it's selected, pass";
                     continue;
                 }
                 // 但是如果当前设施只有一个位置，即不存在“上次循环”的情况，说明是清除干员按钮没点到
@@ -860,14 +1166,15 @@ bool asst::InfrastProductionTask::opers_choose()
             {
                 auto avlb_iter = std::ranges::find_if(m_all_available_opers, [&](const infrast::Oper& lhs) -> bool {
                     int dist = Hasher::hamming(lhs.face_hash, find_iter->face_hash);
-                    Log.debug("opers_choose | face hash dist", dist);
+                    LogDebug << __FUNCTION__ << "opers_choose | face hash dist" << dist;
                     return dist < face_hash_thres;
                 });
                 if (avlb_iter != m_all_available_opers.cend()) {
+                    stage_operator_selection(avlb_iter->operator_id);
                     m_all_available_opers.erase(avlb_iter);
                 }
                 else {
-                    Log.error("opers_choose | not found oper");
+                    LogError << __FUNCTION__ << "opers_choose | not found oper";
                 }
             }
             ++count;
@@ -875,11 +1182,6 @@ bool asst::InfrastProductionTask::opers_choose()
             opt_iter = m_optimal_combs.erase(opt_iter);
         }
         if (m_optimal_combs.empty()) {
-            Log.trace(__FUNCTION__, "| count", count, "cur_max_num_of_opers", cur_max_num_of_opers);
-            if (count < cur_max_num_of_opers) {
-                // 这种情况可能是萌新，可用干员人数不足以填满当前设施
-                callback(AsstMsg::SubTaskExtraInfo, basic_info_with_what("NotEnoughStaff"));
-            }
             break;
         }
 
@@ -890,6 +1192,12 @@ bool asst::InfrastProductionTask::opers_choose()
 
     if (swipe_times) {
         swipe_to_the_left_of_operlist(swipe_times + 1);
+    }
+    count += static_cast<int>(select_abyssal_hunters(abyssal_hunter_ids));
+    LogTrace << __FUNCTION__ << "| count" << count << "cur_max_num_of_opers" << cur_max_num_of_opers;
+    if (count < cur_max_num_of_opers) {
+        // 这种情况可能是萌新，可用干员人数不足以填满当前设施
+        callback(AsstMsg::SubTaskExtraInfo, basic_info_with_what("NotEnoughStaff"));
     }
     // 点两次排序，让已选干员排到最前面
     ProcessTask(*this, { "InfrastOperListTabSkillUnClicked" }).run();
@@ -902,6 +1210,15 @@ bool asst::InfrastProductionTask::use_drone()
     std::string task_name = "DroneAssist" + facility_name();
     ProcessTask task_temp(*this, { task_name });
     return task_temp.run();
+}
+
+bool asst::InfrastProductionTask::try_use_custom_post_drone()
+{
+    if (m_is_use_drones_from_custom && m_custom_drones_config.order == infrast::CustomDronesConfig::Order::Post &&
+        m_custom_drones_config.index == m_cur_facility_index) {
+        return use_drone();
+    }
+    return false;
 }
 
 asst::infrast::SkillsComb

@@ -17,7 +17,9 @@
 #include "Utils/StringMisc.hpp"
 
 using namespace asst;
-using namespace std::chrono;
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::steady_clock;
 namespace asio = boost::asio;
 using tcp = asio::ip::tcp;
 
@@ -164,9 +166,8 @@ void ArpsCapture::close_session_locked(const std::string& reason)
         client_handle_.reset();
     }
     if (port_ != 0 && platform_io_) {
-        std::string cmd = adb_path_ + " -s " + serial_
-                          + " reverse --remove tcp:" + std::to_string(port_);
-        run_cmd(cmd, 5'000);
+        std::string cmd = adb_path_ + " -s " + serial_ + " reverse --remove tcp:" + std::to_string(port_);
+        run_cmd(cmd, 5000);
     }
 
     port_ = 0;
@@ -201,11 +202,11 @@ void ArpsCapture::idle_release_proc()
 {
     std::unique_lock lock(screencap_mutex_);
     while (!idle_release_thread_stop_) {
-        if (!prepared_.load() || !session_active_ || !capture_started_ || idle_power_released_ || !cfg_.keep_screen_on) {
+        if (!prepared_.load() || !session_active_ || !capture_started_ || idle_power_released_ ||
+            !cfg_.keep_screen_on) {
             idle_release_cv_.wait(lock, [&] {
-                return idle_release_thread_stop_
-                       || (prepared_.load() && session_active_ && capture_started_ && !idle_power_released_
-                           && cfg_.keep_screen_on);
+                return idle_release_thread_stop_ || (prepared_.load() && session_active_ && capture_started_ &&
+                                                     !idle_power_released_ && cfg_.keep_screen_on);
             });
             continue;
         }
@@ -329,29 +330,24 @@ bool ArpsCapture::run_cmd_out(const std::string& cmd, std::string& out, int64_t 
 bool ArpsCapture::push_apk()
 {
     std::string local = utils::path_to_utf8_string(apk_local_path_);
-    std::string cmd = adb_path_ + " -s " + serial_
-                      + " push \"" + local + "\" " + kDeviceApkPath;
+    std::string cmd = adb_path_ + " -s " + serial_ + " push \"" + local + "\" " + kDeviceApkPath;
     Log.info("ArpsCapture: pushing APK:", cmd);
     return run_cmd(cmd, 60'000);
 }
 
 bool ArpsCapture::reverse_port()
 {
-    std::string cmd = adb_path_ + " -s " + serial_
-                      + " reverse tcp:" + std::to_string(port_)
-                      + " tcp:" + std::to_string(port_);
+    std::string cmd =
+        adb_path_ + " -s " + serial_ + " reverse tcp:" + std::to_string(port_) + " tcp:" + std::to_string(port_);
     Log.info("ArpsCapture: setting up reverse:", cmd);
     return run_cmd(cmd, 10'000);
 }
 
 bool ArpsCapture::start_client()
 {
-    std::string cmd = adb_path_ + " -s " + serial_
-                      + " shell \"CLASSPATH=" + kDeviceApkPath
-                      + " app_process / " + kMainClass
-                      + " --connect-host=127.0.0.1"
-                      + " --connect-port=" + std::to_string(port_)
-                      + " & ARPS_PID=$!; cat>/dev/null; kill $ARPS_PID 2>/dev/null\"";
+    std::string cmd = adb_path_ + " -s " + serial_ + " shell \"CLASSPATH=" + kDeviceApkPath + " app_process / " +
+                      kMainClass + " --connect-host=127.0.0.1" + " --connect-port=" + std::to_string(port_) +
+                      " & ARPS_PID=$!; cat>/dev/null; kill $ARPS_PID 2>/dev/null\"";
     Log.info("ArpsCapture: starting client:", cmd);
     client_handle_ = platform_io_->interactive_shell(cmd);
     if (!client_handle_) {
@@ -392,13 +388,7 @@ bool ArpsCapture::accept_hello()
     if (!is_protocol_supported(hello, "HELLO")) {
         return false;
     }
-    Log.info(
-        "ArpsCapture: HELLO protocol:",
-        hello.protocol_major,
-        ".",
-        hello.protocol_minor,
-        "json:",
-        hello.json);
+    Log.info("ArpsCapture: HELLO protocol:", hello.protocol_major, ".", hello.protocol_minor, "json:", hello.json);
     return true;
 }
 
@@ -451,13 +441,7 @@ bool ArpsCapture::ensure_capture_started_locked()
     if (!is_protocol_supported(ready, "READY")) {
         return false;
     }
-    Log.info(
-        "ArpsCapture: READY protocol:",
-        ready.protocol_major,
-        ".",
-        ready.protocol_minor,
-        "json:",
-        ready.json);
+    Log.info("ArpsCapture: READY protocol:", ready.protocol_major, ".", ready.protocol_minor, "json:", ready.json);
     capture_started_ = true;
     last_screencap_time_ = steady_clock::now();
     idle_release_cv_.notify_all();

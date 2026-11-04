@@ -3,6 +3,8 @@
 #include "Assistant.h"
 #include "Controller.h"
 #include "MaaUtils/NoWarningCV.hpp"
+#include "SwipeHelper.hpp"
+#include <cmath>
 #include <cstdint>
 #include <numeric>
 
@@ -49,6 +51,10 @@ asst::AdbController::~AdbController()
     LogTraceFunction;
 
     m_inited = false;
+    // 等待异步帧率检测结束，避免线程访问已析构的 this
+    if (m_fps_future.valid()) {
+        m_fps_future.wait();
+    }
     release();
 }
 
@@ -196,25 +202,56 @@ void asst::AdbController::callback(AsstMsg msg, const json::value& details)
     }
 }
 
-int asst::AdbController::get_mumu_index(const std::string& address)
+std::optional<int> asst::AdbController::get_mumu_index(const std::string& address)
 {
     LogTrace << VAR(address);
+
+    // 新版 MuMu 支持 emulator-xxxx 格式的设备号（如 emulator-5554），
+    // 实例索引 = (port - 5554) / 2
+    if (address.starts_with("emulator-")) {
+        constexpr int base_emulator_port = 5554;
+        std::string_view port_sv = std::string_view(address).substr(9); // after "emulator-"
+        int port = 0;
+        if (!utils::chars_to_number<int, true>(port_sv, port)) {
+            Log.error("emulator port is invalid", port_sv);
+            return std::nullopt;
+        }
+        // emulator 控制台端口从 5554 起步进 2（5554, 5556, ...），
+        // 奇数端口是 adb 端口而非控制台端口，不在 emulator-xxxx 格式中出现
+        if (port < base_emulator_port || (port - base_emulator_port) % 2 != 0) {
+            Log.error("emulator port is out of range or not aligned", port);
+            return std::nullopt;
+        }
+        int mumu_index = (port - base_emulator_port) / 2;
+        LogInfo << VAR(port_sv) << VAR(port) << VAR(mumu_index);
+        return mumu_index;
+    }
 
     auto pos = address.find(":");
     if (pos == std::string::npos) {
         Log.error("address is invalid", address);
-        return 0;
+        return std::nullopt;
     }
 
     std::string port_str = address.substr(pos + 1);
     if (port_str.empty() || !std::ranges::all_of(port_str, [](const char& c) -> bool { return std::isdigit(c); })) {
         Log.error("port is invalid", port_str);
-        return 0;
+        return std::nullopt;
     }
     int port = std::stoi(port_str);
     int mumu_index = 0;
-    if (port >= 16384) {
-        mumu_index = (port - 16384) / 32;
+    if (port >= 16'384) {
+        // port = 16384 + (index % 32) * 32 + ((offset + floor(index/32) * 4) % 32)
+        // 设 i = (index % 32) 是 0~31
+        // 不考虑 index 超过 256 的情况，设 j = floor(index/32)，只能是 0~7
+        // 于是 j * 4 的取值范围是 0, 4, 8, ..., 28，全部小于 32，所以取模后就是它本身
+        // offset 的取整为 0~31，但只有端口被占用时才会增加，所以不影响正常情况下的连续性
+        // 所以公式简化为：
+        //     port = 16384 + (index % 32) * 32 + floor(index/32) * 4 = 16384 + i * 32 + j * 4
+        // 设 k = (port - 16384) / 4，则 k = i * 8 + j
+        // index = j * 32 + i = (k & 7) * 32 + (k >> 3) = ((k & 7) << 5) + (k >> 3)
+        int k = (port - 16'384) / 4;
+        mumu_index = ((k & 7) << 5) | (k >> 3);
     }
     else if (port == 7555) {
         mumu_index = 0;
@@ -222,6 +259,10 @@ int asst::AdbController::get_mumu_index(const std::string& address)
     }
     else if (port >= 5555) {
         mumu_index = (port - 5555) / 2;
+    }
+    else {
+        Log.error("port is not in a valid MuMu range", port);
+        return std::nullopt;
     }
     LogInfo << VAR(port_str) << VAR(port) << VAR(mumu_index);
     return mumu_index;
@@ -239,15 +280,27 @@ void asst::AdbController::init_mumu_extras(const AdbCfg& adb_cfg, const std::str
         return;
     }
 
-    set_mumu_package(adb_cfg.extras.get("client_type", ""));
+    // extras.client_type 由 GUI 传入；若缺失则回退到 instance option 的 client_type
+    std::string client_type = adb_cfg.extras.get("client_type", "");
+    if (client_type.empty() && ctrler()) {
+        client_type = ctrler()->get_client_type();
+    }
+    set_mumu_package(client_type);
 
     std::filesystem::path mumu_path = utils::path(adb_cfg.extras.get("path", ""));
+    // 触控需要额外探测 MuMuManager 版本，只截图的用户不该付这份开销
+    bool enable_input = adb_cfg.extras.get("touch", false);
 
     if (adb_cfg.extras.contains("index")) { // MuMu index is provided directly
-        m_mumu_extras.init(mumu_path, adb_cfg.extras.get("index", 0));
+        m_mumu_extras.init(mumu_path, adb_cfg.extras.get("index", 0), enable_input);
     }
     else {
-        m_mumu_extras.init(mumu_path, get_mumu_index(address));
+        auto mumu_index = get_mumu_index(address);
+        if (!mumu_index) {
+            LogError << "Failed to parse MuMu index from address, skip MumuExtras init" << VAR(address);
+            return;
+        }
+        m_mumu_extras.init(mumu_path, mumu_index.value(), enable_input);
     }
 #endif
 }
@@ -258,26 +311,35 @@ void asst::AdbController::set_mumu_package(const std::string& client_type)
     std::ignore = client_type;
     Log.error("MaaCore is not compiled with ASST_WITH_EMULATOR_EXTRAS");
 #else
-    std::string package_name = Config.get_package_name(client_type).value_or("");
+    // MuMu get_display_id 需要真实包名。client_type 为空时默认官服明日方舟
+    const std::string type = client_type.empty() ? "Official" : client_type;
+    std::string package_name = Config.get_package_name(type).value_or("com.hypergryph.arknights");
+    LogInfo << "MuMu package" << VAR(type) << VAR(package_name);
     m_mumu_extras.set_package_name(package_name);
 #endif
 }
 
-int asst::AdbController::get_ld_index(const std::string& address)
+std::optional<int> asst::AdbController::get_ld_index(const std::string& address)
 {
     LogTrace << VAR(address);
 
     // emulator-5554
     if (address.starts_with("emulator-")) {
         constexpr int base_emulator_port = 5554;
-        std::string port_str = address.substr(9); // after "emulator-"
-        if (port_str.empty() || !std::ranges::all_of(port_str, [](char c) { return std::isdigit(c); })) {
-            Log.error("emulator port is invalid", port_str);
-            return 0;
+        std::string_view port_sv = std::string_view(address).substr(9); // after "emulator-"
+        int port = 0;
+        if (!utils::chars_to_number<int, true>(port_sv, port)) {
+            Log.error("emulator port is invalid", port_sv);
+            return std::nullopt;
         }
-        int port = std::stoi(port_str);
+        // emulator 控制台端口从 5554 起步进 2（5554, 5556, ...），
+        // 奇数端口是 adb 端口而非控制台端口，不在 emulator-xxxx 格式中出现
+        if (port < base_emulator_port || (port - base_emulator_port) % 2 != 0) {
+            Log.error("emulator port is out of range or not aligned", port);
+            return std::nullopt;
+        }
         int index = (port - base_emulator_port) / 2;
-        LogInfo << VAR(port_str) << VAR(port) << VAR(index);
+        LogInfo << VAR(port_sv) << VAR(port) << VAR(index);
         return index;
     }
 
@@ -288,7 +350,7 @@ int asst::AdbController::get_ld_index(const std::string& address)
         std::string port_str = address.substr(pos + 1);
         if (port_str.empty() || !std::ranges::all_of(port_str, [](char c) { return std::isdigit(c); })) {
             Log.error("adb port is invalid", port_str);
-            return 0;
+            return std::nullopt;
         }
         int port = std::stoi(port_str);
         int index = (port - base_adb_port) / 2;
@@ -297,7 +359,7 @@ int asst::AdbController::get_ld_index(const std::string& address)
     }
 
     Log.error("address is invalid or unsupported", address);
-    return 0;
+    return std::nullopt;
 }
 
 void asst::AdbController::init_ld_extras(const AdbCfg& adb_cfg, const std::string& address)
@@ -318,7 +380,12 @@ void asst::AdbController::init_ld_extras(const AdbCfg& adb_cfg, const std::strin
         ld_index = adb_cfg.extras.get("index", 0);
     }
     else {
-        ld_index = get_ld_index(address);
+        auto ld_index_opt = get_ld_index(address);
+        if (!ld_index_opt) {
+            LogError << "Failed to parse LD index from address, skip LDExtras init" << VAR(address);
+            return;
+        }
+        ld_index = ld_index_opt.value();
     }
     int ld_pid = adb_cfg.extras.get("pid", 0);
     m_ld_extras.init(ld_path, ld_index, ld_pid, m_width, m_height);
@@ -359,11 +426,16 @@ std::optional<unsigned short> asst::AdbController::init_socket(const std::string
 void asst::AdbController::clear_info() noexcept
 {
     m_inited = false;
+    // 等待可能仍在执行的异步帧率检测
+    if (m_fps_future.valid()) {
+        m_fps_future.wait();
+    }
     m_adb = decltype(m_adb)();
     m_uuid.clear();
     m_width = 0;
     m_height = 0;
     m_screen_size = { 0, 0 };
+    m_last_fps_check_time = {}; // 重置帧率检测计时，重连后立即检测一次
 }
 
 bool asst::AdbController::inited() const noexcept
@@ -410,7 +482,10 @@ bool asst::AdbController::click(const Point& p)
 
     std::string cur_cmd =
         utils::string_replace_all(m_adb.click, { { "[x]", std::to_string(p.x) }, { "[y]", std::to_string(p.y) } });
-    return call_command(cur_cmd).has_value();
+    bool ret = call_command(cur_cmd).has_value();
+    // adb click 没有内置间隔，这里补上间隔，避免高频连点丢点
+    sleep(TouchHoldMs);
+    return ret;
 }
 
 bool asst::AdbController::input(const std::string& text)
@@ -427,7 +502,7 @@ bool asst::AdbController::swipe(
     const Point& p1,
     const Point& p2,
     int duration,
-    bool extra_swipe,
+    SwipeExtraDirection extra_swipe,
     [[maybe_unused]] double slope_in,
     [[maybe_unused]] double slope_out,
     [[maybe_unused]] bool with_pause)
@@ -457,15 +532,16 @@ bool asst::AdbController::swipe(
         });
     bool ret = call_command(cur_cmd).has_value();
 
-    // 额外的滑动：adb有bug，同样的参数，偶尔会划得非常远。额外做一个短程滑动，把之前的停下来
-    if (extra_swipe && opt.adb_extra_swipe_duration > 0) {
+    // 额外的滑动：adb有bug，同样的参数，偶尔会划得非常远。额外做一个指定方向的短程滑动，把之前的停下来
+    if (extra_swipe != SwipeExtraDirection::None && opt.adb_extra_swipe_duration > 0) {
+        const auto offset = extra_swipe_offset(extra_swipe, opt.adb_extra_swipe_dist);
         std::string extra_cmd = utils::string_replace_all(
             m_adb.swipe,
             {
                 { "[x1]", std::to_string(x2) },
                 { "[y1]", std::to_string(y2) },
-                { "[x2]", std::to_string(x2) },
-                { "[y2]", std::to_string(y2 - opt.adb_extra_swipe_dist /* * m_control_scale*/) },
+                { "[x2]", std::to_string(x2 + offset.x) },
+                { "[y2]", std::to_string(y2 + offset.y) },
                 { "[duration]", std::to_string(opt.adb_extra_swipe_duration) },
             });
         ret &= call_command(extra_cmd).has_value();
@@ -485,13 +561,91 @@ std::pair<int, int> asst::AdbController::get_screen_res() const noexcept
     return m_screen_size;
 }
 
+void asst::AdbController::invalidate_connection(std::string_view reason, int width, int height)
+{
+    // 分辨率被外部修改后，触控倍率与截图校验等整套映射全部过期。
+    // 不做原地修补：标记连接失效让任务快速失败，由上层走整体重连，
+    // 重连时会重新探测分辨率并重建全部输入映射
+    if (m_inited) {
+        m_inited = false;
+        m_connection_expired = true;
+        Log.warn("Resolution changed, connection invalidated.", reason, "width", width, "height", height);
+        json::value info = json::object {
+            { "uuid", m_uuid },
+            { "what", "ResolutionChanged" },
+            { "why", std::string(reason) },
+            { "details",
+              json::object {
+                  { "width", width },
+                  { "height", height },
+              } },
+        };
+        callback(AsstMsg::ConnectionInfo, info);
+    }
+}
+
+bool asst::AdbController::reprobe_screen_size()
+{
+    // 连接时执行 display 命令探测分辨率并刷新成员；
+    // 解析失败时保留旧值，避免把已知错误写入后续所有换算
+    const auto& adb_cfg = m_conn_ctx.adb_cfg;
+    auto display_ret = call_command(m_conn_ctx.replace_cmd(adb_cfg.display));
+    auto make_info = [&]() -> json::value {
+        return json::object {
+            { "uuid", m_uuid },
+            { "details",
+              json::object {
+                  { "adb", m_conn_ctx.adb_path },
+                  { "address", m_conn_ctx.address },
+              } },
+        };
+    };
+    if (!display_ret) {
+        json::value info = make_info() | json::object {
+            { "what", "ResolutionError" },
+            { "why", "Display command failed to exec" },
+        };
+        callback(AsstMsg::ConnectionInfo, info);
+        return false;
+    }
+    std::stringstream display_ss(display_ret.value());
+    int size_value1 = 0;
+    int size_value2 = 0;
+    display_ss >> size_value1 >> size_value2;
+    const int width = (std::max)(size_value1, size_value2);
+    const int height = (std::min)(size_value1, size_value2);
+    if (width == 0 || height == 0) {
+        json::value info = make_info() | json::object {
+            { "what", "ResolutionError" },
+            { "why", "Get resolution failed" },
+        };
+        callback(AsstMsg::ConnectionInfo, info);
+        return false;
+    }
+
+    m_width = width;
+    m_height = height;
+    m_screen_size = { m_width, m_height };
+
+    json::value info = make_info() | json::object {
+        { "what", "ResolutionGot" },
+        { "why", "" },
+    };
+    info["details"] |= json::object {
+        { "width", m_width },
+        { "height", m_height },
+    };
+    callback(AsstMsg::ConnectionInfo, info);
+    return true;
+}
+
 void asst::AdbController::release()
 {
     m_arps.uninit();
     close_socket();
 
     if (m_kill_adb_on_exit && !m_adb.release.empty()) {
-        m_platform_io->release_adb(m_adb.release, 20000);
+        m_platform_io->release_adb(m_adb.release, 20'000);
     }
 }
 
@@ -536,6 +690,11 @@ bool asst::AdbController::convert_lf(std::string& data)
 
 bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect)
 {
+    if (m_connection_expired) {
+        // 分辨率已被外部修改，等待上层整体重连，不再产出画面
+        return false;
+    }
+
     using namespace std::chrono;
     DecodeFunc decode_raw = [&](const std::string& data) -> bool {
         if (data.size() < 8) {
@@ -550,18 +709,26 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
                      static_cast<uint32_t>(static_cast<unsigned char>(data[5])) << 8 |
                      static_cast<uint32_t>(static_cast<unsigned char>(data[6])) << 16 |
                      static_cast<uint32_t>(static_cast<unsigned char>(data[7])) << 24;
-        if (int(w) != m_width || int(h) != m_height) {
-            Log.error("Size from image header", w, h, "does not match the size of screen", m_width, m_height);
+        // 归一化后与 m_width/m_height（同为 reprobe 的 max/min 归一化产物）同口径比较，
+        // 显示方向旋转不影响判定
+        const int norm_w = (std::max)(int(w), int(h));
+        const int norm_h = (std::min)(int(w), int(h));
+        if (norm_w != m_width || norm_h != m_height) {
+            // 截图头与已知分辨率不符，通常为运行中模拟器分辨率被外部修改。
+            // 分辨率变化后触控倍率等整套映射全部过期，原地修补无法覆盖所有层，
+            // 标记连接失效并通知上层走整体重连，本帧按失败处理
+            invalidate_connection("Size from image header", norm_w, norm_h);
             return false;
         }
-        size_t std_size = 4ULL * m_width * m_height;
+        size_t std_size = 4ULL * w * h;
         if (data.size() < std_size) {
             return false;
         }
         const size_t header_size = data.size() - std_size; // 12 or 16. ref:
         // https://android.googlesource.com/platform/frameworks/base/+/26a2b97dbe48ee45e9ae70110714048f2f360f97%5E%21/cmds/screencap/screencap.cpp
         auto img_data_beg = data.cbegin() + header_size;
-        cv::Mat temp(m_height, m_width, CV_8UC4, const_cast<char*>(&*img_data_beg));
+        // 旋转帧宽高与成员互换，按协议头实际方向构造
+        cv::Mat temp(int(h), int(w), CV_8UC4, const_cast<char*>(&*img_data_beg));
         if (temp.empty()) {
             return false;
         }
@@ -591,6 +758,7 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
     image_payload = cv::Mat(); // 清空缓存
     if (m_adb.screencap_method == AdbProperty::ScreencapMethod::UnknownYet) {
         std::vector<std::pair<AdbProperty::ScreencapMethod, std::string>> all_methods_cost;
+        auto fastest_method = AdbProperty::ScreencapMethod::UnknownYet;
 
         Log.info("Try to find the fastest way to screencap");
         auto min_cost = milliseconds(LLONG_MAX);
@@ -598,10 +766,10 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
 
         auto start_time = steady_clock::now();
         if (m_support_socket && m_server_started &&
-            screencap(m_adb.screencap_raw_by_nc, decode_raw, allow_reconnect, true, 5000)) {
+            screencap(m_adb.screencap_raw_by_nc, decode_raw, allow_reconnect, true, 5000) == ScreencapResult::Success) {
             auto duration = duration_cast<milliseconds>(steady_clock::now() - start_time);
             if (duration < min_cost) {
-                m_adb.screencap_method = AdbProperty::ScreencapMethod::RawByNc;
+                fastest_method = AdbProperty::ScreencapMethod::RawByNc;
                 m_inited = true;
                 min_cost = duration;
             }
@@ -615,10 +783,11 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
         clear_lf_info();
 
         start_time = steady_clock::now();
-        if (screencap(m_adb.screencap_raw_with_gzip, decode_raw_with_gzip, allow_reconnect)) {
+        if (screencap(m_adb.screencap_raw_with_gzip, decode_raw_with_gzip, allow_reconnect) ==
+            ScreencapResult::Success) {
             auto duration = duration_cast<milliseconds>(steady_clock::now() - start_time);
             if (duration < min_cost) {
-                m_adb.screencap_method = AdbProperty::ScreencapMethod::RawWithGzip;
+                fastest_method = AdbProperty::ScreencapMethod::RawWithGzip;
                 m_inited = true;
                 min_cost = duration;
             }
@@ -632,10 +801,10 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
         clear_lf_info();
 
         start_time = steady_clock::now();
-        if (screencap(m_adb.screencap_encode, decode_encode, allow_reconnect)) {
+        if (screencap(m_adb.screencap_encode, decode_encode, allow_reconnect) == ScreencapResult::Success) {
             auto duration = duration_cast<milliseconds>(steady_clock::now() - start_time);
             if (duration < min_cost) {
-                m_adb.screencap_method = AdbProperty::ScreencapMethod::Encode;
+                fastest_method = AdbProperty::ScreencapMethod::Encode;
                 m_inited = true;
                 min_cost = duration;
             }
@@ -653,7 +822,7 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
             if (m_mumu_extras.screencap()) {
                 auto duration = duration_cast<milliseconds>(steady_clock::now() - start_time);
                 if (duration < min_cost) {
-                    m_adb.screencap_method = AdbProperty::ScreencapMethod::MumuExtras;
+                    fastest_method = AdbProperty::ScreencapMethod::MumuExtras;
                     m_inited = true;
                     min_cost = duration;
                 }
@@ -672,7 +841,7 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
             if (m_ld_extras.screencap()) {
                 auto duration = duration_cast<milliseconds>(steady_clock::now() - start_time);
                 if (duration < min_cost) {
-                    m_adb.screencap_method = AdbProperty::ScreencapMethod::LDExtras;
+                    fastest_method = AdbProperty::ScreencapMethod::LDExtras;
                     m_inited = true;
                     min_cost = duration;
                 }
@@ -701,7 +870,7 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
                 auto duration = duration_cast<milliseconds>(steady_clock::now() - start_time);
                 image_payload = img_opt.value();
                 if (duration < min_cost) {
-                    m_adb.screencap_method = AdbProperty::ScreencapMethod::ARPS;
+                    fastest_method = AdbProperty::ScreencapMethod::ARPS;
                     m_inited = true;
                     min_cost = duration;
                 }
@@ -713,6 +882,8 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
                 all_methods_cost.emplace_back(AdbProperty::ScreencapMethod::ARPS, "???");
             }
         }
+
+        m_adb.screencap_method = fastest_method;
 
         static const std::unordered_map<AdbProperty::ScreencapMethod, std::string> MethodName = {
             { AdbProperty::ScreencapMethod::UnknownYet, "UnknownYet" },
@@ -750,64 +921,68 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
     }
     else {
         auto start_time = high_resolution_clock::now();
-        bool screencap_ret = false;
+        ScreencapResult screencap_result = ScreencapResult::Failed;
         switch (m_adb.screencap_method) {
         case AdbProperty::ScreencapMethod::RawByNc:
-            screencap_ret = screencap(m_adb.screencap_raw_by_nc, decode_raw, allow_reconnect, true);
+            screencap_result = screencap(m_adb.screencap_raw_by_nc, decode_raw, allow_reconnect, true);
             break;
         case AdbProperty::ScreencapMethod::RawWithGzip:
-            screencap_ret = screencap(m_adb.screencap_raw_with_gzip, decode_raw_with_gzip, allow_reconnect);
+            screencap_result = screencap(m_adb.screencap_raw_with_gzip, decode_raw_with_gzip, allow_reconnect);
             break;
         case AdbProperty::ScreencapMethod::Encode:
-            screencap_ret = screencap(m_adb.screencap_encode, decode_encode, allow_reconnect);
+            screencap_result = screencap(m_adb.screencap_encode, decode_encode, allow_reconnect);
             break;
 #if ASST_WITH_EMULATOR_EXTRAS
         case AdbProperty::ScreencapMethod::MumuExtras: {
             auto img_opt = m_mumu_extras.screencap();
-            screencap_ret = img_opt.has_value();
+            screencap_result = img_opt.has_value() ? ScreencapResult::Success : ScreencapResult::Reprobe;
 
-            if (!screencap_ret && allow_reconnect) {
+            if (screencap_result != ScreencapResult::Success && allow_reconnect) {
                 m_mumu_extras.reload();
                 img_opt = m_mumu_extras.screencap();
-                screencap_ret = img_opt.has_value();
+                screencap_result = img_opt.has_value() ? ScreencapResult::Success : ScreencapResult::Reprobe;
             }
 
-            if (screencap_ret) {
+            if (screencap_result == ScreencapResult::Success) {
                 image_payload = img_opt.value();
             }
         } break;
         case AdbProperty::ScreencapMethod::LDExtras: {
             auto img_opt = m_ld_extras.screencap();
-            screencap_ret = img_opt.has_value();
+            screencap_result = img_opt.has_value() ? ScreencapResult::Success : ScreencapResult::Reprobe;
 
-            if (!screencap_ret && allow_reconnect) {
+            if (screencap_result != ScreencapResult::Success && allow_reconnect) {
                 m_ld_extras.reload();
                 img_opt = m_ld_extras.screencap();
-                screencap_ret = img_opt.has_value();
+                screencap_result = img_opt.has_value() ? ScreencapResult::Success : ScreencapResult::Reprobe;
             }
 
-            if (screencap_ret) {
+            if (screencap_result == ScreencapResult::Success) {
                 image_payload = img_opt.value();
             }
         } break;
 #endif
         case AdbProperty::ScreencapMethod::ARPS: {
             auto img_opt = m_arps.screencap();
-            screencap_ret = img_opt.has_value();
+            screencap_result = img_opt.has_value() ? ScreencapResult::Success : ScreencapResult::Failed;
 
-            if (!screencap_ret && allow_reconnect) {
+            if (screencap_result != ScreencapResult::Success && allow_reconnect) {
                 m_arps.uninit();
                 init_arps(m_conn_ctx.adb_cfg);
                 img_opt = m_arps.screencap();
-                screencap_ret = img_opt.has_value();
+                screencap_result = img_opt.has_value() ? ScreencapResult::Success : ScreencapResult::Failed;
             }
 
-            if (screencap_ret) {
+            if (screencap_result == ScreencapResult::Success) {
                 image_payload = img_opt.value();
             }
         } break;
         default:
             break;
+        }
+        const bool screencap_ret = screencap_result == ScreencapResult::Success;
+        if (screencap_result == ScreencapResult::Reprobe) {
+            m_adb.screencap_method = AdbProperty::ScreencapMethod::UnknownYet;
         }
         auto duration = duration_cast<milliseconds>(high_resolution_clock::now() - start_time);
         // 记录截图耗时，每10次截图回传一次最值+平均值
@@ -844,76 +1019,124 @@ bool asst::AdbController::screencap(cv::Mat& image_payload, bool allow_reconnect
             }
             callback(AsstMsg::ConnectionInfo, info);
         }
+
+        // 每 1 分钟检测一次模拟器帧率
+        check_fps();
+
+        if (screencap_ret &&
+            (image_payload.cols != m_last_screencap_size.first || image_payload.rows != m_last_screencap_size.second)) {
+            // 截图尺寸发生帧间变化：模拟器分辨率可能被外部修改（MumuExtras/LDExtras
+            // 输出原生分辨率且无协议头校验点，Encode 路径同理，统一在此检测）。
+            // 宽高互换为显示方向旋转而非分辨率修改，只更新基准、不触发连接失效。
+            // 以图像自身历史尺寸为基准，连接初期 fallback 桌面等持续性差异不会误触发；
+            // 首帧不触发。分辨率变化后触控倍率等整套映射全部过期，标记连接失效，
+            // 通知上层走整体重连，本帧画面有效照常返回
+            bool rotated =
+                image_payload.cols == m_last_screencap_size.second && image_payload.rows == m_last_screencap_size.first;
+            if (m_last_screencap_size.first != 0) {
+                if (!rotated) {
+                    invalidate_connection("Screencap size changed", image_payload.cols, image_payload.rows);
+                }
+                else {
+                    on_display_rotated();
+                }
+            }
+            m_last_screencap_size = { image_payload.cols, image_payload.rows };
+        }
+
         return screencap_ret;
     }
 }
 
-bool asst::AdbController::screencap(
+asst::AdbController::ScreencapResult asst::AdbController::screencap(
     const std::string& cmd,
     const DecodeFunc& decode_func,
     bool allow_reconnect,
     bool by_socket,
     int timeout)
 {
-    if ((!m_support_socket || !m_server_started) && by_socket) [[unlikely]] {
-        return false;
-    }
-    auto ret = call_command(cmd, timeout, allow_reconnect, by_socket);
-
-    if (!ret || ret.value().empty()) [[unlikely]] {
-        Log.warn("data is empty!");
-        return false;
-    }
-    auto& data = ret.value();
-
-    bool tried_conversion = false;
-    if (m_adb.screencap_end_of_line == AdbProperty::ScreencapEndOfLine::CRLF) {
-        tried_conversion = true;
-        if (!convert_lf(data)) [[unlikely]] { // 没找到 "\r\n"
-            Log.info("screencap_end_of_line is set to CRLF but no `\\r\\n` found, set it to LF");
-            m_adb.screencap_end_of_line = AdbProperty::ScreencapEndOfLine::LF;
+    try {
+        if ((!m_support_socket || !m_server_started) && by_socket) [[unlikely]] {
+            return ScreencapResult::Failed;
         }
-    }
+        auto ret = call_command(cmd, timeout, allow_reconnect, by_socket);
 
-    if (decode_func(data)) [[likely]] {
-        if (m_adb.screencap_end_of_line == AdbProperty::ScreencapEndOfLine::UnknownYet) [[unlikely]] {
-            Log.info("screencap_end_of_line is LF");
-            m_adb.screencap_end_of_line = AdbProperty::ScreencapEndOfLine::LF;
+        if (!ret || ret.value().empty()) [[unlikely]] {
+            Log.warn("data is empty!");
+            return ScreencapResult::Failed;
         }
-    }
-    else {
-        Log.info("data is not empty, but image is empty");
+        auto& data = ret.value();
 
-        if (tried_conversion) { // 已经转换过行尾，再次转换 data 不会变化，不必重试
-            Log.error("skip retry decoding and decode failed!");
-            return false;
+        bool tried_conversion = false;
+        if (m_adb.screencap_end_of_line == AdbProperty::ScreencapEndOfLine::CRLF) {
+            tried_conversion = true;
+            if (!convert_lf(data)) [[unlikely]] { // 没找到 "\r\n"
+                Log.info("screencap_end_of_line is set to CRLF but no `\\r\\n` found, set it to LF");
+                m_adb.screencap_end_of_line = AdbProperty::ScreencapEndOfLine::LF;
+            }
         }
 
-        Log.info("try to cvt lf");
-        if (!convert_lf(data)) { // 没找到 "\r\n"，data 没有变化，不必重试
-            Log.error("no `\\r\\n` found, skip retry decode");
-            return false;
-        }
-        if (!decode_func(data)) {
-            Log.error("convert lf and retry decode failed!");
-            return false;
-        }
-
-        if (m_adb.screencap_end_of_line == AdbProperty::ScreencapEndOfLine::UnknownYet) {
-            Log.info("screencap_end_of_line is CRLF");
+        if (decode_func(data)) [[likely]] {
+            if (m_adb.screencap_end_of_line == AdbProperty::ScreencapEndOfLine::UnknownYet) [[unlikely]] {
+                Log.info("screencap_end_of_line is LF");
+                m_adb.screencap_end_of_line = AdbProperty::ScreencapEndOfLine::LF;
+            }
         }
         else {
-            Log.info("screencap_end_of_line is changed to CRLF");
+            Log.info("data is not empty, but image is empty");
+
+            if (tried_conversion) { // 已经转换过行尾，再次转换 data 不会变化，不必重试
+                Log.error("skip retry decoding and decode failed!");
+                return ScreencapResult::Reprobe;
+            }
+
+            Log.info("try to cvt lf");
+            if (!convert_lf(data)) { // 没找到 "\r\n"，data 没有变化，不必重试
+                Log.error("no `\\r\\n` found, skip retry decode");
+                return ScreencapResult::Reprobe;
+            }
+            if (!decode_func(data)) {
+                Log.error("convert lf and retry decode failed!");
+                return ScreencapResult::Reprobe;
+            }
+
+            if (m_adb.screencap_end_of_line == AdbProperty::ScreencapEndOfLine::UnknownYet) {
+                Log.info("screencap_end_of_line is CRLF");
+            }
+            else {
+                Log.info("screencap_end_of_line is changed to CRLF");
+            }
+            m_adb.screencap_end_of_line = AdbProperty::ScreencapEndOfLine::CRLF;
         }
-        m_adb.screencap_end_of_line = AdbProperty::ScreencapEndOfLine::CRLF;
+        return ScreencapResult::Success;
     }
-    return true;
+    catch (const cv::Exception& e) {
+        if (e.code == cv::Error::StsNoMem) {
+            throw;
+        }
+        try {
+            Log.error(
+                "ADB screencap decode OpenCV exception",
+                e.what(),
+                "code",
+                e.code,
+                "file",
+                e.file,
+                "line",
+                e.line);
+        }
+        catch (...) {
+        }
+        return ScreencapResult::Reprobe;
+    }
 }
 
 bool asst::AdbController::connect(const std::string& adb_path, const std::string& address, const std::string& config)
 {
     LogTraceFunction;
 
+    // 重连即全新探测，清除上一次连接期间因分辨率变化而置位的过期标记
+    m_connection_expired = false;
     clear_info();
 
 #ifdef ASST_DEBUG
@@ -970,7 +1193,13 @@ bool asst::AdbController::connect(const std::string& adb_path, const std::string
         if (devices_ret) {
             const auto& devices_str = devices_ret.value();
             const boost::regex address_regex(m_adb.address_regex);
-            for (boost::sregex_iterator iter(devices_str.begin(), devices_str.end(), address_regex), end; iter != end;
+            for (boost::sregex_iterator iter(
+                     devices_str.begin(),
+                     devices_str.end(),
+                     address_regex,
+                     boost::regex_constants::match_not_dot_newline),
+                 end;
+                 iter != end;
                  ++iter) {
                 if (iter->size() > 1 && iter->str(1) == address) {
                     need_connect = false;
@@ -1024,7 +1253,7 @@ bool asst::AdbController::connect(const std::string& adb_path, const std::string
 
     /* get uuid (imei) */
     {
-        auto uuid_ret = call_command(m_conn_ctx.replace_cmd(adb_cfg.uuid), 20000, false /* adb 连接时不允许重试 */);
+        auto uuid_ret = call_command(m_conn_ctx.replace_cmd(adb_cfg.uuid), 20'000, false /* adb 连接时不允许重试 */);
         if (!uuid_ret) {
             json::value info = get_info_json() | json::object {
                 { "what", "ConnectFailed" },
@@ -1153,43 +1382,13 @@ bool asst::AdbController::connect(const std::string& adb_path, const std::string
     }
 
     /* display */
-    {
-        auto display_ret = call_command(m_conn_ctx.replace_cmd(adb_cfg.display));
-        if (!display_ret) {
-            json::value info = get_info_json() | json::object {
-                { "what", "ConnectFailed" },
-                { "why", "Display command failed to exec" },
-            };
-            callback(AsstMsg::ConnectionInfo, info);
-            return false;
-        }
-        std::stringstream display_ss(display_ret.value());
-        int size_value1 = 0;
-        int size_value2 = 0;
-        display_ss >> size_value1 >> size_value2;
-
-        m_width = (std::max)(size_value1, size_value2);
-        m_height = (std::min)(size_value1, size_value2);
-
+    if (!reprobe_screen_size()) {
         json::value info = get_info_json() | json::object {
-            { "what", "ResolutionGot" },
-            { "why", "" },
+            { "what", "ConnectFailed" },
+            { "why", "Display command failed to exec" },
         };
-
-        info["details"] |= json::object {
-            { "width", m_width },
-            { "height", m_height },
-        };
-
         callback(AsstMsg::ConnectionInfo, info);
-
-        if (m_width == 0 || m_height == 0) {
-            info["what"] = "ResolutionError";
-            info["why"] = "Get resolution failed";
-            callback(AsstMsg::ConnectionInfo, info);
-            return false;
-        }
-        m_screen_size = { m_width, m_height };
+        return false;
     }
 
     if (need_exit()) {
@@ -1213,6 +1412,7 @@ bool asst::AdbController::connect(const std::string& adb_path, const std::string
     m_adb.start = m_conn_ctx.replace_cmd(adb_cfg.start);
     m_adb.stop = m_conn_ctx.replace_cmd(adb_cfg.stop);
     m_adb.back_to_home = m_conn_ctx.replace_cmd(adb_cfg.back_to_home);
+    m_adb.fps = m_conn_ctx.replace_cmd(adb_cfg.fps);
 
     if (m_support_socket && !m_server_started) {
         std::string bind_address;
@@ -1272,6 +1472,85 @@ void asst::AdbController::set_kill_adb_on_exit(bool enable) noexcept
 void asst::AdbController::clear_lf_info()
 {
     m_adb.screencap_end_of_line = AdbProperty::ScreencapEndOfLine::UnknownYet;
+}
+
+void asst::AdbController::check_fps()
+{
+    // 命令未配置或尚未连接，跳过
+    if (m_adb.fps.empty()) {
+        return;
+    }
+
+    // 上一次异步检测尚未完成，跳过（避免堆积）
+    if (m_fps_future.valid() && m_fps_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+        return;
+    }
+
+    // 每 1 分钟检测一次
+    constexpr auto FpsCheckInterval = std::chrono::minutes(1);
+    auto now = std::chrono::steady_clock::now();
+    if (m_last_fps_check_time.time_since_epoch().count() != 0 && now - m_last_fps_check_time < FpsCheckInterval) {
+        return;
+    }
+    m_last_fps_check_time = now;
+
+    // 异步执行，避免 adb 延迟阻塞截图返回
+    // 值捕获易变数据（m_uuid / m_adb.fps），防止 clear_info() 清空后异步线程读到悬空数据；
+    // call_command / callback 依赖的 mutex、platform_io、callback 等均为构造后不变，
+    // 生命周期由 ~AdbController 和 clear_info() 中的 m_fps_future.wait() 保证安全
+    m_fps_future = std::async(std::launch::async, [this, cmd = m_adb.fps, uuid = m_uuid]() {
+        if (need_exit()) {
+            return;
+        }
+
+        // 放宽到 5 秒：异步执行后不再阻塞截图，可给 adb 足够时间
+        auto ret = call_command(cmd, 5000, false);
+        if (!ret || ret.value().empty()) {
+            Log.warn("fps command failed or empty");
+            return;
+        }
+
+        // SurfaceFlinger --latency 第一行是每帧刷新周期（纳秒），例如 16666666 表示 60 FPS
+        // 注意：这里检测的是模拟器/系统的设置刷新率，而非游戏实际运行帧率。
+        auto output = std::move(ret.value());
+        convert_lf(output);
+        auto newline_pos = output.find('\n');
+        std::string first_line = newline_pos == std::string::npos ? output : output.substr(0, newline_pos);
+
+        // 去掉空白和非数字字符
+        std::erase_if(first_line, [](char c) { return !std::isdigit(static_cast<unsigned char>(c)); });
+
+        if (first_line.empty()) {
+            Log.warn("fps output is empty after sanitize");
+            return;
+        }
+
+        long long refresh_period_ns = 0;
+        if (!utils::chars_to_number<long long, true>(first_line, refresh_period_ns)) {
+            Log.warn("fps output parse failed:", first_line);
+            return;
+        }
+
+        if (refresh_period_ns <= 0) {
+            Log.warn("invalid refresh period:", refresh_period_ns);
+            return;
+        }
+
+        // ns -> FPS
+        double fps = 1000000000.0 / static_cast<double>(refresh_period_ns);
+        int fps_int = static_cast<int>(std::round(fps));
+
+        json::value info = json::object {
+            { "uuid", uuid },
+            { "what", "EmulatorFPS" },
+            { "details",
+              json::object {
+                  { "fps", fps_int },
+                  { "refresh_period_ns", refresh_period_ns },
+              } },
+        };
+        callback(AsstMsg::ConnectionInfo, info);
+    });
 }
 
 void asst::AdbController::back_to_home() noexcept

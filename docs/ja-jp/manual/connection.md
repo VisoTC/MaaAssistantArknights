@@ -5,21 +5,37 @@ icon: mdi:plug
 
 # 接続設定
 
+## 自動検出
+
+MAA は、現在**実行中の単一のエミュレータ**から ADB パス、接続アドレス、接続構成を自動的に検出して入力できます。
+
+MAA v6.16.8 時点で自動検出に対応しているエミュレータと接続アドレスは以下の通りです。
+
+- BlueStacks 5：`127.0.0.1:5555/5556/5565/5575/5585/5595/5554`
+- MuMu エミュレータ：`127.0.0.1:16384/16416/16448/16480/16512/16544/16576`
+- LDPlayer 9：`emulator-5554/5556/5558/5560`、`127.0.0.1:5555/5557/5559/5561`
+- 夜神 (NoxPlayer)：`127.0.0.1:62001/59865`
+- 逍遥 (MEmu)：`127.0.0.1:21503`
+- テンセントアプリストア (5.10.56.xx 以降)：`127.0.0.1:5555`
+
+検出に失敗した場合は、UAC 管理者権限で MAA を起動してもう一度検出を試してください。それでも失敗する場合は、下記の手動設定をご覧のうえ、上記のリストを参考にフィードバックをお寄せください。
+
 ## ADB パス
 
-:::info 技術的詳細
-自動検出ではエミュレータの ADB を使用しますが、自動検出に問題が発生することがあります。その場合、手動で設定する必要があります。
-`ADB の強制置換`は、Google が提供する ADB をダウンロードして置換することで、一度設定すれば解決します。
+::: info 技術的詳細  
+自動検出ではエミュレータの ADB を使用しますが、自動検出に問題が発生することがあります。その場合、手動で設定する必要があります。  
+`ADB の強制置換`は、Google が提供する ADB をダウンロードして置換することで、一度設定すれば解決します。  
+環境変数に利用可能な ADB が存在する場合は、`adb` と直接入力できます。  
 :::
 
 ### エミュレータ提供の ADB を使用する
 
-エミュレータのインストールパスに移動し、Windows ではタスクマネージャでプロセスを右クリックし、「ファイルの場所を開く」を選択します。
+エミュレータのインストールパスに移動し、Windows ではタスクマネージャでプロセスを右クリックし、 ｢ファイルの場所を開く｣ を選択します。
 
 最上位またはサブディレクトリに、`adb` を含む exe ファイルがあるはずです。検索機能を使用して選択します。
 
-:::details いくつかの例
-`adb.exe` `HD-adb.exe` `adb_server.exe` `nox_adb.exe`
+::: details いくつかの例  
+`adb.exe` `HD-adb.exe` `adb_server.exe` `nox_adb.exe`  
 :::
 
 ### Google 提供の ADB を使用する
@@ -30,8 +46,8 @@ icon: mdi:plug
 
 ## 接続アドレス
 
-:::tip
-ローカルで実行しているエミュレータの接続アドレスは `127.0.0.1:<ポート番号>` または `emulator-<四桁の数字>` です。
+::: tip  
+ローカルで実行しているエミュレータの接続アドレスは `127.0.0.1:<ポート番号>` または `emulator-<四桁の数字>` です。  
 :::
 
 ### ポート番号の取得
@@ -41,6 +57,7 @@ icon: mdi:plug
 - [Bluestacks 5](https://support.bluestacks.com/hc/ja/articles/360061342631-BlueStacks-5-BlueStacks-4%E3%81%8B%E3%82%89%E3%82%A2%E3%83%97%E3%83%AA%E3%82%92%E7%A7%BB%E8%A1%8C%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95) `5555`
 - [MuMu](https://mumu.163.com/help/20240807/40912_1073151.html?maa) `16384`
 - [MuMu Pro](https://mumu.163.com/mac/function/20240126/40028_1134600.html) `16384`
+- [LDPlayer 9](https://help.ldmnq.com/docs/LD9adbserver#edc3863750608062bcb3feea256413dc) `emulator-5554`
 - [逍遥](https://bbs.xyaz.cn/forum.php?mod=viewthread&tid=365537) `21503`
 - [夜神](https://support.yeshen.com/zh-CN/qt/ml) `62001`
 - [テンセントアプリストア](https://sj.qq.com/faq/3878) (5.10.56.xx 以降)：ADB ポートは `127.0.0.1:5555` 固定。ADB パス例：`C:\Program Files\Tencent\Androws\Application\バージョン番号\adb.exe`。
@@ -79,7 +96,7 @@ icon: mdi:plug
 
 - 方法2：すでに確立されたADB接続を検索する
   1. 方法1を実行します。
-  2. `Windowsキー+S` を押して検索バーを開き、「リソースモニター」を入力して開きます。
+  2. `Windowsキー+S` を押して検索バーを開き、 ｢リソースモニター｣ を入力して開きます。
   3. `ネットワーク` タブに切り替えて、モニターするポート名であるシミュレータープロセス名（例：`HD-Player.exe`）を検索します。
   4. シミュレータープロセスのすべてのリッスンポートを記録します。
   5. `TCP接続` タブの中で、`adb.exe` を探し、リモートポート列でシミュレーターリッスンポートに一致するポートを探します。
@@ -94,12 +111,12 @@ icon: mdi:plug
 #### エミュレーターexeにコマンドを添付して複数起動する
 
 1. **単一**のエミュレーターを複数開始します。
-2. タスクマネージャーを開き、該当するエミュレータープロセスを見つけます。詳細情報タブに移動し、列ヘッダーで右クリックし、「列の選択」をクリックし、「コマンドライン」を選択します。
-3. 追加された「コマンドライン」列で、「...\Bluestacks_nxt\HD-Player.exe」の後にある内容を見つけます。
-4. 見つけた `--instance Nougat32` のような内容を「起動設定」 - 「追加コマンド」に記入します。
+2. タスクマネージャーを開き、該当するエミュレータープロセスを見つけます。詳細情報タブに移動し、列ヘッダーで右クリックし、 ｢列の選択｣ をクリックし、 ｢コマンドライン｣ を選択します。
+3. 追加された ｢コマンドライン｣ 列で、 ｢...\Bluestacks_nxt\HD-Player.exe｣ の後にある内容を見つけます。
+4. 見つけた `--instance Nougat32` のような内容を ｢起動設定｣ - ｢追加コマンド｣ に記入します。
 
-::: tip
-操作が終了したら、「ステップ2」で開いた「コマンドライン」列を再度非表示にすることをお勧めします。これにより、パフォーマンスの低下を防ぎます。
+::: tip  
+操作が終了したら、 ｢ステップ2｣ で開いた ｢コマンドライン｣ 列を再度非表示にすることをお勧めします。これにより、パフォーマンスの低下を防ぎます。  
 :::
 
 ::: details 例
@@ -113,16 +130,16 @@ icon: mdi:plug
 追加コマンド: --instance Nougat32_1 --cmd launchApp --package "com.hypergryph.arknights.bilibili"
 ```
 
-`--cmd launchApp --package` の部分は起動後に指定のパッケージ名のアプリを自動で起動するためのものであり、必要に応じて変更してください。
+`--cmd launchApp --package` の部分は起動後に指定のパッケージ名のアプリを自動で起動するためのものであり、必要に応じて変更してください。  
 :::
 
 #### シミュレーターやアプリを使用した複数起動の方法
 
 1. マルチインスタンス管理ツールを開き、対応するシミュレーターのショートカットを追加します。
-2. シミュレーターのショートカットのパスを「起動設定」-「シミュレーターのパス」に入力します。
+2. シミュレーターのショートカットのパスを ｢起動設定｣ - ｢シミュレーターのパス｣ に入力します。
 
-::: tip
-一部のシミュレーターはアプリケーションのショートカットを作成することができ、それを使用してシミュレーターを直接起動し、明日方舟を開くことができます。
+::: tip  
+一部のシミュレーターはアプリケーションのショートカットを作成することができ、それを使用してシミュレーターを直接起動し、明日方舟を開くことができます。  
 :::
 
 ::: details 例
@@ -138,39 +155,39 @@ icon: mdi:plug
 
 もし `シミュレータのパス` を使用して複数の起動操作を行う場合、`起動設定` - `追加コマンド` を空に設定することをお勧めします。
 
-### BlueStacksシミュレータ Hyper-V 启動ごとにポート番号が異なります
+### BlueStacksシミュレータ Hyper-V 起動ごとにポート番号が異なります
 
 `接続設定` で `接続構成` を `BlueStacksシミュレータ` に設定し、その後 `自動接続の検出` と `毎回再検出` をチェックします。
 
 通常、これで接続できるはずです。接続できない場合、複数のシミュレータコアが存在するか、問題が発生している可能性がありますので、以下の追加設定をお読みください。
 
-#### `Bluestacks.Config.Keyword` を指定
+#### `ConfigKeyword` を指定
 
-::: info 注意
-複数の起動機能が有効になっている場合や複数のシミュレータコアがインストールされている場合は、追加の設定が必要です。
+::: info 注意  
+複数の起動機能が有効になっている場合や複数のシミュレータコアがインストールされている場合は、追加の設定が必要です。  
 :::
 
-`.\config\gui.json` 内で `Bluestacks.Config.Keyword` フィールドを検索し、内容を `"bst.instance.<シミュレータ番号>.status.adb_port"` に設定します。シミュレータ番号はシミュレータパスの `BlueStacks_nxt\Engine` 内で確認できます。
+`gui.new.json` 内で現在の設定名フィールド（設定-切り替え設定 で確認できます。デフォルトは `Default`）の下にある `Gui.ConnectSettings.Extras.BluestacksExtra.ConfigKeyword` フィールドを検索し、内容を `"bst.instance.<シミュレータ番号>.status.adb_port"` に設定します。シミュレータ番号はシミュレータパスの `BlueStacks_nxt\Engine` 内で確認できます。
 
-::: details 例
+::: details 例  
 Nougat64 コア：
 
 ```json
-"Bluestacks.Config.Keyword":"bst.instance.Nougat64.status.adb_port",
+"ConfigKeyword": "bst.instance.Nougat64.status.adb_port"
 ```
 
 Pie64_2 コア：（コア名の後の数字は複数の起動コアを示します）
 
 ```json
-"Bluestacks.Config.Keyword": "bst.instance.Pie64_2.status.adb_port",
+"ConfigKeyword": "bst.instance.Pie64_2.status.adb_port"
 ```
 
 :::
 
-#### `Bluestacks.Config.Path` を指定
+#### `ConfigPath` を指定
 
-::: info 注意
-MAA は現在 `bluestacks.conf` の保存場所をレジストリから読み取ろうとしますが、この機能が機能しない場合は、手動で設定ファイルのパスを指定する必要があります。
+::: info 注意  
+MAA は現在 `bluestacks.conf` の保存場所をレジストリから読み取ろうとしますが、この機能が機能しない場合は、手動で設定ファイルのパスを指定する必要があります。  
 :::
 
 1. ブルースタックスシミュレータのデータディレクトリ内にある `bluestacks.conf` ファイルを見つけます。
@@ -181,17 +198,24 @@ MAA は現在 `bluestacks.conf` の保存場所をレジストリから読み取
 
 2. 初めて使用する場合は、一度 MAA を実行して、MAA が設定ファイルを自動生成するようにします。
 
-3. **MAA を閉じた後に**、`gui.json` を開き、`Configurations` の下の現在の設定名フィールド（設定-切り替え設定 で確認できます。デフォルトは `Default`）を検索し、`Bluestacks.Config.Path` フィールドを検索して、`bluestacks.conf` の完全なパスを入力します。（スラッシュはエスケープ `\\` を使用してください）
+3. **MAA を閉じた後に**、`gui.new.json` を開き、現在の設定名フィールド（設定-切り替え設定 で確認できます。デフォルトは `Default`）の下にある `Gui.ConnectSettings.Extras.BluestacksExtra.ConfigPath` フィールドを検索して、`bluestacks.conf` の完全なパスを入力します。（スラッシュはエスケープ `\\` を使用してください）
 
-::: details 例
+::: details 例  
 `C:\ProgramData\BlueStacks_nxt\bluestacks.conf` を使用しています。
 
 ```json
 {
   "Configurations": {
     "Default": {
-      "Bluestacks.Config.Path": "C:\\ProgramData\\BlueStacks_nxt\\bluestacks.conf"
-      // 残りの構成フィールドは、手入力しないで修正します。
+      "Gui": {
+        "ConnectSettings": {
+          "Extras": {
+            "BluestacksExtra": {
+              "ConfigPath": "C:\\ProgramData\\BlueStacks_nxt\\bluestacks.conf"
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -199,21 +223,31 @@ MAA は現在 `bluestacks.conf` の保存場所をレジストリから読み取
 
 :::
 
+#### MAA に戻ってテスト
+
+`設定` - `接続設定` の `スクリーンショットテスト` 機能を使用して、接続先が意図したシミュレータコアであるかを確認できます。
+
 ## 接続設定
 
-対応するエミュレーターの設定を選択してください。リストにない場合は汎用設定を選択してください。汎用設定が利用できない場合は他の利用可能な設定を試し、選択してください。
+対応するエミュレーターの設定を選択してください。リストにない場合は一般モードを選択してください。一般モードが利用できない場合は他の利用可能な設定を試し、選択してください。
 
 具体的な違いについては、[ソースコード](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/resource/config.json#L57)をご覧ください。
 
 ### MuMu スクリーンショット強化モード
 
+::: tip  
+ここで説明するスクリーンショットとタッチの強化機能は、Windows x64 版 MuMu 向けです。  
+:::
+
 **バージョン要件**：公式版/Arknights Edition MuMu V4.1.26 以降、またはグローバル版 MuMu V5.21.3 以降。<!-- V3.8.13 -->
 
 1. `設定` - `接続設定` で `MuMu のスクリーンショット拡張モードを有効にする` をチェックします。MAAは、スイッチをチェックすると、レジストリを通じてインストールパスを自動的に入力しようとします。
 
-2. `MuMu12 エミュレーターパス` には `MuMu Player` または `MuMuPlayerGlobal-12.0` または `YXArkNights-12.0` フォルダのパスを入力してください。例: `C:\Program Files\Netease\MuMuPlayerGlobal-12.0`。
+2. `MuMu エミュレータパス` には、MuMu インストールディレクトリのルート（`nx_device` または `shell` フォルダを含むディレクトリ）のパスを入力してください。例: `C:\Program Files\Netease\MuMuPlayer`。
 
-3. MuMu ネットワークブリッジを使用している場合は、`MuMu ネットワークブリッジモード` を選択し、MuMu マルチインスタンスマネージャ内の対応するエミュレータのシリアル番号を手動で入力する必要があります。例えば、メインインスタンスは `0` です。
+3. MuMu ネットワークブリッジを使用している場合は、`MuMu ネットワークブリッジモード` を選択し、MuMu マルチインスタンスマネージャ内の対応するエミュレータのインスタンス番号を手動で入力する必要があります。例えば、メインインスタンスは `0` です。
+
+**MuMu タッチ強化モード**：公式版 MuMu V6.3.2 以降が必要です。現在、Arknights Edition とグローバル版は未対応です。`MuMu のスクリーンショット拡張モードを有効にする` にチェックを入れた後、その下にある `MuMu タッチ強化を有効化` にチェックを入れると有効になります。
 
 ### LDPlayer スクリーンショット強化モード
 
@@ -229,18 +263,19 @@ LDPlayerの正式版9 V9.1.32 以降を使用する必要があります。<!-- 
 
 Android Emulator v27.2.9 以降が必要です。（アークナイツのリリース以降にダウンロードしたエミュレーターであれば大丈夫です。）
 
-AVD スクリーンショット強化モードは MaaFramework 内で実装されているため、MaaFramework のタッチモードを有効にすることが、この機能を利用する前提となります。
+AVD スクリーンショット強化モードは MaaFramework 内で実装されているため、MaaFwAdb のタッチモードを有効にすることが、この機能を利用する前提となります。
 
 1. `設定` - `接続設定` - `接続構成` で `Android Virtual Device (AVD)` を選択します。
 
-2. `タッチモード` で `MaaFramework` を選択します。
+2. `タッチモード` で `MaaFwAdb` を選択します。
 
 ## タッチモード
 
-1. [Minitouch](https://github.com/DeviceFarmer/minitouch)：Android タッチイベントを操作するための C 言語で書かれたツールで、`evdev` デバイスを操作し、外部プログラムがタッチイベントとジェスチャーをトリガーできる Socket インターフェースを提供します。Android 10 以降、SELinux が `Enforcing` モードの場合、Minitouch は使用できなくなりました。<sup>[出典](https://github.com/DeviceFarmer/minitouch?tab=readme-ov-file#for-android-10-and-up)</sup>
-2. [MaaTouch](https://github.com/MaaAssistantArknights/MaaTouch)：MAA による Java で Minitouch を再実装し、Android の `InputDevice` を使用し、追加の機能を付加しました。高バージョンの Android での利用可能性はまだテスト中です。~~テストを手伝ってください~~
-3. Adb Input：直接 ADB を呼び出して、Android の `input` コマンドを使用してタッチ操作を行います。最も互換性があり、最も遅い速度です。
-4. [MaaFramework](https://maafw.com/)：MaaFramework の制御ユニットのスクリーンショットとタッチ機能を呼び出します。利用可能性はまだテスト中です。~~テストを手伝ってください x2~~
+1. [Minitouch](https://github.com/DeviceFarmer/minitouch)：Android タッチイベントを操作するための C 言語で書かれたツールで、`evdev` デバイスを操作し、外部プログラムがタッチイベントとジェスチャーをトリガーできる Socket インターフェースを提供します。Android 10 以降、SELinux が `Enforcing` モードの場合、Minitouch は使用できなくなりました。<sup>[出典](https://github.com/DeviceFarmer/minitouch?tab=readme-ov-file#for-android-10-and-up)</sup>(標準)
+2. [MaaTouch](https://github.com/MaaAssistantArknights/MaaTouch)：MAA による Java で Minitouch を再実装し、Android の `InputDevice` を使用し、追加の機能を付加しました。(実験機能)
+3. ADB Input：直接 ADB を呼び出して、Android の `input` コマンドを使用してタッチ操作を行います。OS バージョンが古い物理デバイス専用で、他のモードが使える場合は選択しないでください。ADB Input のスワイプはズレやすいため、スワイプ速度が非常に遅く設定され、スワイプ距離も他のモードと異なります。正確な座標制御が必要な場面では使用できません。(非推奨)
+4. [MaaFwAdb](https://maafw.com/)：MaaFramework の制御ユニットのスクリーンショットとタッチ機能を呼び出します。追加スワイプ非対応：追加スワイプとは、メインスワイプの終了後に垂直方向へ少し追加分の｢ブレーキ｣スワイプを行うもので（軌跡は 90° に曲がる L 字型）、リストの慣性を打ち消すために使用され、追加スワイプでドラッグの暴走を防いでいるページはこのモードで暴走します。(実験機能)
+5. MuMu タッチ強化：MuMu の外部レンダラープロセスのタッチインターフェースを呼び出します。`MuMu のスクリーンショット拡張モードを有効にする` をチェックした後にのみタッチモードのドロップダウンに表示され、利用できない場合は自動的に Minitouch にフォールバックします（実験機能）。公式版 MuMu V6.3.2 以降が必要で、Arknights Edition とグローバル版は未対応です。MuMu のバックグラウンド常駐（バックグラウンド放置）シーンでの操作に対応します。
 
 ## ADB Lite
 

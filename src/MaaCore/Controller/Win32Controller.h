@@ -2,6 +2,7 @@
 
 #ifdef _WIN32
 
+#include <deque>
 #include <memory>
 #include <string>
 
@@ -34,6 +35,8 @@ public:
         Win32InputMethod mouse_method,
         Win32InputMethod keyboard_method);
 
+    void restore_window_position();
+
 public: // ControllerAPI 接口
     virtual bool connect(const std::string& adb_path, const std::string& address, const std::string& config) override;
     virtual bool inited() const noexcept override;
@@ -45,6 +48,7 @@ public: // ControllerAPI 接口
     virtual size_t get_version() const noexcept override { return 0; }
 
     virtual bool screencap(cv::Mat& image_payload, bool allow_reconnect = false) override;
+    virtual bool screencap_for_preview(cv::Mat& image_payload, bool allow_reconnect = false) override;
 
     virtual bool start_game(const std::string& client_type) override;
     virtual bool stop_game(const std::string& client_type) override;
@@ -55,7 +59,7 @@ public: // ControllerAPI 接口
         const Point& p1,
         const Point& p2,
         int duration = 0,
-        bool extra_swipe = false,
+        SwipeExtraDirection extra_swipe = SwipeExtraDirection::None,
         double slope_in = 1,
         double slope_out = 1,
         bool with_pause = false) override;
@@ -63,14 +67,19 @@ public: // ControllerAPI 接口
     virtual bool inject_input_event(const InputEvent& event) override;
 
     virtual bool press_esc() override;
+    virtual void set_main_screen_recognition(bool on) override;
     virtual ControlFeat::Feat support_features() const noexcept override;
 
     virtual std::pair<int, int> get_screen_res() const noexcept override;
 
 private:
+    bool screencap_impl(cv::Mat& image_payload, bool move_cursor);
     void callback(AsstMsg msg, const json::value& details);
+    // 记录窗口当前位置，任务结束时恢复
+    void save_window_position();
 
     // 封装 MaaWin32ControlUnit 的调用
+    bool prepare_window_for_input();
     bool unit_connect();
     bool unit_screencap(cv::Mat& image);
     bool unit_click(int x, int y);
@@ -79,11 +88,11 @@ private:
     bool unit_touch_move(int contact, int x, int y, int pressure);
     bool unit_touch_up(int contact);
     bool unit_input_text(const std::string& text);
+    bool unit_key_down(int key);
+    bool unit_key_up(int key);
     bool unit_click_key(int key);
 
 private:
-    static constexpr int DefaultSwipeDelay = 10; // ms
-
     AsstCallback m_callback = nullptr;
     std::unique_ptr<Win32ControlUnitLoader> m_loader;
     void* m_unit_handle = nullptr;
@@ -96,6 +105,13 @@ private:
     Win32ScreencapMethod m_screencap_method = Win32Screencap::None;
     Win32InputMethod m_mouse_method = Win32Input::None;
     Win32InputMethod m_keyboard_method = Win32Input::None;
+
+    std::deque<long long> m_screencap_cost;
+    int m_screencap_times = 0;
+
+    bool m_main_screen_recognition = false;
+    RECT m_original_window_rect = { 0, 0, 0, 0 };
+    bool m_window_rect_saved = false;
 };
 } // namespace asst
 

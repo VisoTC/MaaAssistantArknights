@@ -15,8 +15,10 @@ public:
     virtual ~BattleProcessTask() override = default;
 
     virtual bool set_stage_name(const std::string& stage_name) override;
-    void set_wait_until_end(bool wait_until_end);
-    void set_formation_task_ptr(std::shared_ptr<std::unordered_map<std::string, std::string>> value);
+
+    void set_wait_until_end(bool wait_until_end) { m_need_to_wait_until_end = wait_until_end; };
+
+    void set_formation_task_ptr(std::shared_ptr<std::unordered_map<battle::OperNameTag, std::string>> value);
 
 protected:
     virtual bool _run() override;
@@ -35,20 +37,25 @@ protected:
 
     virtual bool need_to_wait_until_end() const { return m_need_to_wait_until_end; }
 
+    // 等待战斗结束期间是否继续策略轮询：经 set_wait_until_end 打开的等待是流程同步语义
+    // （等战斗结束再导航下一关），不应隐式挂机；依赖等待期轮询驱动战斗的模式由其 override 打开
+    virtual bool need_strategy_during_wait() const noexcept { return false; }
+
     bool to_group();
     bool do_action(const battle::copilot::Action& action, size_t index);
 
-    const std::string& get_name_from_group(const std::string& action_name);
+    // 将作业步骤中的name转换为具体干员名
+    battle::OperNameTag get_name_from_group(battle::Role role, const std::string& oper_name_in_action);
     void notify_action(const battle::copilot::Action& action);
     bool wait_condition(const battle::copilot::Action& action);
-    bool enter_bullet_time(const std::string& name, const Point& location);
+    bool enter_bullet_time(battle::Role role, const std::string& name, const std::optional<Point>& location);
     void sleep_and_do_strategy(unsigned millisecond);
 
     battle::copilot::CombatData m_combat_data;
-    std::unordered_map</*group*/ std::string, /*oper*/ std::string> m_oper_in_group;
+    std::unordered_map</*group*/ battle::OperNameTag, /*oper*/ battle::OperNameTag> m_oper_in_group;
 
     bool m_in_bullet_time = false;
     bool m_need_to_wait_until_end = false;
-    std::shared_ptr<std::unordered_map<std::string, std::string>> m_formation_ptr = nullptr;
+    std::shared_ptr<std::unordered_map<battle::OperNameTag, std::string>> m_formation_ptr = nullptr;
 };
 }

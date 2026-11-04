@@ -5,8 +5,8 @@ icon: ri:game-fill
 
 # Integrated Strategy (I.S.) Schema
 
-::: tip
-Please note that JSON files do not support comments. Comments are for demonstration purposes only and should not be copied directly
+::: tip  
+Please note that JSON files do not support comments. Comments are for demonstration purposes only and should not be copied directly  
 :::
 
 ## Integrated Strategy resources location
@@ -18,6 +18,7 @@ Please note that JSON files do not support comments. Comments are for demonstrat
     `Sami/` for Sami's I.S. ("萨米" - Expeditioner's Jǫklumarkar)
     `Sarkaz/` for Sarkaz's I.S. ("萨卡兹" - Sarkaz Endless Tale)
     `JieGarden/` for JieGarden's I.S. ("界园" - Boundary Garden)
+    `BlackFlow/` for BlackFlow's I.S. ("黑流树海")
     - `autopilot/` combat json for each level
       - `level_name_in_chinese.json` combat logic of the level
     - `encounter/` encounter nodes logic
@@ -38,6 +39,14 @@ Please note that JSON files do not support comments. Comments are for demonstrat
 
 - In `JieGarden/`:
   - `coppers.json` basic information and pickup/replacement logic for Coppers
+  - `map.json` stores template image information for JieGarden's map nodes
+
+- In `BlackFlow/`:
+  - `strategy.json` high-level routing strategy configuration for BlackFlow's I.S.
+  - `node_execution.json` node type handling routing configuration for BlackFlow's I.S.
+  - `map_perception/` map perception visual resources for BlackFlow's I.S.
+  - `scrap_market.json` scrap trader (秘境行商) data for BlackFlow's I.S. (idle natural item prices, refresh costs and processing keep limit)
+  - `map_templates.json` map layout templates for BlackFlow's I.S.
 
 ## Integrated Strategy Step 1: Operator Recruitment
 
@@ -73,8 +82,8 @@ Split operators in different **_groups_** according to your understanding of the
 
 :::
 
-::: tip
-By default, only E1 Level 55 operators will be recruited
+::: tip  
+By default, only E1 Level 55 operators will be recruited  
 :::
 
 ```json
@@ -106,73 +115,73 @@ By default, only E1 Level 55 operators will be recruited
 
    Taking Sami's I.S. as an example: operators are mainly divided into:
 
-   | Group                                                           | Considerations                                             | Class                                      | Operators                                                                                                             |
+   | Group | Considerations | Class | Operators |
    | :-------------------------------------------------------------- | :--------------------------------------------------------- | :----------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
-   | **_地面阻挡_** (Ground Blocking)                                | Field presence and clearing enemies                        | Defenders, Guards                          | Healing defenders, cornerstones, Blacknight, Mountain, M3, Ling and Scene's summons, Spot, Defender reserve operators |
-   | **_地面单切/处决者_** (Ground Single-Target/Executors)          | Solo elite enemies                                         | Executor specialists                       | SilverAsh, Yato the Elegy, Kirara R Yato, M3, Red                                                                     |
-   | **_高台C_** (Ranged Core)                                       | Sustained and decisive output                              | Snipers, Casters                           | Weathered, Logos, Ch'en the Holungday, Chongyue                                                                       |
-   | **_高台输出_** (Ranged DPS)                                     | Anti-air and sustained output                              | Snipers, Casters                           | Archetto, Exusiai, Kroos, Steward                                                                                     |
-   | **_速狙_** (Fast Snipers)                                       | Physical damage, standard range                            | Snipers                                    | Eyjafjalla, Exusiai, Yeye, Kroos                                                                                      |
-   | **_术师_** (Casters)                                            | Arts damage, standard range                                | Single-target Casters                      | Eyjafjalla, Logos, Steward                                                                                            |
-   | **_辅助_** (Supporters)                                         | Can hit 1 tile behind                                      | Supporters                                 | Suzuran, Lily of the Valley, Yeye, Orchid                                                                             |
-   | **_狙击_** (Long-range Snipers)                                 | Longer range high ground                                   | Artilleryman, Spreadshooter                | Weathered, Toddifons, Rosa                                                                                            |
-   | **_奶_** (Healers)                                              | Healing ability                                            | Medics, Supporters                         | Kal'tsit, Skadi the Corrupting Heart, Hibiscus, Ansel                                                                 |
-   | **_单奶_** (Single-target Healers)                              | Attack range depth >= 4                                    | Medics                                     | Kal'tsit, Reed the Flame Shadow, Ptilopsis, Perfumer, Hibiscus, Ansel                                                 |
-   | **_群奶_** (AoE Healers)                                        | Attack range depth < 4, can heal behind                    | Medics, Supporters                         | Nightingale, Ptilopsis, Skadi the Corrupting Heart                                                                    |
-   | **_回费_** (DP Recovery)                                        | Cost recovery                                              | Vanguards                                  | Myrtle, Ines, Fang, Vanilla                                                                                           |
-   | **_地刺_** (Ground Traps)                                       | No blocking, provides DPS or slowing in front of defenders | Ambushers                                  | Gladiia, Ascalon, Manticore                                                                                           |
-   | **_地面远程_** (Ground Ranged)                                  | Ground long-range, can output behind shields               | Instructors, Lords                         | Horn, Pallas, Thorns, SilverAsh                                                                                       |
-   | **_领主_** (Lords)                                              | Ground attack range depth > 4, can target air              | Fortress, Lord                             | Thorns, SilverAsh, Chouyu                                                                                             |
-   | **_盾法_** (Shield Casters)                                     | Short attack range, some tanking ability                   | Arts Fighter Casters                       | Lin, Carnelian                                                                                                        |
-   | **_炮灰_** (Fodder)                                             | Absorb attacks, redeploy                                   | Specialists, summons                       | M3, Red, Myrtle, reserve operators                                                                                    |
-   | **_大龙_** (Big Dragon)                                         | Tank in front of blockers, easy to combine                 | Summons                                    | Ling's dragons, Jessica the Flame Purifier's shield                                                                   |
-   | **_补给站_** (Supply Stations)                                  | Accelerate main DPS operator skill rotation                | Summons                                    | Support Supply Station, Artificer operator summons                                                                    |
-   | **_无人机_** (Drones)                                           | Ignore height restrictions for healing summons             | Summons                                    | Skadi's Seaborn, Silence's Medical Drone                                                                              |
-   | **_支援陷阱_** (Support Traps)                                  | Deployable ground explosives                               | Summons                                    | Support Mist Generator, Support Rumble-Rumble                                                                         |
-   | **_障碍物_** (Obstacles)                                        | Don't take deployment slots, attract aggro or block        | Summons                                    | Cage, obstacles                                                                                                       |
-   | **_其他地面_** (Other Ground)                                   | Ground operators not preferred for priority use            | Push/pull, block-1 vanguards, swordmasters | Bagpipe, Croissant                                                                                                    |
-   | **_高台预备/其他高台_** (High Ground Reserve/Other High Ground) | High ground operators not preferred for priority use       | AoE casters, chain casters, tacticians     | Orchid, reserve operators                                                                                             |
+   | **_地面阻挡_** (Ground Blocking) | Field presence and clearing enemies | Defenders, Guards | Healing defenders, cornerstones, Blacknight, Mountain, M3, Ling and Scene's summons, Spot, Defender reserve operators |
+   | **_地面单切/处决者_** (Ground Single-Target/Executors) | Solo elite enemies | Executor specialists | SilverAsh, Yato the Elegy, Kirara R Yato, M3, Red |
+   | **_高台C_** (Ranged Core) | Sustained and decisive output | Snipers, Casters | Weathered, Logos, Ch'en the Holungday, Chongyue |
+   | **_高台输出_** (Ranged DPS) | Anti-air and sustained output | Snipers, Casters | Archetto, Exusiai, Kroos, Steward |
+   | **_速狙_** (Fast Snipers) | Physical damage, standard range | Snipers | Eyjafjalla, Exusiai, Yeye, Kroos |
+   | **_术师_** (Casters) | Arts damage, standard range | Single-target Casters | Eyjafjalla, Logos, Steward |
+   | **_辅助_** (Supporters) | Can hit 1 tile behind | Supporters | Suzuran, Lily of the Valley, Yeye, Orchid |
+   | **_狙击_** (Long-range Snipers) | Longer range high ground | Artilleryman, Spreadshooter | Weathered, Toddifons, Rosa |
+   | **_奶_** (Healers) | Healing ability | Medics, Supporters | Kal'tsit, Skadi the Corrupting Heart, Hibiscus, Ansel |
+   | **_单奶_** (Single-target Healers) | Attack range depth >= 4 | Medics | Kal'tsit, Reed the Flame Shadow, Ptilopsis, Perfumer, Hibiscus, Ansel |
+   | **_群奶_** (AoE Healers) | Attack range depth < 4, can heal behind | Medics, Supporters | Nightingale, Ptilopsis, Skadi the Corrupting Heart |
+   | **_回费_** (DP Recovery) | Cost recovery | Vanguards | Myrtle, Ines, Fang, Vanilla |
+   | **_地刺_** (Ground Traps) | No blocking, provides DPS or slowing in front of defenders | Ambushers | Gladiia, Ascalon, Manticore |
+   | **_地面远程_** (Ground Ranged) | Ground long-range, can output behind shields | Instructors, Lords | Horn, Pallas, Thorns, SilverAsh |
+   | **_领主_** (Lords) | Ground attack range depth > 4, can target air | Fortress, Lord | Thorns, SilverAsh, Chouyu |
+   | **_盾法_** (Shield Casters) | Short attack range, some tanking ability | Arts Fighter Casters | Lin, Carnelian |
+   | **_炮灰_** (Fodder) | Absorb attacks, redeploy | Specialists, summons | M3, Red, Myrtle, reserve operators |
+   | **_大龙_** (Big Dragon) | Tank in front of blockers, easy to combine | Summons | Ling's dragons, Jessica the Flame Purifier's shield |
+   | **_补给站_** (Supply Stations) | Accelerate main DPS operator skill rotation | Summons | Support Supply Station, Artificer operator summons |
+   | **_无人机_** (Drones) | Ignore height restrictions for healing summons | Summons | Skadi's Seaborn, Silence's Medical Drone |
+   | **_支援陷阱_** (Support Traps) | Deployable ground explosives | Summons | Support Mist Generator, Support Rumble-Rumble |
+   | **_障碍物_** (Obstacles) | Don't take deployment slots, attract aggro or block | Summons | Cage, obstacles |
+   | **_其他地面_** (Other Ground) | Ground operators not preferred for priority use | Push/pull, block-1 vanguards, swordmasters | Bagpipe, Croissant |
+   | **_高台预备/其他高台_** (High Ground Reserve/Other High Ground) | High ground operators not preferred for priority use | AoE casters, chain casters, tacticians | Orchid, reserve operators |
 
-   ::: tip
+   ::: tip  
    "Ground Blocking" mainly considers an operator's overall defensive capabilities (sometimes killing everything is also a form of defense), including "Ground Ranged" and "Lord" groups.
 
    "Healers" mainly considers overall healing ability, including single-target and AoE healers. Consider attack range coverage when deciding whether to use single-target healers (healing 4 tiles) or AoE healers (healing behind).
 
    "Ranged DPS" only considers output ability, mainly a mixed ordering of sniper and caster professions. Consider damage type, attack range and other restrictions when using specific groups like fast snipers, casters, supporters, or shield casters.
 
-   For trap-type summons, because there are many of them, don't put them in the support trap group. It works better to let MAA deploy them automatically.
+   For trap-type summons, because there are many of them, don't put them in the support trap group. It works better to let MAA deploy them automatically.  
    :::
 
 2. Groups requiring special handling
 
    In addition to those general groups, sometimes we need more custom tweaks for some operators or types such as
 
-   | Group                    | Operators                                  | Features                                                                                                         |
+   | Group | Operators | Features |
    | :----------------------- | :----------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
-   | 益达 (Weathered)         | 维什戴尔 (Weathered)                       | High ground DPS, prioritizing deployment can reduce pressure                                                     |
-   | 棘刺 (Thorns)            | 棘刺 (Thorns), 号角 (Horn)                 | Ground ranged output, Phantom I.S. has some maps with very suitable positions                                    |
-   | 召唤类 (Summoners)       | 凯尔希 (Kal'tsit), 令 (Ling), 稀音 (Scene) | Self-contained ground blocking, some maps need priority deployment, summons can be used as blockers or fodder    |
-   | 情报官 (Agents)          | 晓歌 (Cantabile), 伊内丝 (Ines)            | Can recover DP, provide side output, and can single cut                                                          |
-   | 浊心斯卡蒂 (Skadi Alter) | 浊心斯卡蒂 (Skadi the Corrupting Heart)    | Decent healing under low pressure, but special range, some maps have suitable positions                          |
-   | 焰苇 (Reed Alter)        | 焰影苇草 (Reed the Flame Shadow)           | Commonly used opening operator in Sami I.S., combines healing and output, some maps have optimal positions       |
-   | 玛恩纳 (Mlynar)          | 玛恩纳 (Mlynar), 银灰 (SilverAsh)          | Ground large-area decisive output, can be deployed against bosses                                                |
-   | 史尔特尔 (Surtr)         | 史尔特尔 (Surtr)                           | Since Surtr always carries S3 at E2, field presence ability is almost zero, deployment priority is extremely low |
-   | 骰子 (Dice)              | 骰子 (Dice)                                | In Mizuki I.S. the dice needs to be operated separately                                                          |
+   | 益达 (Weathered) | 维什戴尔 (Weathered) | High ground DPS, prioritizing deployment can reduce pressure |
+   | 棘刺 (Thorns) | 棘刺 (Thorns), 号角 (Horn) | Ground ranged output, Phantom I.S. has some maps with very suitable positions |
+   | 召唤类 (Summoners) | 凯尔希 (Kal'tsit), 令 (Ling), 稀音 (Scene) | Self-contained ground blocking, some maps need priority deployment, summons can be used as blockers or fodder |
+   | 情报官 (Agents) | 晓歌 (Cantabile), 伊内丝 (Ines) | Can recover DP, provide side output, and can single cut |
+   | 浊心斯卡蒂 (Skadi Alter) | 浊心斯卡蒂 (Skadi the Corrupting Heart) | Decent healing under low pressure, but special range, some maps have suitable positions |
+   | 焰苇 (Reed Alter) | 焰影苇草 (Reed the Flame Shadow) | Commonly used opening operator in Sami I.S., combines healing and output, some maps have optimal positions |
+   | 玛恩纳 (Mlynar) | 玛恩纳 (Mlynar), 银灰 (SilverAsh) | Ground large-area decisive output, can be deployed against bosses |
+   | 史尔特尔 (Surtr) | 史尔特尔 (Surtr) | Since Surtr always carries S3 at E2, field presence ability is almost zero, deployment priority is extremely low |
+   | 骰子 (Dice) | 骰子 (Dice) | In Mizuki I.S. the dice needs to be operated separately |
 
-::: info
-Currently fixed to group unidentified ground crews behind the penultimate formation (other ground), and unidentified high-platform crews behind the penultimate formation (other high-platform)
+::: info  
+Currently fixed to group unidentified ground crews behind the penultimate formation (other ground), and unidentified high-platform crews behind the penultimate formation (other high-platform)  
 :::
 
-::: tip
-Newly implemented operators need to be manually added to each theme's `recruitment.json`, and developers may not always remember to make adaptations.
-If you notice this issue, you can open an issue to remind developers, or you can submit a PR directly.
+::: tip  
+Newly implemented operators need to be manually added to each theme's `recruitment.json`, and developers may not always remember to make adaptations.  
+If you notice this issue, you can open an issue to remind developers, or you can submit a PR directly.  
 :::
 
 ### Preset groups--Complete line-up testing
 
 In a team that you expect to pass or reach the top, what are the basic core players? Are they essential? How many do you need?
 
-::: info
+::: info  
 The current script's recruiting logic is to only recruit 0 hope and key agents before the lineup meets the lineup readiness level, and save hope for high star key agents. So don't set the threshold number too high, it is recommended that the number of all the operators needed (the basic core lineup) should add up to 4-8 operators.
 
 (The current implementation manually marks high-strength operators and three-star operators as key operators, and only recruits key operators during recruitment) (TODO: Identify 0 hope operators)
@@ -181,7 +190,7 @@ After the team meets the lineup completeness check, each time you get a recruitm
 
 When forming combat squads, the default sorting of the operator selection interface (from top to bottom, left to right) will be read and stored in order. Based on this order, keeping the relative order, the first operators that meet the lineup completeness will be moved to the beginning until the lineup completeness is all satisfied or there are no operators that meet the lineup completeness. Then reserve operators will be moved to the end, forming a new order, and selection will be based on this new order. In particular, since six-star temporary recruited operators are at the very beginning of the squad by default, it's easy to include six-star temporary recruited operators in the actual squad. (TODO: Exclude temporary recruited E1 operators that can't be used)
 
-For beginner accounts: If 10 recruitments don't satisfy half the team's key operators, the completeness check will be abandoned, and operators will be used based on their ratings, so beginner accounts without trained three-stars may end up with just two or three six-stars and a bunch of reserve operators.
+For beginner accounts: If 10 recruitments don't satisfy half the team's key operators, the completeness check will be abandoned, and operators will be used based on their ratings, so beginner accounts without trained three-stars may end up with just two or three six-stars and a bunch of reserve operators.  
 :::
 
 ```json
@@ -217,12 +226,12 @@ For beginner accounts: If 10 recruitments don't satisfy half the team's key oper
 }
 ```
 
-::: caution
-When an operator appears in multiple operator groups, it is only counted once.
+::: caution  
+When an operator appears in multiple operator groups, it is only counted once.  
 For example: Operator `棘刺` (Thorns) may appear in both the `棘刺` (Thorns) group and the `地面阻挡` (Ground Blocking) group. Within this strategy group, operator `棘刺` (Thorns) is only counted once.
 
-But each strategy group counts separately.
-For example: Operator `焰影苇草` (Reed the Flame Shadow) may appear in both the `高台输出` (Ranged DPS) group and the `奶` (Healers) group. In this case, both strategy groups can count operator `焰影苇草` (Reed the Flame Shadow).
+But each strategy group counts separately.  
+For example: Operator `焰影苇草` (Reed the Flame Shadow) may appear in both the `高台输出` (Ranged DPS) group and the `奶` (Healers) group. In this case, both strategy groups can count operator `焰影苇草` (Reed the Flame Shadow).  
 :::
 
 ### Adjusting parameters for operator recruitment
@@ -246,6 +255,7 @@ For example: Operator `焰影苇草` (Reed the Flame Shadow) may appear in both 
                {
                    "name": "百炼嘉维尔",                      // Operator name ("百炼嘉维尔" = "Gavial the Invincible", the first position in the group indicates that
                                                              // when it is necessary to deploy a ground blocking group, the first thing to check is whether it is Gavial Alter or not.)
+                   "role": "Warrior",                        // Operator role, optional. Used to distinguish operators with the same name; English role names should be used, case-insensitive
                    "skill": 3,                               // Which skill to use (In this case skill 3)
                    "skill_usage": 2,                         // Skill usage mode, refer to Combat Operation Protocol, difference is default is 1 if empty
                                                              // (0 is don't use automatically, 1 is use when ready, 2 is use x times (x is set by "skill_times" field), 3 is not supported for now)
@@ -266,6 +276,7 @@ For example: Operator `焰影苇草` (Reed the Flame Shadow) may appear in both 
                                                              // If the lineup completeness test is not passed, only key and 0 hope are recruited, saving hope.
                    "is_start": true,                         // If true, the operator is a starter. Default to false if empty. If there is no start player in the team,
                                                              // only start players and 0 hope players will be recruited, and user-filled players will be recruited.
+                   "is_alternate": false,                    // true means a backup operator (can be recruited repeatedly; when swiping to a backup operator, no further swiping to the right), false or omitted means a normal operator
                    "auto_retreat": 0,                        // Auto-retreat after a few full-seconds of deployment, takes effect when greater than 0, mainly used for specialists and vanguards,
                                                              // since I.S. usually starts at 2x speed, it is recommended to set it to skill duration divided by 2
                    "recruit_priority_when_team_full": 850,   // No need to set separately, recruitment priority when lineup completeness is met, default is recruitment priority -100
@@ -284,6 +295,12 @@ For example: Operator `焰影苇草` (Reed the Flame Shadow) may appear in both 
                                                              // (This means that when there are 2 or more operators from Kal'tsit, Ground Blocking, and Thorns groups,
                                                              // Gavial the Invincible's recruitment priority is reduced by 300)
                        }
+                   ],
+                   "collection_priority_offsets": [          // Adjust recruitment priority based on currently owned collectibles
+                       {
+                           "collection": "古旧的钱币",        // Collectible name ("古旧的钱币" = "Antique Coin")
+                           "offset": 100                     // Adjustment to recruitment priority after obtaining this collectible, default to 0 if omitted
+                       }
                    ]
                },
                ...
@@ -295,10 +312,10 @@ For example: Operator `焰影苇草` (Reed the Flame Shadow) may appear in both 
    }
    ```
 
-   ::: info
+   ::: info  
    The groups in `recruit_priority_offsets` should not have duplicate operators.
 
-   After setting `auto_retreat`, you generally don't need to set `retreat_plan` for it in the battle plan.
+   After setting `auto_retreat`, you generally don't need to set `retreat_plan` for it in the battle plan.  
    :::
 
 5. Add groups and operators as you see fit
@@ -363,8 +380,8 @@ For example: Operator `焰影苇草` (Reed the Flame Shadow) may appear in both 
        ...
    ```
 
-   ::: tip
-   The blue box alternative will take effect when all steps in `deploy_plan` are completed but there are still operators to deploy in the waiting area, following the same logic as the general combat strategy
+   ::: tip  
+   The blue box alternative will take effect when all steps in `deploy_plan` are completed but there are still operators to deploy in the waiting area, following the same logic as the general combat strategy  
    :::
 
 2. Deployment tile blacklist
@@ -372,8 +389,8 @@ For example: Operator `焰影苇草` (Reed the Flame Shadow) may appear in both 
    There are points of priority for defence and points of priority for not deploying operators, such as where the fireball passes through, under the boss's feet, and some locations that are not good for output.
 
    At this point, we introduce `blacklist_location` to blacklist the tiles that we don't want MAA to deploy operators on.
-   ::: info
-   The tiles added here will not be used, even if they are included in the deployment strategy later on.
+   ::: info  
+   The tiles added here will not be used, even if they are included in the deployment strategy later on.  
    :::
 
    ```json
@@ -432,26 +449,27 @@ There is no need to set up too many customised plans when there is a problem. It
    ]
    ```
 
-   ::: info
-   MAA flattens all deployment commands and then executes the highest-priority deployment operations
-   Example: deploys [ "百嘉" (Gavial), "基石" (Cornerstone), "地面C" (Ground C)] on [6,4], deploys [ "基石" (Cornerstone), "地面C" (Ground C)] on [6,3], then MAA will flatten the deployment commands to [ "百嘉" (Gavial), "基石" (Cornerstone), "地面C" (Ground C), "基石" (Cornerstone), "地面C" (Ground C)]
+   ::: info  
+   MAA flattens all deployment commands and then executes the highest-priority deployment operations  
+   Example: deploys [ "百嘉" (Gavial), "基石" (Cornerstone), "地面C" (Ground C)] on [6,4], deploys [ "基石" (Cornerstone), "地面C" (Ground C)] on [6,3], then MAA will flatten the deployment commands to [ "百嘉" (Gavial), "基石" (Cornerstone), "地面C" (Ground C), "基石" (Cornerstone), "地面C" (Ground C)]  
    If a "百嘉" (Gavial) operator on [6,4] is retreated during battle, the "基石" (Cornerstone) operator in hand, if available, will be deployed on [6,4], instead of [6,3]
 
-   This means that from a macro perspective, after each deployment action is completed, it will start checking for executable strategies from the beginning (the current step's position has no already placed operators, and there are operators in the deployment area belonging to this step's operator group)
+   This means that from a macro perspective, after each deployment action is completed, it will start checking for executable strategies from the beginning (the current step's position has no already placed operators, and there are operators in the deployment area belonging to this step's operator group)  
    :::
 
-   ::: tip
+   ::: tip  
    Some commonly used operator group usages:
    1. In many operations, the main defensive point combination is [ "地面阻挡" (Ground Blocking), "处决者" (Executor), "其他地面" (Other Ground)], which means when the main tanking operator dies, it will try to use an executor to delay the CD; when there's too much survival pressure on this point, consider using [ "重装" (Heavy Defender), "地面阻挡" (Ground Blocking), "处决者" (Executor), "炮灰" (Fodder), "其他地面" (Other Ground)]; for positions behind defenders, prioritize [ "地面远程" (Ground Ranged), "地面阻挡" (Ground Blocking), "处决者" (Executor), "其他地面" (Other Ground)]; to purely attract aggro or sacrifice, use [ "炮灰" (Fodder), "障碍物" (Obstacles), "其他地面" (Other Ground)]
 
    2. High ground position combinations commonly use [ "高台输出" (Ranged DPS), "其他高台" (Other High Ground)], if you want any high ground to be placed you can use [ "高台输出" (Ranged DPS), "狙击" (Sniper), "辅助" (Supporter), "盾法" (Shield Caster), "其他高台" (Other High Ground)]
 
    3. Some ground positions are suitable for both SilverAsh and ground trap operators [ "玛恩纳" (SilverAsh), "地刺" (Ground Traps)]
-      :::
 
-2. Deployment of operators at a point in time
-   ::: tip
-   Suitable for certain single-cutting operators or usage scenarios that require cannon fodder
+   :::
+
+2. Deployment of operators at a point in time  
+   ::: tip  
+   Suitable for certain single-cutting operators or usage scenarios that require cannon fodder  
    :::
 
    ```json
@@ -473,11 +491,11 @@ There is no need to set up too many customised plans when there is a problem. It
        ]
    ```
 
-3. Retrieval of the operators at some point
-   ::: tip
+3. Retrieval of the operators at some point  
+   ::: tip  
    Sometimes the fodder is too strong to hold the field or you need to deploy to move the lineup. What should I do? Retreat!
 
-   Deployment and retreat commands for the same position should have non-overlapping condition numbers, otherwise it will instantly retreat after deploying
+   Deployment and retreat commands for the same position should have non-overlapping condition numbers, otherwise it will instantly retreat after deploying  
    :::
 
    ```json
@@ -539,10 +557,10 @@ There is no need to set up too many customised plans when there is a problem. It
        ],
    ```
 
-::: info
+::: info  
 When MAA cannot find a customized combat strategy for the current level, it will automatically execute the general combat strategy.
 
-When MAA fails to recognize the current level name, it will not execute any combat logic.
+When MAA fails to recognize the current level name, it will not execute any combat logic.  
 :::
 
 ### Have a special understanding of an operator's playing style? -- Refined operation of specific operators
@@ -582,6 +600,7 @@ The Encounter options can be modified to guide MAA towards special endings
 ```json
 {
     "theme": "Sami",                              // I.S. Theme
+    "mode": [1, 4],                               // Restrict which modes this file takes effect in; optional; applies to all modes if omitted
     "stage": [                                    // Encounter event
         {
             "name": "低地市集",                    // Name of the Encounter ("低地市集" = "Lowland Market")
@@ -589,27 +608,100 @@ The Encounter options can be modified to guide MAA towards special endings
             "choose": 3,                          // Which option should you choose first (the third one is preferred here)
                                                   // If you can't choose it, choose the escape option (basically the last one)
 
-            "choices": [                          // Requirements for selecting options
-                                                  // (it does not affect program operation for the time being
-                                                  // only marking applicable situations for easy modification)
+            "choices": [                          // Additional requirements for specific options
                 {
                     "name": "选择碎草药",          // Option name ("选择碎草药" = "Selection of herbs")
-                    "ChaosLevel": {               // Immunity / Light level
-                        "value": "3",             // Required number
-                        "type": ">"               // Is it greater than or less than
-                                                  // (here it means that the Immunity / Light level is greater than 3
-                                                  // only when the option of "Selection of herbs" is activated)
-                    }
+                    "choose": 1,                  // The option index to prefer when the condition below is met; optional; this entry has no effect if omitted
+                    "requirements": [             // Conditions for taking effect, optional
+                        {
+                            "name": "Vision",     // Condition type; currently only Vision (Light value) is supported
+                            "value": "3",         // Required number
+                            "type": ">"           // Greater than or less than (= is also supported; here it means this entry's choose takes effect only when Light is greater than 3)
+                        }
+                    ]
                 },
                 {
                     "name": "选择好看的织物",      // ("选择好看的织物" = "Choosing good-looking fabrics")
-                    "ChaosLevel": {
-                        "value": "3",
-                        "type": ">"
-                    }
+                    "choose": 1,
+                    "requirements": [
+                        {
+                            "name": "Vision",
+                            "value": "3",
+                            "type": ">"
+                        }
+                    ]
                 },
                 ...
 ```
+
+Events also support the following optional fields:
+
+- `option_text`: string array, the text of each option of the event, used to assist recognition matching
+- `next_event`: string, the name of the next event to jump to after this event is handled
+- `fallback_choices`: an array in the form `[[actual option count, preferred choice], ...]`; when the number of options actually recognized differs from `option_num`, the entry matching the actual option count is used to select the corresponding option
+
+### BlackFlow encounter strategy and selection results
+
+This section is machine-translated. If possible, please read the Chinese document. Any corrections or suggestions would be greatly appreciated.
+
+The BlackFlow strategy module supports `encounter_rules`. A rule matches an event by its title `event_name`, and `when` uses the existing strategy condition syntax.
+For example, the event title for the Expedition node (先行一步) is "未涉足之树". When multiple rules match, `rank` is compared first and the lower value wins;
+rules with the same `rank` are ordered by the lexicographical order of their `id`. When no rule matches, the event's default configuration is used.
+
+Options can be matched by the order of texts in `option_text`, or by specifying both `option_num` and `choose`: when the actual number of options
+equals `option_num`, the option numbered `choose` (starting from 1) is selected. The two forms are mutually exclusive. `allow_fallback` defaults to
+`true`: when the target is unavailable or the selection fails, available options are tried from bottom to top; when set to `false`, a failed target selection ends this selection.
+
+Event decisions can read the following built-in page facts without declaring them again in `facts`:
+
+| Fact | Type | Meaning |
+| ----------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `encounter.name` | `string` | The currently recognized event title. |
+| `encounter.option_count` | `int` | The number of options actually recognized. |
+| `encounter.available_options` | `string_list` | Option texts available for this decision. |
+| `encounter.route_known` | `bool` | Whether a valid, complete single remaining route was kept when entering the event. |
+| `encounter.remaining_battles` | `int` | The number of battles after the current event on that route; only provided to decisions when the route is known. |
+| `encounter.selected_option` | `int` | The index of the option actually selected, starting from 1. |
+| `encounter.selected_text` | `string` | The text of the option actually selected. |
+| `encounter.used_fallback` | `bool` | Whether the actual selection used the fallback. |
+| `encounter.rule_id` | `string` | The rule matched by this selection request; empty when no rule matched. |
+
+`available_options`, `route_known` and `remaining_battles` are provided for event decisions. Concluding that no battle remains requires both
+`route_known` to be `true` and `remaining_battles` to be `0`. An empty route, multiple landing points, or unclear identities of subsequent nodes
+never allow the conclusion that no battle remains. These facts reflect the plan at the time the event was entered and do not constrain later replanning.
+
+After a successful selection, the shared event plugin emits the `RoguelikeEventSelected` callback, which contains `name`, `option_num`,
+`choose_option`, `option_text`, `rule_id`, `rule_description` and `used_fallback`. The UI log shows the text actually selected;
+when a rule matched and no fallback was used, the rule's `description` is appended as the reason, so different strategies can explain
+their own reasons even when they choose the same option. The BlackFlow session writes the actual selection into page facts
+and then refreshes milestones. `rule_id` represents the original selection request; when a fallback was used it does not prove that the target option was selected,
+so milestones should check the actual selection facts. A selection result does not mean an operator has been dispatched; for items that are always
+obtained once a choice is confirmed, the rule's `on_selected` can update the corresponding facts explicitly.
+
+`on_selected` maps run fact names to values. Only declared `run` facts with matching types are allowed, and writing to `milestone.*`
+is not allowed. The assignments are applied only when the text actually selected belongs to the rule's `option_text`; they are not applied when a fallback selects other text.
+These assignments are written together with this selection record before milestones are refreshed, and no partial update is kept on failure. In Ending 2, once the "线人" (Informant) event confirms the choice
+"我受雇于梅兰德", `sandtable_a` is set to `true` immediately; the node still finishes with the usual reward and wrap-up flow.
+
+Page task results are likewise validated as a whole set of facts and page changes before being written together. A page that is already complete cannot receive another completion result, which prevents
+the same collectible result from being counted twice. Milestone changes use the existing callbacks without adding source records; the end check for missed milestones still runs
+during map observation.
+
+The default BlackFlow event configuration supports `option_tasks`, keyed by the full text of the option actually selected, with the name of an existing task as the value.
+After a match, it is forwarded to the corresponding task chain through the `JustReturn` entry, and the target task runs under its own name, keeping its template configuration, task-name callbacks
+and execution count statistics. That task chain handles the following pages, and the event-level `next_event` is not executed this time. Without a matching entry, the original
+reward and event wrap-up flow continues. All configured tasks must be resolvable before the selection; when a task is missing, no option is clicked.
+
+#### Consecutive single-option events
+
+`continue_single_option` in the default BlackFlow event configuration defaults to `false` and is currently enabled only for "安眠一隅".
+When enabled, the options are recognized again on every page, and an option is selected only when exactly one option is available; there is no fallback selection by fixed text, number or reverse order.
+Zero or multiple available options, as well as a failed selection confirmation, are all treated as a selection failure.
+
+Every selection still uses the confirm button and the `LoadingText` wait chain. Rewards and event dialogues are then handled; when options appear, the event title is checked,
+and the next page is recognized only if the title is still the current event. The whole event ends only after the map is clearly recognized. Adjacent pages may use the same option text.
+Loading, recognition failures and user stops never count as event completion. This field is BlackFlow-only and cannot be enabled together with `next_event` or `option_tasks`.
+Each successful selection still reports the actual option separately, and page completion is reported only after the whole event ends.
 
 ### Dynamically prioritise certain options according to the team situation (TODO)
 
@@ -653,7 +745,7 @@ The Encounter options can be modified to guide MAA towards special endings
             "roles": [                                         // Buy this collectible when you have these classes in your team
                 "WARRIOR"                                      // (This means that if you have a Guard operator in your team
                                                                // you will try to buy a Halberd-Breaker when you encounter it)
-            ],
+            ],                                                 // Only uppercase English role names are supported
             "effect": "所有【近卫】干员的防御力-40%，但攻击力+40%，攻击速度+30", // ("All [Guard] Operators members have -40% Defence, but +40% Attack Power and +30% Attack Speed.")
             "No": 16
         },
@@ -661,7 +753,8 @@ The Encounter options can be modified to guide MAA towards special endings
 
         {
             "name": "Miss.Christine摸摸券",                     // ("Miss.Christine摸摸券" = "Miss.Christine Touch coupon")
-            "promotion": 2,                                   // Purchased when there are 2 operators in the team to be promoted
+            "promotion": 2,                                   // When not 0, purchased only if there are operators awaiting promotion in the team; default is 0, no requirement
+            "promotion_rarity": 6,                            // Upper limit of the rarity of operators awaiting promotion to count; only operators with a rarity lower than this value are counted; optional, default is 6 (i.e., no limit)
             "effect": "立即进阶两个干员（不消耗希望）",           // ("Immediate promote two operators (Does not consume Hope)")
             "No": 15
         },
@@ -674,12 +767,52 @@ The Encounter options can be modified to guide MAA towards special endings
             "decrease_collapse": true                          // true means getting this collectible will reduce collapse value. Will not be purchased when mode is 5
         },
         ...
-
-    "others":                                                  // MAA won't buy these collectibles, like ending collectibles and the crane
-        {
-            "name": "无人起重机"                               // ("无人起重机" = "Unmanned Crane")
-        },
 ```
+
+Besides `priority`, `shopping.json` can declare named buy tables and sell tables for themes that select tables by strategy:
+
+```json5
+{
+    "theme": "BlackFlow",
+    "priority": [ ... ],                     // The default buy table, named default
+    "buy_tables": {                          // Optional named buy tables; items use the same format as priority, and default is reserved for priority
+        "table_name": [ { "name": "..." } ]
+    },
+    "sell_tables": {                         // Optional named sell tables listing the names allowed to be sold; list order does not decide the selling order
+        "cultivation_final": [ "血蕈", "雾滚草", ... ]
+    }
+}
+```
+
+Named tables, `price`, and the balance pre-check while shopping currently apply only to BlackFlow; other themes keep reading `priority` with their original parsing rules.
+
+In every theme, `roles` only accepts the uppercase class names above. BlackFlow additionally requires item names to be non-empty and `roles` and `chars` to be string arrays.
+Any invalid item makes the whole file fail to parse.
+An empty buy table means there are no purchase candidates, and an empty sell table means nothing is sold.
+
+A BlackFlow item can set a positive integer `price`. When the shop balance can be read, items the balance cannot afford are skipped and the next item is checked; without `price` the behavior is unchanged.
+
+### Strategy-based shopping table selection in BlackFlow
+
+The BlackFlow strategy module supports `shopping_rules`. When a page is dispatched, it selects a pair of buy and sell tables based on the current page intent and facts:
+
+```json5
+"shopping_rules": [
+    {
+        "id": "cultivation_final",                           // Unique within the strategy
+        "description": "第三层培育后结束，加工品卖出换种子",   // Optional
+        "page_intent": "scrap_shop.cultivate",               // Optional; if omitted, applies to all pages in this strategy
+        "rank": 0,                                           // Optional, defaults to 0; lower values take priority
+        "when": { "fact": "current_floor", "op": "eq", "value": 3 }, // Optional; uses the existing strategy condition syntax
+        "buy_table": "default",                              // Optional, defaults to default
+        "sell_table": "cultivation_final"                    // Optional; if omitted or empty, nothing is sold
+    }
+]
+```
+
+If multiple rules match, the rule with the lowest `rank` is selected; ties are resolved by the lexicographical order of `id`, as with `encounter_rules`. Both tables come from the same rule; fields from different rules are not combined. If no rule matches, the `default` buy table is used and nothing is sold. Tables are selected again for every page dispatch, so the previous page's selection is not carried over.
+
+`when` cannot access candidate route facts. Referenced table names must exist in BlackFlow's `shopping.json`; otherwise, the strategy configuration fails to parse. The shopping plugin uses the selected buy table, while 秘境行商 (scrap trader) cultivation uses the selected sell table to filter items for sale.
 
 ## Integrated Strategy Special Mechanisms
 
@@ -761,7 +894,11 @@ Here is an example task configuration for farming hidden Collapsal Paradigms:
     "investment_enabled": false,
     "squad": "远程战术分队",                   // ("远程战术分队" = "Ranged Tactics Squad")
     "roles": "稳扎稳打",                       // ("稳扎稳打" = "Steady Approach")
-    "core_char": "维什戴尔",                   // ("维什戴尔" = "Weathered")
+    "core_char_list": [
+        { "name": "维什戴尔", "use_support": false },   // ("维什戴尔" = "Weathered")
+        { "name": "斑点", "use_support": false },       // ("斑点" = "Spot")
+        { "name": "史都华德", "use_support": false }    // ("史都华德" = "Steward")
+    ],
     "expected_collapsal_paradigms": ["目空一些", "睁眼瞎", "图像损坏", "一抹黑"]
                                                // ("目空一些" = "Blank Somewhat", "睁眼瞎" = "Blind Eye", "图像损坏" = "Image Distortion", "一抹黑" = "Pitch Black")
 }

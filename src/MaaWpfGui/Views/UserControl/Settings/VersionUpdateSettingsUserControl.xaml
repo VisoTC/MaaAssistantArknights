@@ -11,10 +11,9 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:s="https://github.com/canton7/Stylet"
     xmlns:settings_vms="clr-namespace:MaaWpfGui.ViewModels.UserControl.Settings"
-    xmlns:uiBehaviors="clr-namespace:MaaWpfGui.Extensions.UIBehaviors"
     d:Background="White"
     d:DataContext="{d:DesignInstance {x:Type settings_vms:VersionUpdateSettingsUserControlModel}}"
-    d:DesignWidth="550"
+    d:DesignWidth="540"
     s:View.ActionTarget="{Binding}"
     mc:Ignorable="d">
     <Grid>
@@ -22,21 +21,14 @@
             <RowDefinition />
             <RowDefinition />
         </Grid.RowDefinitions>
-        <controls:TextBlock
-            Grid.Row="0"
-            HorizontalAlignment="Center"
-            FontWeight="Bold"
-            Text="{DynamicResource GlobalConfigTip}"
-            TextAlignment="Center"
-            Visibility="{c:Binding 'ConfigurationList.Count > 1',
-                                   Source={x:Static helper:Instances.SettingsViewModel}}" />
+        <controls:GlobalConfigTip Grid.Row="0" />
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition />
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
 
@@ -48,55 +40,58 @@
                     Margin="8"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
-                    Content="{DynamicResource StartupUpdateCheck}"
+                    Content="{DynamicResource Settings.Update.StartupCheck}"
                     IsChecked="{Binding StartupUpdateCheck}"
                     IsEnabled="False" />
                 <StackPanel Margin="8" Orientation="Horizontal">
                     <CheckBox
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
-                        Content="{DynamicResource UpdateAutoCheck}"
+                        Content="{DynamicResource Settings.Update.AutoCheck}"
                         IsChecked="{Binding UpdateAutoCheck}" />
-                    <controls:TooltipBlock TooltipText="{DynamicResource UpdateAutoCheckTip}" />
+                    <controls:TooltipBlock TooltipText="{DynamicResource Settings.Update.AutoCheck.Tip}" />
+                </StackPanel>
+                <StackPanel Margin="8" Orientation="Horizontal">
+                    <CheckBox
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Content="{DynamicResource Settings.Update.AutoDownload}"
+                        IsChecked="{Binding AutoDownloadUpdatePackage}" />
+                    <controls:TooltipBlock TooltipText="{DynamicResource Settings.Update.AutoDownload.Tip}" />
+                </StackPanel>
+                <StackPanel Margin="8" Orientation="Horizontal">
+                    <CheckBox
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Content="{DynamicResource Settings.Update.AutoInstall}"
+                        IsChecked="{Binding AutoInstallUpdatePackage}" />
+                    <controls:TooltipBlock TooltipText="{DynamicResource Settings.Update.AutoInstall.Tip}" />
                 </StackPanel>
                 <CheckBox
-                    Margin="8"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Center"
-                    Content="{DynamicResource UpdateAutoDownload}"
-                    IsChecked="{Binding AutoDownloadUpdatePackage}" />
-                <CheckBox
-                    Margin="8"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Center"
-                    Content="{DynamicResource AutoInstallUpdatePackage}"
-                    IsChecked="{Binding AutoInstallUpdatePackage}" />
-                <CheckBox
-                    MaxWidth="150"
+                    MaxWidth="200"
                     Margin="8"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
                     IsChecked="{Binding ShowUpdaterConsole}">
-                    <TextBlock Text="{DynamicResource ShowUpdaterConsole}" TextWrapping="Wrap" />
+                    <TextBlock Text="{DynamicResource Settings.Update.ShowUpdaterConsole}" TextWrapping="Wrap" />
                 </CheckBox>
-                <StackPanel
-                    Margin="8"
-                    Orientation="Horizontal"
-                    Visibility="{c:Binding 'UpdateSource == &quot;Github&quot;'}">
+                <StackPanel Margin="8" Orientation="Horizontal">
                     <CheckBox
+                        MaxWidth="200"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
-                        Content="{DynamicResource ForceGithubGlobalSource}"
-                        IsChecked="{Binding ForceGithubGlobalSource}" />
-                    <controls:TooltipBlock TooltipText="{DynamicResource ForceGithubGlobalSourceTip}" />
+                        IsChecked="{Binding ShowUpdaterProgress}">
+                        <TextBlock Text="{DynamicResource Settings.Update.ShowUpdaterProgress}" TextWrapping="Wrap" />
+                    </CheckBox>
+                    <controls:TooltipBlock TooltipText="{DynamicResource Settings.Update.ShowUpdaterProgress.Tip}" />
                 </StackPanel>
                 <StackPanel Margin="8">
                     <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
                         <controls:TextBlock
                             Margin="8,0,0,0"
                             HorizontalAlignment="Left"
-                            Text="{DynamicResource UpdateCheck}" />
-                        <controls:TooltipBlock TooltipMaxWidth="350" TooltipText="{DynamicResource UpdateCheckTip}" />
+                            Text="{DynamicResource Settings.Update.Channel}" />
+                        <controls:TooltipBlock TooltipText="{DynamicResource Settings.Update.Channel.Tip}" />
                     </StackPanel>
                     <hc:ComboBox
                         Width="150"
@@ -114,8 +109,8 @@
                             <controls:TextBlock
                                 Margin="8,0,0,0"
                                 HorizontalAlignment="Left"
-                                Text="{DynamicResource UpdateSource}" />
-                            <controls:TooltipBlock TooltipMaxWidth="350" TooltipText="{DynamicResource UpdateSourceTip}" />
+                                Text="{DynamicResource Settings.Update.Source}" />
+                            <controls:TooltipBlock TooltipText="{DynamicResource Settings.Update.Source.Tip}" />
                         </StackPanel>
                         <hc:ComboBox
                             Width="150"
@@ -126,60 +121,10 @@
                             SelectedValue="{Binding UpdateSource}"
                             SelectedValuePath="Value" />
                     </StackPanel>
-                    <StackPanel
+                    <controls:UpdateCredentialInput
+                        Width="150"
                         Margin="8"
-                        HorizontalAlignment="Left"
-                        Visibility="{c:Binding 'UpdateSource == &quot;MirrorChyan&quot;'}">
-                        <controls:TextBlock Margin="8,0,0,5" HorizontalAlignment="Left">
-                            <TextBlock.Text>
-                                <MultiBinding StringFormat="{}{0} CDK">
-                                    <Binding Source="{StaticResource MirrorChyan}" />
-                                </MultiBinding>
-                            </TextBlock.Text>
-                        </controls:TextBlock>
-                        <Grid Width="150">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <hc:PasswordBox
-                                hc:BorderElement.CornerRadius="4,0,0,4"
-                                IsSafeEnabled="False"
-                                ShowEyeButton="True"
-                                UnsafePassword="{Binding MirrorChyanCdk}" />
-                            <Button
-                                Grid.Column="1"
-                                hc:BorderElement.CornerRadius="0,4,4,0"
-                                BorderThickness="0,1,1,1"
-                                Command="{s:Action MirrorChyanCdkCopy}"
-                                Content="{DynamicResource Copy}" />
-                        </Grid>
-                        <controls:TextBlock
-                            MaxWidth="150"
-                            Margin="0,5,0,0"
-                            Foreground="{DynamicResource ErrorLogBrush}"
-                            Text="{DynamicResource MirrorChyanCdkFetchFailed}"
-                            TextWrapping="Wrap"
-                            Visibility="{c:Binding MirrorChyanCdkFetchFailed}" />
-                        <controls:TextBlock
-                            MaxWidth="150"
-                            Margin="0,5,0,0"
-                            d:Foreground="{DynamicResource SuccessLogBrush}"
-                            d:Text="{DynamicResource MirrorChyanCdkRemainingDays}"
-                            uiBehaviors:ResourceReferenceHelper.ForegroundResourceKey="{Binding MirrorChyanCdkRemainingBrush}"
-                            Text="{Binding MirrorChyanCdkRemainingText}"
-                            TextWrapping="Wrap"
-                            ToolTip="{Binding MirrorChyanCdkExpiredLocalTime}"
-                            Visibility="{c:Binding 'MirrorChyanCdkRemainingText != &quot;&quot;'}" />
-                    </StackPanel>
-                    <controls:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Hyperlink
-                            Cursor="Hand"
-                            NavigateUri="{Binding Source={x:Static constants:MaaUrls.MirrorChyanWebsite}}"
-                            TextDecorations="None">
-                            <TextBlock Text="{DynamicResource MirrorChyan}" />
-                        </Hyperlink>
-                    </controls:TextBlock>
+                        HorizontalAlignment="Left" />
                 </StackPanel>
             </StackPanel>
             <Grid
@@ -246,7 +191,7 @@
                                     hc:FloatingBlock.Content="{Binding UiVersion}"
                                     Foreground="White"
                                     PreviewMouseDown="MaaVersionClick"
-                                    Text="{DynamicResource MaaVersion}"
+                                    Text="{DynamicResource Settings.Update.MaaVersion}"
                                     TextWrapping="Wrap" />
                             </Border>
                             <Border
@@ -281,7 +226,7 @@
                                     hc:FloatingBlock.Content="{Binding UiVersion}"
                                     Foreground="White"
                                     PreviewMouseDown="UiVersionClick"
-                                    Text="{DynamicResource UiVersion}"
+                                    Text="{DynamicResource Settings.Update.UiVersion}"
                                     TextWrapping="Wrap" />
                             </Border>
                             <Border
@@ -316,7 +261,7 @@
                                     hc:FloatingBlock.Content="{Binding CoreVersion}"
                                     Foreground="White"
                                     PreviewMouseDown="CoreVersionClick"
-                                    Text="{DynamicResource CoreVersion}"
+                                    Text="{DynamicResource Settings.Update.CoreVersion}"
                                     TextWrapping="Wrap" />
                             </Border>
                             <Border
@@ -350,7 +295,7 @@
                                     hc:FloatingBlock.Content="{Binding ResourceVersion}"
                                     Foreground="White"
                                     PreviewMouseDown="ResourceVersionClick"
-                                    Text="{DynamicResource ResourceVersion}"
+                                    Text="{DynamicResource VersionUpdate.ResourceVersion}"
                                     TextWrapping="Wrap" />
                             </Border>
                             <Border
@@ -395,7 +340,7 @@
                                     hc:FloatingBlock.Content="{Binding BuildDateTimeCurrentCultureString}"
                                     Foreground="White"
                                     PreviewMouseDown="MaaVersionClick"
-                                    Text="{DynamicResource BuildDateTime}"
+                                    Text="{DynamicResource Settings.Update.BuildDateTime}"
                                     TextWrapping="Wrap" />
                             </Border>
                             <Border
@@ -429,7 +374,7 @@
                                     hc:FloatingBlock.Content="{Binding ResourceDateTimeCurrentCultureString}"
                                     Foreground="White"
                                     PreviewMouseDown="ResourceVersionClick"
-                                    Text="{DynamicResource ResourceDateTime}"
+                                    Text="{DynamicResource Settings.Update.ResourceDateTime}"
                                     TextWrapping="Wrap" />
                             </Border>
                             <Border
@@ -459,23 +404,23 @@
                         <Button
                             Margin="5"
                             Command="{s:Action ManualUpdate}"
-                            Content="{DynamicResource UpdateCheckNow}"
+                            Content="{DynamicResource Settings.Update.CheckNow}"
                             IsEnabled="{c:Binding !IsCheckingForUpdates}" />
                         <Button
                             Margin="5"
                             Command="{s:Action ShowChangelog}"
-                            Content="{DynamicResource ShowChangelog}"
+                            Content="{DynamicResource Settings.Update.ShowChangelog}"
                             IsEnabled="{c:Binding !IsCheckingForUpdates}" />
                     </StackPanel>
                     <StackPanel Grid.Row="4">
                         <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
-                            <controls:TooltipBlock TooltipText="{DynamicResource ResourceUpdateTip}" Visibility="Hidden" />
+                            <controls:TooltipBlock TooltipText="{DynamicResource Settings.Update.ResourceUpdate.Tip}" Visibility="Hidden" />
                             <Button
                                 Margin="5"
                                 Command="{s:Action ManualUpdateResource}"
-                                Content="{DynamicResource ResourceUpdate}"
+                                Content="{DynamicResource Settings.Update.ResourceUpdate}"
                                 IsEnabled="{c:Binding !IsCheckingForUpdates}" />
-                            <controls:TooltipBlock TooltipText="{DynamicResource ResourceUpdateTip}" />
+                            <controls:TooltipBlock TooltipText="{DynamicResource Settings.Update.ResourceUpdate.Tip}" />
                         </StackPanel>
 
                         <!--  Download / update log (shows recent download progress/messages)  -->
@@ -524,7 +469,7 @@
                                 Cursor="Hand"
                                 NavigateUri="{Binding Source={x:Static constants:MaaUrls.ResourceRepository}}"
                                 TextDecorations="None">
-                                <TextBlock Text="{DynamicResource ResourceRepository}" />
+                                <TextBlock Style="{StaticResource HyperlinkTextBlockStyle}" Text="{DynamicResource Settings.Update.ResourceRepository}" />
                             </Hyperlink>
                         </controls:TextBlock>
                     </StackPanel>

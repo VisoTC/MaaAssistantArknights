@@ -1,6 +1,6 @@
 {
     "Reclamation2": {
-        "doc": "生息演算「沙洲遗闻」",
+        "doc": "生息演算 ｢沙洲遗闻｣",
         "algorithm": "JustReturn",
         "Doc": "此处为cpp入口，出口直接将任务的next设为空即可",
         "next": [
@@ -316,7 +316,7 @@
         "action": "Swipe",
         "specificRect": [752, 620, 0, 0],
         "rectMove": [752, 80, 0, 0],
-        "specialParams": [500, 0, 3, 0],
+        "specialParams": [500, 0, 37, 1],
         "next": ["Reclamation2ExSwipeAndClickProduct#next"]
     },
     "Reclamation2ProsperityMax": {

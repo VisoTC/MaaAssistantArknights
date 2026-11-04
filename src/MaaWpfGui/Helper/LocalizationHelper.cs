@@ -1,6 +1,6 @@
 // <copyright file="LocalizationHelper.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -21,8 +21,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Markup;
-using MaaWpfGui.Constants;
-using MaaWpfGui.Extensions;
+using MaaWpfGui.Configuration.Factory;
+using Stylet;
 
 namespace MaaWpfGui.Helper;
 
@@ -68,9 +68,16 @@ public static class LocalizationHelper
         }
     }
 
-    private static readonly string _culture = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.Localization, DefaultLanguage);
+    // 与 Gui.Localization 的默认值互相依赖。不走 GUI 启动流程的入口（如控制台驱动）须先访问本类的静态成员（如 DefaultLanguage），
+    // 再访问 ConfigFactory，否则 Lazy 重入会抛 ValueFactory attempted to access
+    private static string _culture = ConfigFactory.Root.Gui.Localization;
 
-    private static readonly string _customCulture = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.CustomCulture, string.Empty);
+    private static string _customCulture = ConfigFactory.Root.Gui.CustomCulture;
+
+    /// <summary>
+    /// 获取当前语言。
+    /// </summary>
+    public static string CurrentCulture => _culture;
 
     public static CultureInfo CustomCultureInfo
     {
@@ -88,11 +95,76 @@ public static class LocalizationHelper
     }
 
     /// <summary>
+    /// 语言变更事件，运行时切换语言后触发，订阅者应刷新缓存的本地化文本。
+    /// <para>
+    /// 订阅约定：该事件为静态事件，订阅者必须是应用级单例（通过 Stylet IoC 容器管理，
+    /// 如 <see cref="ViewModels.UI.ToolboxViewModel"/>、各 <c>*UserControlModel</c> 的 <c>Instance</c> 单例），
+    /// 因此订阅后无需取消订阅。非单例类型（如 <see cref="ViewModels.TaskItemViewModel"/>）
+    /// 必须在 <see cref="IDisposable.Dispose"/> 时通过
+    /// <see cref="Utilities.PropertyDependsOnUtility.UnInitializePropertyDependencies"/> 清理跨实例依赖。
+    /// </para>
+    /// </summary>
+    public static event Action? LanguageChanged;
+
+    /// <summary>
     /// Loads localizations.
     /// </summary>
     public static void Load()
     {
-        if (_culture == "pallas")
+        LoadLocalizationDictionaries(_culture);
+        ApplyCultureToThread();
+    }
+
+    /// <summary>
+    /// 运行时切换语言，热替换 ResourceDictionary 并通知订阅者刷新。
+    /// </summary>
+    /// <param name="newCulture">新语言代码，如 "en-us"。</param>
+    public static void Reload(string newCulture)
+    {
+        Execute.OnUIThread(() => ReloadCore(newCulture));
+    }
+
+    private static void ReloadCore(string newCulture)
+    {
+        if (newCulture == _culture)
+        {
+            return;
+        }
+
+        _culture = newCulture;
+
+        // 移除旧的本地化字典
+        var app = Application.Current;
+        if (app != null)
+        {
+            var dictList = app.Resources.MergedDictionaries;
+            var toRemove = dictList.Where(IsLocalizationDictionary).ToList();
+            foreach (var dict in toRemove)
+            {
+                dictList.Remove(dict);
+            }
+        }
+
+        _preprocessedCultures.Clear();
+
+        // 加载新语言字典
+        LoadLocalizationDictionaries(newCulture);
+        ApplyCultureToThread();
+
+        // 通知订阅者刷新缓存的本地化文本
+        LanguageChanged?.Invoke();
+    }
+
+    private static bool IsLocalizationDictionary(ResourceDictionary dict)
+    {
+        // 通过 Source 文件名判断本地化字典（路径固定为 Res\Localizations\xxx.xaml）
+        var source = dict.Source?.OriginalString ?? string.Empty;
+        return source.Replace('\\', '/').Contains("res/localizations/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void LoadLocalizationDictionaries(string culture)
+    {
+        if (culture == "pallas")
         {
             var dictionary = new ResourceDictionary {
                 Source = new(@"Res\Localizations\zh-cn.xaml", UriKind.Relative),
@@ -106,11 +178,11 @@ public static class LocalizationHelper
             return;
         }
 
-        string[] cultureList = _culture switch {
-            "zh-cn" => [_culture],
-            "zh-tw" => ["zh-cn", _culture],
-            "en-us" => ["zh-cn", _culture],
-            _ => ["zh-cn", "en-us", _culture],
+        string[] cultureList = culture switch {
+            "zh-cn" => [culture],
+            "zh-tw" => ["zh-cn", culture],
+            "en-us" => ["zh-cn", culture],
+            _ => ["zh-cn", "en-us", culture],
         };
 
         foreach (var cur in cultureList)
@@ -121,12 +193,15 @@ public static class LocalizationHelper
             _preprocessedCultures.Add(cur);
             PreprocessDictionary(dictionary, cur);
             Application.Current.Resources.MergedDictionaries.Add(dictionary);
-            if (cur == _culture)
+            if (cur == culture)
             {
                 break;
             }
         }
+    }
 
+    private static void ApplyCultureToThread()
+    {
         try
         {
             Thread.CurrentThread.CurrentCulture = !string.IsNullOrEmpty(_customCulture)
@@ -182,6 +257,28 @@ public static class LocalizationHelper
     }
 
     /// <summary>
+    /// Gets a localized string as-is, without unescaping <c>\n</c> or <c>\\</c>, so the result matches what XAML DynamicResource shows for the same key.
+    /// Intended for strings shared between XAML tooltips and code-behind dialogs that contain literal backslashes.
+    /// </summary>
+    /// <param name="key">The key of the string.</param>
+    /// <param name="culture">The language of the string</param>
+    /// <returns>The raw string.</returns>
+    public static string GetRawString(string key, string? culture = null)
+    {
+        if (_culture == "pallas")
+        {
+            return GetPallasString();
+        }
+
+        if (TryLookupStringInternal(key, out var value, culture, unescape: false))
+        {
+            return value;
+        }
+
+        return $"{{{{ {key} }}}}";
+    }
+
+    /// <summary>
     /// Try get a localized string. Returns false when the key is not present in resources.
     /// </summary>
     /// <param name="key">The key of the string.</param>
@@ -199,7 +296,7 @@ public static class LocalizationHelper
         return TryLookupStringInternal(key, out value, culture);
     }
 
-    private static bool TryLookupStringInternal(string key, out string value, string? culture = null)
+    private static bool TryLookupStringInternal(string key, out string value, string? culture = null, bool unescape = true)
     {
         value = string.Empty;
 
@@ -218,7 +315,7 @@ public static class LocalizationHelper
 
                 if (dictionary.Contains(key))
                 {
-                    value = Regex.Unescape(dictionary[key]?.ToString() ?? string.Empty);
+                    value = unescape ? Regex.Unescape(dictionary[key]?.ToString() ?? string.Empty) : dictionary[key]?.ToString() ?? string.Empty;
                     return true;
                 }
             }
@@ -236,7 +333,7 @@ public static class LocalizationHelper
                 var dict = dictList[i];
                 if (dict.Contains(key))
                 {
-                    value = Regex.Unescape(dict[key]?.ToString() ?? string.Empty);
+                    value = unescape ? Regex.Unescape(dict[key]?.ToString() ?? string.Empty) : dict[key]?.ToString() ?? string.Empty;
                     return true;
                 }
             }
@@ -293,7 +390,8 @@ public static class LocalizationHelper
 
         visited.Push(currentKey);
 
-        var result = Regex.Replace(input, @"\{key=(\w+)\}", match => {
+        // key 取到右花括号为止，不限定字符集：既有引用含 .（如 Copilot.UserAdditional.Add），\w 无法覆盖
+        var result = Regex.Replace(input, @"\{key=([^}]+)\}", match => {
             var innerKey = match.Groups[1].Value;
             var innerValue = GetString(innerKey, culture);
             return ResolveNestedKeys(innerKey, innerValue, culture, visited);

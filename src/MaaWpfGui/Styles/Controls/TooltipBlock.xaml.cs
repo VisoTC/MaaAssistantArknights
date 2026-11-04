@@ -1,6 +1,6 @@
 // <copyright file="TooltipBlock.xaml.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -42,7 +42,7 @@ public partial class TooltipBlock : UserControl
 
     public static readonly DependencyProperty TooltipTextEmptyProperty = DependencyProperty.Register(nameof(TooltipTextEmpty), typeof(bool), typeof(TooltipBlock), new PropertyMetadata(true));
 
-    public static readonly DependencyProperty TooltipMaxWidthProperty = DependencyProperty.Register(nameof(TooltipMaxWidth), typeof(double), typeof(TooltipBlock), new(double.MaxValue));
+    public static readonly DependencyProperty TooltipMaxWidthProperty = DependencyProperty.Register(nameof(TooltipMaxWidth), typeof(double), typeof(TooltipBlock), new(500d));
 
     public static readonly DependencyProperty NormalOpacityProperty = DependencyProperty.Register(nameof(NormalOpacity), typeof(double), typeof(TooltipBlock), new(0.7, OnOpacityChanged));
 
@@ -115,6 +115,9 @@ public partial class TooltipBlock : UserControl
         IsToolTipEnabled = !TooltipTextEmpty || CustomToolTip != null;
     }
 
+    /// <summary>
+    /// Gets or sets tooltip 内容最大宽度，超出后 TextBlock 自动软换行，避免长文案拉成超宽单行。
+    /// </summary>
     public double TooltipMaxWidth
     {
         get => (double)GetValue(TooltipMaxWidthProperty);

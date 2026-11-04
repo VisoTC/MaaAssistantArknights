@@ -6,8 +6,10 @@
 #include "Config/Miscellaneous/CopilotConfig.h"
 #include "Config/TaskData.h"
 #include "Controller/Controller.h"
+#include "Task/Miscellaneous/BattleFormationTask.h"
 #include "Task/Miscellaneous/BattleProcessTask.h"
 #include "Task/ProcessTask.h"
+#include "Task/StageNavigationHelper.h"
 #include "Utils/Logger.hpp"
 #include "Utils/Platform.hpp"
 #include "Vision/Matcher.h"
@@ -31,6 +33,13 @@ bool asst::MultiCopilotTaskPlugin::_run()
     }
     file_name = utils::path_to_utf8_string(config.copilot_file);
 
+    if (config.assigned_groups) {
+        m_formation_task_ptr->set_assigned_groups(*config.assigned_groups);
+    }
+    else {
+        m_formation_task_ptr->set_assigned_groups(std::nullopt);
+    }
+
     const auto& stage_name = Copilot.get_stage_name();
     if (!m_battle_task_ptr->set_stage_name(stage_name)) {
         Log.error("Not support stage");
@@ -44,7 +53,16 @@ bool asst::MultiCopilotTaskPlugin::_run()
     callback(AsstMsg::SubTaskExtraInfo, info);
 
     bool ret = true;
-    ret = ret && navigate_to_stage(config.nav_name);
+    for (int i = 0; i < m_max_retry; ++i) {
+        ret = navigate_to_stage(config.nav_name);
+        sleep(Config.get_options().task_delay);
+        if (ret) {
+            break;
+        }
+        if (need_exit()) {
+            return false;
+        }
+    }
 
     ProcessTask(*this, { "NotUsePrts" }).set_ignore_error(true).set_retry_times(0).run();
     if (config.is_raid) {
@@ -57,6 +75,21 @@ bool asst::MultiCopilotTaskPlugin::_run()
 
 bool asst::MultiCopilotTaskPlugin::navigate_to_stage(const std::string& stage_name)
 {
+    // 优先检查是否存在对应活动关卡名的模板资源，如果存在则走模板匹配
+    std::string templ_path = StageNavigationHelper::get_stage_template_path(stage_name);
+    if (!templ_path.empty()) {
+        Log.info("Stage template found, using template matching for", stage_name, ", templ:", templ_path);
+        // 动态注入模板路径到 MatchTaskInfo（需带 .png 后缀）
+        Task.get<MatchTaskInfo>(stage_name + "@Copilot@ClickStageByTemplate")->templ_names = { templ_path + ".png" };
+        Task.get<OcrTaskInfo>(stage_name + "@Copilot@ClickedCorrectStage")->text = { stage_name };
+        return ProcessTask(*this, { stage_name + "@Copilot@StageNavigationByTemplateMatchBegin" })
+            .set_retry_times(20)
+            .run();
+    }
+
+    // 模板不存在，使用基于图像分析的 OCR 方案
+    Log.info("No stage template available, using image-based OCR for", stage_name);
+
     auto image = ctrler()->get_image();
 
     if (is_stage_detail_opened(image)) { // 关卡介绍已展开

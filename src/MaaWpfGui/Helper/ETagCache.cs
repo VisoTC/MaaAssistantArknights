@@ -1,6 +1,6 @@
 // <copyright file="ETagCache.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -67,6 +67,12 @@ public class ETagCache
 
     public static void Save()
     {
+        if (Main.Bootstrapper.IsDemoMode)
+        {
+            // README 截图演示模式：不写缓存文件
+            return;
+        }
+
         File.WriteAllText(_etagFile, JsonConvert.SerializeObject(_etagCache, Formatting.Indented));
         File.WriteAllText(_lastModifiedFile, JsonConvert.SerializeObject(_lastModifiedCache, Formatting.Indented));
     }
@@ -140,7 +146,7 @@ public class ETagCache
 
         try
         {
-            var response = await Instances.HttpService.GetAsync(new Uri(url), headers);
+            var response = await Instances.HttpService.GetAsync(new Uri(url), headers, HttpCompletionOption.ResponseContentRead);
             return response;
         }
         catch (Exception e)

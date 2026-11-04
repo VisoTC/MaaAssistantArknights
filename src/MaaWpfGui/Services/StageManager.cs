@@ -1,6 +1,6 @@
 // <copyright file="StageManager.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -20,9 +20,11 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 using HandyControl.Controls;
 using HandyControl.Data;
 using MaaWpfGui.Constants.Enums;
+using MaaWpfGui.Extensions;
 using MaaWpfGui.Helper;
 using MaaWpfGui.Models;
 using MaaWpfGui.Models.MaaApi;
@@ -48,12 +50,83 @@ public class StageManager
     // data
     private Dictionary<string, StageInfo> _stages = [];
 
+    /// <summary>
+    /// 匹配 Tip 模板中的 {n} 占位符，捕获组使 Split 结果保留占位符段。
+    /// </summary>
+    private static readonly Regex TipPlaceholderRegex = new(@"(\{\d+\})", RegexOptions.Compiled);
+
+    /// <summary>
+    /// 刷新关卡列表的本地化文本。
+    /// </summary>
+    private void RefreshStageLocalization()
+    {
+        foreach (var stage in _stages.Values)
+        {
+            if (!string.IsNullOrEmpty(stage.DisplayKey))
+            {
+                stage.Display = LocalizationHelper.GetString(stage.DisplayKey);
+            }
+
+            if (string.IsNullOrEmpty(stage.Value))
+            {
+                stage.Display = LocalizationHelper.GetString("TaskQueue.Stage.Label.Default");
+            }
+
+            if (!string.IsNullOrEmpty(stage.TipKey))
+            {
+                stage.Tip = LocalizationHelper.GetString(stage.TipKey);
+            }
+        }
+    }
+
     private Dictionary<string, SideStoryActivity> _activityList = [];
 
     public IReadOnlyDictionary<string, SideStoryActivity> ActivityList => _activityList.AsReadOnly();
 
+    /// <summary>
+    /// 关卡与活动数据重载完成（本地缓存加载或 OTA 更新后触发）。
+    /// 可能在非 UI 线程触发，监听方自行处理线程上下文。
+    /// </summary>
+    public event EventHandler? StageDataChanged;
+
+    // 资源全开放活动（resourceCollection），用于判断当前是否处于资源全开放期间
+    private StageActivityInfo _resourceCollection = new() { IsResourceCollection = true };
+
+    /// <summary>
+    /// 判断当前是否有 SideStory（SideStory/故事集/别的限时）活动进行中。
+    /// </summary>
+    /// <returns>存在进行中的活动则返回 <c>true</c>。</returns>
+    public bool IsActivityOpen()
+    {
+        var time = DateTimeOffset.Now;
+        return _activityList.Any(ss => ss.Value.Info.StartTimeUtc <= time && time <= ss.Value.Info.ExpireTimeUtc);
+    }
+
+    /// <summary>
+    /// 判断当前是否处于资源全开放活动（resourceCollection）期间。
+    /// </summary>
+    /// <returns>处于资源全开放期间则返回 <c>true</c>。</returns>
+    public bool IsResourceCollectionOpen()
+    {
+        return _resourceCollection.BeingOpen;
+    }
+
     // mini game entries exposed from StageActivityV2 (richer model including Tip/TipKey)
     private List<MiniGameEntry> _miniGameEntries = InitializeDefaultMiniGameEntries();
+
+    /// <summary>
+    /// 刷新小游戏条目的本地化文本。
+    /// </summary>
+    private void RefreshMiniGameLocalization()
+    {
+        foreach (var entry in _miniGameEntries)
+        {
+            if (!string.IsNullOrEmpty(entry.DisplayKey))
+            {
+                entry.Display = LocalizationHelper.GetString(entry.DisplayKey);
+            }
+        }
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StageManager"/> class.
@@ -61,6 +134,7 @@ public class StageManager
     public StageManager()
     {
         UpdateStageLocal();
+        LocalizationHelper.LanguageChanged += RefreshLocalization;
     }
 
     /// <summary>
@@ -107,23 +181,22 @@ public class StageManager
 
             if (!loaded)
             {
-                growlInfo.Message = LocalizationHelper.GetString("ApiUpdateFailed");
+                growlInfo.Message = LocalizationHelper.GetString("VersionUpdate.Api.UpdateFailed");
             }
             else if (cached)
             {
-                // growlInfo.Message = LocalizationHelper.GetString("ApiCacheLoaded");
                 return;
             }
             else
             {
-                growlInfo.Message = LocalizationHelper.GetString("ApiUpdateSuccess");
+                growlInfo.Message = LocalizationHelper.GetString("VersionUpdate.Api.UpdateSuccess");
             }
 
-            Growl.Info(growlInfo);
+            GrowlHelper.Info(growlInfo);
         });
     }
 
-    private static string GetClientType() => SettingsViewModel.GameSettings.ClientType switch {
+    private static ClientType GetClientType() => SettingsViewModel.GameSettings.ClientType switch {
         ClientType.Bilibili => ClientType.Official,
         _ => SettingsViewModel.GameSettings.ClientType,
     };
@@ -171,7 +244,7 @@ public class StageManager
         bool globalTasksCached = true;
         if (clientType != ClientType.Official && tasksJson != null)
         {
-            var tasksPath = "resource/global/" + clientType + '/' + TasksApi;
+            var tasksPath = "resource/global/" + clientType.ToCustomString() + '/' + TasksApi;
 
             // Download the client specific resources only when the Official ones are successfully downloaded so that the client specific resource version is the actual version
             // TODO: There may be an issue when the CN resource is loaded from cache (e.g. network down) while global resource is downloaded (e.g. network up again)
@@ -211,7 +284,7 @@ public class StageManager
     {
         var tempStage = InitializeDefaultStages();
 
-        var clientType = GetClientType();
+        var clientType = GetClientType().ToCustomString();
 
         bool isDebugVersion = Instances.VersionUpdateDialogViewModel.IsDebugVersion();
         bool curVerParsed = TryParseVersion(VersionUpdateSettingsUserControlModel.CoreVersion, out var curVersionObj);
@@ -229,35 +302,54 @@ public class StageManager
         AddPermanentStages(tempStage, resourceCollection);
 
         _stages = tempStage;
+        _resourceCollection = resourceCollection;
 
         // parse mini-game tasks from activity json if provided (use helper to populate temp list)
         var tempMiniGames = InitializeDefaultMiniGameEntries();
         ParseMiniGameEntries(activity?[clientType], tempMiniGames, curVerParsed, curVersionObj, isDebugVersion);
         _miniGameEntries = tempMiniGames;
+
+        StageDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private static Dictionary<string, StageInfo> InitializeDefaultStages()
     {
         return new()
         {
-            // 「当前/上次」关卡导航
-            { string.Empty, new() { Display = LocalizationHelper.GetString("DefaultStage"), Value = string.Empty } },
+            // ｢当前/上次｣ 关卡导航
+            { string.Empty, new() { Display = LocalizationHelper.GetString("TaskQueue.Stage.Label.Default"), Value = string.Empty } },
 
             // 周一和周日的关卡提示
-            { "Pormpt1", new() { Tip = LocalizationHelper.GetString("Pormpt1"), OpenDaysOfWeek = [DayOfWeek.Monday], IsHidden = true } },
-            { "Pormpt2", new() { Tip = LocalizationHelper.GetString("Pormpt2"), OpenDaysOfWeek = [DayOfWeek.Sunday], IsHidden = true } },
+            { "TaskQueue.Stage.Label.Prompt1", new() { TipKey = "TaskQueue.Stage.Label.Prompt1", OpenDaysOfWeek = [DayOfWeek.Monday], IsHidden = true } },
+            { "TaskQueue.Stage.Label.Prompt2", new() { TipKey = "TaskQueue.Stage.Label.Prompt2", OpenDaysOfWeek = [DayOfWeek.Sunday], IsHidden = true } },
         };
+    }
+
+    /// <summary>
+    /// 刷新构造时缓存的本地化列表文本。
+    /// </summary>
+    private void RefreshLocalization()
+    {
+        RefreshStageLocalization();
+        RefreshMiniGameLocalization();
     }
 
     private static List<MiniGameEntry> InitializeDefaultMiniGameEntries()
     {
         var entries = new List<MiniGameEntry>
         {
-            new() { Display = LocalizationHelper.GetString("MiniGameNameSsStore"), Value = "SS@Store@Begin", TipKey = "MiniGameNameSsStoreTip" },
-            new() { Display = LocalizationHelper.GetString("MiniGameNameGreenTicketStore"), Value = "GreenTicket@Store@Begin", TipKey = "MiniGameNameGreenTicketStoreTip" },
-            new() { Display = LocalizationHelper.GetString("MiniGameNameYellowTicketStore"), Value = "YellowTicket@Store@Begin", TipKey = "MiniGameNameYellowTicketStoreTip" },
-            new() { Display = LocalizationHelper.GetString("MiniGameNameRAStore"), Value = "RA@Store@Begin", TipKey = "MiniGameNameRAStoreTip" },
-            new() { Display = LocalizationHelper.GetString("MiniGame@SecretFront"), Value = "MiniGame@SecretFront", TipKey = "MiniGame@SecretFrontTip" },
+            // 常驻活动
+            new() { Display = LocalizationHelper.GetString("Toolbox.MiniGame.SecretFront"), DisplayKey = "Toolbox.MiniGame.SecretFront", Value = "MiniGame@SecretFront", TipKey = "Toolbox.MiniGame.SecretFront.Tip" },
+            new() { Display = LocalizationHelper.GetString("Toolbox.MiniGame.Reclamation.Title"), DisplayKey = "Toolbox.MiniGame.Reclamation.Title", Value = "Reclamation", CategoryKey = "Toolbox.MiniGame.Category.Permanent" },
+
+            // 撒尿牛丸
+            new() { Display = LocalizationHelper.GetString("Toolbox.MiniGame.Name.SsStore"), DisplayKey = "Toolbox.MiniGame.Name.SsStore", Value = "SS@Store@Begin", TipKey = "Toolbox.MiniGame.Name.SsStore.Tip", CategoryKey = "Toolbox.MiniGame.Category.PermanentFeature" },
+            new() { Display = LocalizationHelper.GetString("Toolbox.MiniGame.Name.GreenTicketStore"), DisplayKey = "Toolbox.MiniGame.Name.GreenTicketStore", Value = "GreenTicket@Store@Begin", TipKey = "Toolbox.MiniGame.Name.GreenTicketStore.Tip", CategoryKey = "Toolbox.MiniGame.Category.PermanentFeature" },
+            new() { Display = LocalizationHelper.GetString("Toolbox.MiniGame.Name.YellowTicketStore"), DisplayKey = "Toolbox.MiniGame.Name.YellowTicketStore", Value = "YellowTicket@Store@Begin", TipKey = "Toolbox.MiniGame.Name.YellowTicketStore.Tip", CategoryKey = "Toolbox.MiniGame.Category.PermanentFeature" },
+            new() { Display = LocalizationHelper.GetString("Toolbox.MiniGame.Name.RAStore"), DisplayKey = "Toolbox.MiniGame.Name.RAStore", Value = "RA@Store@Begin", TipKey = "Toolbox.MiniGame.Name.RAStore.Tip", CategoryKey = "Toolbox.MiniGame.Category.PermanentFeature" },
+            new() { Display = LocalizationHelper.GetString("Toolbox.MiniGame.AutoRaisePotential"), DisplayKey = "Toolbox.MiniGame.AutoRaisePotential", Value = "MiniGame@AutoRaisePotential@Begin", TipKey = "Toolbox.MiniGame.AutoRaisePotential.Tip", CategoryKey = "Toolbox.MiniGame.Category.PermanentFeature" },
+            new() { Display = LocalizationHelper.GetString("Toolbox.MiniGame.MaterialSynthesis"), DisplayKey = "Toolbox.MiniGame.MaterialSynthesis", Value = "MiniGame@MaterialSynthesis@Begin", TipKey = "Toolbox.MiniGame.MaterialSynthesis.Tip", CategoryKey = "Toolbox.MiniGame.Category.PermanentFeature" },
+            new() { Display = LocalizationHelper.GetString("Toolbox.MiniGame.CursedRelic"), DisplayKey = "Toolbox.MiniGame.CursedRelic", Value = "MiniGame@CursedRelic@Begin", TipKey = "Toolbox.MiniGame.CursedRelic.Tip", CategoryKey = "Toolbox.MiniGame.Category.PermanentFeature" },
         };
 
         return entries;
@@ -283,7 +375,10 @@ public class StageManager
             var value = token["Value"]?.ToString() ?? token["value"]?.ToString();
             var tip = token["Tip"]?.ToString();
             var tipKey = token["TipKey"]?.ToString();
+            var category = token["Category"]?.ToString();
+            var categoryKey = token["CategoryKey"]?.ToString();
             var minimumRequired = token["MinimumRequired"]?.ToString();
+            var activity = token["Activity"]?.ToString();
 
             string finalDisplay = string.Empty;
             if (!string.IsNullOrEmpty(display))
@@ -354,7 +449,10 @@ public class StageManager
                 Value = value,
                 Tip = tip,
                 TipKey = tipKey,
+                Category = category,
+                CategoryKey = categoryKey,
                 MinimumRequired = minimumRequired,
+                Activity = activity,
                 UtcStartTime = utcStart,
                 UtcExpireTime = utcExpire,
             };
@@ -471,7 +569,7 @@ public class StageManager
                 {
                     if (!TryParseVersion(minReqStr, out var minReqObj))
                     {
-                        entry.Tip = LocalizationHelper.GetString("LowVersion") + '\n' + LocalizationHelper.GetString("MinimumRequirements") + " " + minReqStr;
+                        entry.Tip = LocalizationHelper.GetString("VersionUpdate.LowVersion") + '\n' + LocalizationHelper.GetString("VersionUpdate.MinimumRequirements") + " " + minReqStr;
                         entry.TipKey = null;
                     }
                     else
@@ -479,7 +577,7 @@ public class StageManager
                         bool unsupported = !isDebugVersion && curVerParsed && curVersionObj!.CompareSortOrderTo(minReqObj) < 0;
                         if (unsupported)
                         {
-                            entry.Tip = LocalizationHelper.GetString("LowVersion") + '\n' + LocalizationHelper.GetString("MinimumRequirements") + " " + minReqStr;
+                            entry.Tip = LocalizationHelper.GetString("VersionUpdate.LowVersion") + '\n' + LocalizationHelper.GetString("VersionUpdate.MinimumRequirements") + " " + minReqStr;
                             entry.TipKey = null;
                         }
                     }
@@ -501,7 +599,7 @@ public class StageManager
                 {
                     if (!TryParseVersion(minReqStr, out var minReqObj))
                     {
-                        entry.Tip = LocalizationHelper.GetString("LowVersion") + '\n' + LocalizationHelper.GetString("MinimumRequirements") + " " + minReqStr;
+                        entry.Tip = LocalizationHelper.GetString("VersionUpdate.LowVersion") + '\n' + LocalizationHelper.GetString("VersionUpdate.MinimumRequirements") + " " + minReqStr;
                         entry.TipKey = null;
                     }
                     else
@@ -509,7 +607,7 @@ public class StageManager
                         bool unsupported = !isDebugVersion && curVerParsed && curVersionObj!.CompareSortOrderTo(minReqObj) < 0;
                         if (unsupported)
                         {
-                            entry.Tip = LocalizationHelper.GetString("LowVersion") + '\n' + LocalizationHelper.GetString("MinimumRequirements") + " " + minReqStr;
+                            entry.Tip = LocalizationHelper.GetString("VersionUpdate.LowVersion") + '\n' + LocalizationHelper.GetString("VersionUpdate.MinimumRequirements") + " " + minReqStr;
                             entry.TipKey = null;
                         }
                     }
@@ -528,6 +626,25 @@ public class StageManager
         }
     }
 
+    /// <summary>
+    /// 解析动态关卡代号的显示名：优先查 ｢TaskQueue.Stage.关卡代号｣ 形态的本地化 key（语言文件中该批 key 的值即代号原文），
+    /// 查不到时回退代号原文，与直接使用代号显示的行为一致；命中本地化时返回该 key 作为 DisplayKey，供语言切换刷新。
+    /// </summary>
+    /// <param name="stage">关卡代号。</param>
+    /// <returns>显示名与其本地化 key；未命中本地化时 key 为 null。</returns>
+    private static (string Display, string? DisplayKey) ResolveStageDisplay(string stage)
+    {
+        // 帕拉斯语言下 TryGetString 恒真，会把语言文件中不存在的 key 写入 DisplayKey，
+        // 切回正常语言后按 DisplayKey 刷新即显示占位符，因此跳过解析直接显示代号原文
+        if (LocalizationHelper.CurrentCulture == "pallas")
+        {
+            return (stage, null);
+        }
+
+        var key = $"TaskQueue.Stage.{stage}";
+        return LocalizationHelper.TryGetString(key, out var display) ? (display, key) : (stage, null);
+    }
+
     private static StageInfo CreateStageInfo(JToken? stageObj, bool unsupportedStages, SemVersion? minRequiredObj, JToken? activityToken)
     {
         activityToken = stageObj?["Activity"] ?? activityToken;
@@ -537,7 +654,7 @@ public class StageManager
         var value = stageObj?["Value"]?.ToString() ?? string.Empty;
 
         var drop = unsupportedStages
-            ? LocalizationHelper.GetString("LowVersion") + '\n' + LocalizationHelper.GetString("MinimumRequirements") + minRequiredObj
+            ? LocalizationHelper.GetString("VersionUpdate.LowVersion") + '\n' + LocalizationHelper.GetString("VersionUpdate.MinimumRequirements") + minRequiredObj
             : stageObj?["Drop"]?.ToString();
 
         DateTime utcStart = DateTime.MinValue;
@@ -578,7 +695,9 @@ public class StageManager
             UtcExpireTime = utcExpire,
         };
 
-        return new StageInfo(display, value, drop, activity);
+        var (resolvedDisplay, displayKey) = ResolveStageDisplay(display);
+
+        return new StageInfo(resolvedDisplay, value, drop, activity) { DisplayKey = displayKey };
     }
 
     private static void AddPermanentStages(Dictionary<string, StageInfo> tempStage, StageActivityInfo resourceCollection)
@@ -586,29 +705,29 @@ public class StageManager
         var permanentStages = new Dictionary<string, StageInfo>
         {
             // 主线关卡
-            { "1-7", new() { Display = "1-7", Value = "1-7" } },
+            { "1-7", new() { Display = LocalizationHelper.GetString("TaskQueue.Stage.1-7"), DisplayKey = "TaskQueue.Stage.1-7", Value = "1-7" } },
             { "R8-11", new() { Display = "R8-11", Value = "R8-11" } },
             { "12-17-HARD", new() { Display = "12-17-HARD", Value = "12-17-HARD" } },
 
             // 资源本
-            { "CE-6", new("CE-6", "CETip", [DayOfWeek.Tuesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection) },
-            { "AP-5", new("AP-5", "APTip", [DayOfWeek.Monday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection) },
-            { "CA-5", new("CA-5", "CATip", [DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Friday, DayOfWeek.Sunday], resourceCollection, [["3301", "3302", "3303"]]) },
-            { "LS-6", new("LS-6", "LSTip", [], resourceCollection) },
-            { "SK-5", new("SK-5", "SKTip", [DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday, DayOfWeek.Saturday], resourceCollection) },
+            { "CE-6", new("CE-6", "TaskQueue.Stage.CE.Tip", [DayOfWeek.Tuesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection, localizationKey: "TaskQueue.Stage.CE-6") },
+            { "AP-5", new("AP-5", "TaskQueue.Stage.AP.Tip", [DayOfWeek.Monday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection, localizationKey: "TaskQueue.Stage.AP-5") },
+            { "CA-5", new("CA-5", "TaskQueue.Stage.CA.Tip", [DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Friday, DayOfWeek.Sunday], resourceCollection, [["3301", "3302", "3303"]], null, ["StageItemBrush.SkillBook1", "StageItemBrush.SkillBook2", "StageItemBrush.SkillBook3"], localizationKey: "TaskQueue.Stage.CA-5") },
+            { "LS-6", new("LS-6", "TaskQueue.Stage.LS.Tip", [], resourceCollection, localizationKey: "TaskQueue.Stage.LS-6") },
+            { "SK-5", new("SK-5", "TaskQueue.Stage.SK.Tip", [DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday, DayOfWeek.Saturday], resourceCollection, localizationKey: "TaskQueue.Stage.SK-5") },
 
             // 剿灭模式
-            { "Annihilation", new() { Display = LocalizationHelper.GetString("AnnihilationMode"), Value = "Annihilation" } },
+            { "Annihilation", new() { Display = LocalizationHelper.GetString("TaskQueue.Annihilation.Mode"), DisplayKey = "TaskQueue.Annihilation.Mode", Value = "Annihilation" } },
 
-            // 芯片本 - dropGroups 格式：[[PR-X-1的掉落], [PR-X-2的掉落]]
-            { "PR-A-1", new("PR-A-1", "PR-ATip", [DayOfWeek.Monday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Sunday], resourceCollection, [["3261", "3231"], ["3262", "3232"]]) },
-            { "PR-A-2", new("PR-A-2", string.Empty, [DayOfWeek.Monday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Sunday], resourceCollection) },
-            { "PR-B-1", new("PR-B-1", "PR-BTip", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Friday, DayOfWeek.Saturday], resourceCollection, [["3251", "3241"], ["3252", "3242"]]) },
-            { "PR-B-2", new("PR-B-2", string.Empty, [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Friday, DayOfWeek.Saturday], resourceCollection) },
-            { "PR-C-1", new("PR-C-1", "PR-CTip", [DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection, [["3211", "3271"], ["3212", "3272"]]) },
-            { "PR-C-2", new("PR-C-2", string.Empty, [DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection) },
-            { "PR-D-1", new("PR-D-1", "PR-DTip", [DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection, [["3221", "3281"], ["3222", "3282"]]) },
-            { "PR-D-2", new("PR-D-2", string.Empty, [DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection) },
+            // 芯片本 - dropGroups 格式：[[PR-X-1的掉落], [PR-X-2的掉落], [PR-X 两职业的双芯片]]
+            { "PR-A-1", new("PR-A-1", "TaskQueue.Stage.PR-A.Tip", [DayOfWeek.Monday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Sunday], resourceCollection, [["3261", "3231"], ["3262", "3232"], ["3263", "3233"]], ["TaskQueue.Stage.ChipShort.Medic", "TaskQueue.Stage.ChipShort.Defender"], ["StageItemBrush.Primary", "StageItemBrush.Secondary"], localizationKey: "TaskQueue.Stage.PR-A-1") },
+            { "PR-A-2", new("PR-A-2", string.Empty, [DayOfWeek.Monday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Sunday], resourceCollection, localizationKey: "TaskQueue.Stage.PR-A-2") },
+            { "PR-B-1", new("PR-B-1", "TaskQueue.Stage.PR-B.Tip", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Friday, DayOfWeek.Saturday], resourceCollection, [["3251", "3241"], ["3252", "3242"], ["3253", "3243"]], ["TaskQueue.Stage.ChipShort.Caster", "TaskQueue.Stage.ChipShort.Sniper"], ["StageItemBrush.Primary", "StageItemBrush.Secondary"], localizationKey: "TaskQueue.Stage.PR-B-1") },
+            { "PR-B-2", new("PR-B-2", string.Empty, [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Friday, DayOfWeek.Saturday], resourceCollection, localizationKey: "TaskQueue.Stage.PR-B-2") },
+            { "PR-C-1", new("PR-C-1", "TaskQueue.Stage.PR-C.Tip", [DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection, [["3211", "3271"], ["3212", "3272"], ["3213", "3273"]], ["TaskQueue.Stage.ChipShort.Vanguard", "TaskQueue.Stage.ChipShort.Supporter"], ["StageItemBrush.Primary", "StageItemBrush.Secondary"], localizationKey: "TaskQueue.Stage.PR-C-1") },
+            { "PR-C-2", new("PR-C-2", string.Empty, [DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection, localizationKey: "TaskQueue.Stage.PR-C-2") },
+            { "PR-D-1", new("PR-D-1", "TaskQueue.Stage.PR-D.Tip", [DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection, [["3221", "3281"], ["3222", "3282"], ["3223", "3283"]], ["TaskQueue.Stage.ChipShort.Guard", "TaskQueue.Stage.ChipShort.Specialist"], ["StageItemBrush.Primary", "StageItemBrush.Secondary"], localizationKey: "TaskQueue.Stage.PR-D-1") },
+            { "PR-D-2", new("PR-D-2", string.Empty, [DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Saturday, DayOfWeek.Sunday], resourceCollection, localizationKey: "TaskQueue.Stage.PR-D-2") },
 
             // 常驻活动关，隐藏但仍可通过手动输入访问
             { "OF-1", new() { Display = "OF-1", Value = "OF-1", IsHidden = true } },
@@ -641,11 +760,13 @@ public class StageManager
                 UtcStartTime = DateTime.MinValue,
                 UtcExpireTime = DateTime.MinValue,
             };
-            return new StageInfo(stage, stage, null, expiredActivity);
+            var (display, displayKey) = ResolveStageDisplay(stage);
+            return new StageInfo(display, stage, null, expiredActivity) { DisplayKey = displayKey };
         }
 
         // Fallback: treat as permanent stage
-        return new() { Display = stage, Value = stage };
+        var (fallbackDisplay, fallbackDisplayKey) = ResolveStageDisplay(stage);
+        return new() { Display = fallbackDisplay, DisplayKey = fallbackDisplayKey, Value = stage };
     }
 
     public bool IsStageInStageList(string stage)
@@ -659,7 +780,8 @@ public class StageManager
             UtcStartTime = DateTime.MinValue,
             UtcExpireTime = DateTime.MinValue,
         };
-        _stages.Add(stage, new StageInfo(stage, stage, null, unopenActivity));
+        var (display, displayKey) = ResolveStageDisplay(stage);
+        _stages.Add(stage, new StageInfo(display, stage, null, unopenActivity) { DisplayKey = displayKey });
     }
 
     /// <summary>
@@ -678,9 +800,9 @@ public class StageManager
     /// </summary>
     /// <param name="dayOfWeek">Day of week</param>
     /// <returns>Open stages</returns>
-    public string GetStageTips(DayOfWeek dayOfWeek)
+    public IEnumerable<Inline> GetStageTipsInlines(DayOfWeek dayOfWeek)
     {
-        var lines = new List<string>();
+        var inlines = new List<Inline>();
         var shownSideStories = new HashSet<string>();
         bool resourceTipShown = false;
         DateTime now = DateTime.UtcNow;
@@ -692,56 +814,142 @@ public class StageManager
             // Resource collection tip - only show one
             if (!resourceTipShown && activity is { IsResourceCollection: true, BeingOpen: true })
             {
-                // 插入到第一行
-                lines.Insert(0, $"｢{activity.Tip}｣ {LocalizationHelper.GetString("DaysLeftOpen")}{GetDaysLeftText(activity.UtcExpireTime, now)}");
+                if (inlines.Count > 0)
+                {
+                    inlines.Insert(0, new LineBreak());
+                }
+                inlines.Insert(0, new Run($"｢{activity.Tip}｣ {LocalizationHelper.GetString("TaskQueue.Stage.Label.DaysLeftOpen")}{GetDaysLeftText(activity.UtcExpireTime, now)}"));
                 resourceTipShown = true;
             }
 
             // Side story tips
             if (!string.IsNullOrEmpty(activity?.StageName) && shownSideStories.Add(activity.StageName))
             {
-                lines.Add($"｢{activity.StageName}｣ {LocalizationHelper.GetString("DaysLeftOpen")}{GetDaysLeftText(activity.UtcExpireTime, now)}");
+                if (inlines.Count > 0)
+                {
+                    inlines.Add(new LineBreak());
+                }
+
+                inlines.Add(new Run($"｢{activity.StageName}｣ {LocalizationHelper.GetString("TaskQueue.Stage.Label.DaysLeftOpen")}{GetDaysLeftText(activity.UtcExpireTime, now)}"));
+
+                var affiliatedGames = _miniGameEntries
+                    .Where(g => g.Activity == activity.StageName && g.BeingOpen)
+                    .ToList();
+                if (affiliatedGames.Count > 0)
+                {
+                    foreach (var game in affiliatedGames)
+                    {
+                        var gameName = string.IsNullOrEmpty(game.DisplayKey)
+                            ? game.Display
+                            : (LocalizationHelper.TryGetString(game.DisplayKey, out var loc) ? loc : game.Display);
+                        inlines.Add(new LineBreak());
+                        inlines.Add(new Run($"{LocalizationHelper.GetString("Toolbox.Title")}→{LocalizationHelper.GetString("Toolbox.MiniGame.Title")}→{gameName}"));
+                    }
+                }
             }
 
             // Side story Drop item tips
             if (!string.IsNullOrEmpty(stage.Drop))
             {
+                if (inlines.Count > 0)
+                {
+                    inlines.Add(new LineBreak());
+                }
+
                 var str = $"{stage.Value}: {ItemListHelper.GetItemName(stage.Drop) ?? stage.Drop}";
                 var count = Instances.ToolboxViewModel?.DepotResult?.FirstOrDefault(d => d.Id == stage.Drop)?.DisplayCount;
                 if (!string.IsNullOrEmpty(count))
                 {
-                    str += $" ({LocalizationHelper.GetString("Inventory")} {count})";
+                    str += $" ({LocalizationHelper.GetString("TaskQueue.Stage.Label.Inventory")} {count})";
                 }
-
-                lines.Add(str);
+                inlines.Add(new Run(str));
             }
 
             // Normal stage tips
             if (!string.IsNullOrEmpty(stage.Tip))
             {
-                lines.Add(stage.Tip);
+                if (inlines.Count > 0)
+                {
+                    inlines.Add(new LineBreak());
+                }
+
+                if (stage.TipArgKeys is { Count: > 0 })
+                {
+                    // Tip 是含 {n} 占位符的模板，占位符序号与 DropGroups 掉落序一致，名称与库存数字按同一序号着色
+                    var tipArgs = stage.TipArgKeys.Select(k => LocalizationHelper.GetString(k)).ToArray();
+                    foreach (var segment in TipPlaceholderRegex.Split(stage.Tip))
+                    {
+                        if (segment.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        if (segment[0] == '{' && segment[^1] == '}' && int.TryParse(segment[1..^1], out var argIndex)
+                            && argIndex < tipArgs.Length)
+                        {
+                            var argRun = new Run(tipArgs[argIndex]);
+                            if (stage.DropBrushKeys != null && argIndex < stage.DropBrushKeys.Count)
+                            {
+                                argRun.SetResourceReference(TextElement.ForegroundProperty, stage.DropBrushKeys[argIndex]);
+                            }
+
+                            inlines.Add(argRun);
+                        }
+                        else
+                        {
+                            inlines.Add(new Run(segment));
+                        }
+                    }
+                }
+                else
+                {
+                    inlines.Add(new Run(stage.Tip));
+                }
             }
 
             // Drop groups tips (for chip stages like PR-A-1/2)
             if (stage.DropGroups != null && stage.DropGroups.Count > 0
                 && stage.DropGroups.SelectMany(i => i).Select(dropId => Instances.ToolboxViewModel?.DepotResult?.FirstOrDefault(d => d.Id == dropId)?.Count).Any(x => x >= 0))
             {
-                var groupTexts = new List<string>();
-                foreach (var dropGroup in stage.DropGroups)
+                if (inlines.Count > 0)
                 {
-                    var itemCounts = dropGroup
-                        .Select(dropId => Instances.ToolboxViewModel?.DepotResult?.FirstOrDefault(d => d.Id == dropId)?.DisplayCount ?? "--")
-                        .ToList();
-                    groupTexts.Add(string.Join(" & ", itemCounts));
+                    inlines.Add(new LineBreak());
                 }
 
-                string inventoryLabel = LocalizationHelper.GetString("Inventory");
-                string inventoryText = $" ({inventoryLabel} {string.Join(" / ", groupTexts)})";
-                lines.Add(inventoryText);
+                inlines.Add(new Run($"({LocalizationHelper.GetString("TaskQueue.Stage.Label.Inventory")} "));
+
+                for (int g = 0; g < stage.DropGroups.Count; g++)
+                {
+                    var dropGroup = stage.DropGroups[g];
+                    if (g > 0)
+                    {
+                        inlines.Add(new Run(" / "));
+                    }
+
+                    for (int i = 0; i < dropGroup.Count; i++)
+                    {
+                        if (i > 0)
+                        {
+                            inlines.Add(new Run("&"));
+                        }
+
+                        var dropId = dropGroup[i];
+                        string countStr = Instances.ToolboxViewModel?.DepotResult?.FirstOrDefault(d => d.Id == dropId)?.DisplayCount ?? "--";
+
+                        var countRun = new Run(countStr);
+                        if (stage.DropBrushKeys != null && i < stage.DropBrushKeys.Count)
+                        {
+                            countRun.SetResourceReference(TextElement.ForegroundProperty, stage.DropBrushKeys[i]);
+                        }
+
+                        inlines.Add(countRun);
+                    }
+                }
+                inlines.Add(new Run(")"));
             }
         }
 
-        return lines.Count > 0 ? string.Join(Environment.NewLine, lines) : string.Empty;
+        return inlines;
     }
 
     /// <summary>
@@ -753,7 +961,7 @@ public class StageManager
     private static string GetDaysLeftText(DateTime expireTime, DateTime now)
     {
         int daysLeft = (expireTime - now).Days;
-        return daysLeft > 0 ? daysLeft.ToString() : LocalizationHelper.GetString("LessThanOneDay");
+        return daysLeft > 0 ? daysLeft.ToString() : LocalizationHelper.GetString("TaskQueue.Stage.Label.LessThanOneDay");
     }
 
     /// <summary>

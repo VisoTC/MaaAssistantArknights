@@ -1,6 +1,6 @@
 // <copyright file="AnnouncementInfo.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -11,15 +11,12 @@
 // but WITHOUT ANY WARRANTY
 // </copyright>
 
-using System.ComponentModel;
-using MaaWpfGui.Configuration.Factory;
+using MaaWpfGui.Models;
 
 namespace MaaWpfGui.Configuration.Global;
 
-public class AnnouncementInfo : INotifyPropertyChanged
+public class AnnouncementInfo : NotifyPropertyChangedWithValue
 {
-    public event PropertyChangedEventHandler PropertyChanged;
-
     /// <summary>
     /// Gets or sets a value indicating whether 下次不再显示公告
     /// </summary>
@@ -29,9 +26,4 @@ public class AnnouncementInfo : INotifyPropertyChanged
     /// Gets or sets a value indicating whether 不显示公告
     /// </summary>
     public bool DoNotShow { get; set; } = false;
-
-    public void OnPropertyChanged(string propertyName, object before, object after)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventDetailArgs(propertyName, before, after));
-    }
 }

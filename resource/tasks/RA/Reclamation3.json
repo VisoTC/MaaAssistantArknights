@@ -142,7 +142,7 @@
         "action": "Swipe",
         "specificRect": [120, 580, 1, 1],
         "rectMove": [1920, 0, 1, 1],
-        "specialParams": [500, 0, 3, 0]
+        "specialParams": [500, 0, 37, 1]
     },
     "RelaunchAnchor@RA@RA1-DeployGatheringBaseSwipe": {
         "doc": "步骤 10：JustReturn Swipe，占位部署采集基站",
@@ -150,7 +150,7 @@
         "action": "Swipe",
         "specificRect": [530, 630, 10, 10],
         "rectMove": [955, 300, 1, 1],
-        "specialParams": [500, 0, 3, 0],
+        "specialParams": [500, 0, 37, 1],
         "postDelay": 1000,
         "next": ["RelaunchAnchor@RA@RA1-DeployGatheringBasePrompt", "RelaunchAnchor@RA@RA1-WaitDoubleSpeed"]
     },
@@ -194,7 +194,7 @@
         "action": "Swipe",
         "specificRect": [1120, 630, 10, 10],
         "rectMove": [745, 300, 1, 1],
-        "specialParams": [500, 0, 3, 0],
+        "specialParams": [500, 0, 37, 1],
         "next": ["RelaunchAnchor@RA@RA1-DeployOperatorDirection", "#self"]
     },
     "RelaunchAnchor@RA@RA1-DeployOperatorDirection": {
@@ -212,7 +212,7 @@
         "action": "Swipe",
         "specificRect": [745, 300, 1, 1],
         "rectMove": [1745, 300, 10, 10],
-        "specialParams": [300, 0, 3, 0],
+        "specialParams": [300, 0, 37, 1],
         "next": ["RelaunchAnchor@RA@RA1-DeployOperatorDirection", "RelaunchAnchor@RA@RA1-DeployOperatorWait"]
     },
     "RelaunchAnchor@RA@RA1-DeployOperatorWait": {
@@ -249,7 +249,7 @@
         "algorithm": "OcrDetect",
         "action": "ClickSelf",
         "text": ["交付木材8+"],
-        "ocrReplace": [["(8|9|\\d{2,3}).*5", "交付木材8+"]],
+        "ocrReplace": [["(8|9|[0-68-9]{2,3}).*5", "交付木材8+"]],
         "roi": [170, 235, 50, 35],
         "next": ["RelaunchAnchor@RA@RA1-WaitWoodDialogue"]
     },
@@ -997,16 +997,15 @@
     "RelaunchAnchor@RA@RA4-WaitMission3": {
         "doc": "步骤 51 前等待任务完成",
         "baseTask": "RelaunchAnchor@RA@Common-WaitSkip",
-        "next": ["RelaunchAnchor@RA@RA4-ClickMission3", "#self"]
+        "next": ["RelaunchAnchor@RA@RA4-SettleNow", "RelaunchAnchor@RA@RA4-ClickMission3", "#self"]
     },
     "RelaunchAnchor@RA@RA4-ClickMission3": {
-        "doc": "步骤 51：OCR 识别 <1/1> 并点击",
+        "doc": "步骤 51：OCR 识别 <累计击败领袖敌人> 并点击",
         "algorithm": "OcrDetect",
         "action": "ClickSelf",
-        "text": ["1/1"],
-        "ocrReplace": [["(1|l|i).*(1|l|i)", "1/1"]],
-        "roi": [247, 234, 31, 26],
-        "next": ["RelaunchAnchor@RA@RA4-SettleNow"]
+        "text": ["累计", "击败", "领袖", "敌人"],
+        "roi": [80, 231, 205, 27],
+        "next": ["#self", "RelaunchAnchor@RA@RA4-WaitMission3"]
     },
     "RelaunchAnchor@RA@RA4-SettleNow": {
         "doc": "步骤 52：OCR 识别 <立即结算> 并点击",
@@ -1334,7 +1333,7 @@
         "action": "Swipe",
         "specificRect": [970, 110, 1, 1],
         "rectMove": [430, 550, 1, 1],
-        "specialParams": [1000, 0, 3, 0],
+        "specialParams": [1000, 0, 37, 1],
         "postDelay": 1000
     },
     "RelaunchAnchor@RA@RA15-DeployGatheringBaseSwipe": {
@@ -1343,7 +1342,7 @@
         "action": "Swipe",
         "specificRect": [400, 650, 1, 1],
         "rectMove": [495, 414, 1, 1],
-        "specialParams": [1000, 0, 3, 0],
+        "specialParams": [1000, 0, 37, 1],
         "postDelay": 4000,
         "next": ["RelaunchAnchor@RA@RA15-AlignMapCheck", "RelaunchAnchor@RA@RA15-WaitDoubleSpeed"]
     },
@@ -1380,7 +1379,7 @@
         "action": "Swipe",
         "specificRect": [1139, 638, 1, 1],
         "rectMove": [390, 512, 1, 1],
-        "specialParams": [1000, 0, 3, 0],
+        "specialParams": [1000, 0, 37, 1],
         "postDelay": 2000,
         "next": ["RelaunchAnchor@RA@RA15-DeployCX2"]
     },
@@ -1390,7 +1389,7 @@
         "action": "Swipe",
         "specificRect": [725, 319, 1, 1],
         "rectMove": [730, 500, 1, 1],
-        "specialParams": [1000, 0, 3, 0],
+        "specialParams": [1000, 0, 37, 1],
         "next": ["RelaunchAnchor@RA@RA15-MissionIcon1"]
     },
     "RelaunchAnchor@RA@RA15-MissionIcon1": {

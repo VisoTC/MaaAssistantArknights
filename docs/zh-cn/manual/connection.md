@@ -9,7 +9,7 @@ icon: mdi:plug
 
 MAA 可以通过当前**正在运行的单个模拟器**自动检测并填充 ADB 路径、连接地址和连接配置。
 
-截止至 MAA v5.22.3 支持自动检测的模拟器及连接地址如下：
+截止至 MAA v6.16.8 支持自动检测的模拟器及连接地址如下：
 
 - BlueStacks 5：`127.0.0.1:5555/5556/5565/5575/5585/5595/5554`
 - MuMu 模拟器：`127.0.0.1:16384/16416/16448/16480/16512/16544/16576`
@@ -22,10 +22,10 @@ MAA 可以通过当前**正在运行的单个模拟器**自动检测并填充 AD
 
 ## ADB 路径
 
-:::info 技术细节
-自动检测使用的是模拟器的 ADB，当自动检测出现问题时才需要手动设置。
-`强制替换 ADB` 会自动下载谷歌提供的 ADB 后自动填写路径。
-当环境变量中存在可用的 ADB 时，可直接填写 `adb`。
+::: info 技术细节  
+自动检测使用的是模拟器的 ADB，当自动检测出现问题时才需要手动设置。  
+`强制替换 ADB` 会自动下载谷歌提供的 ADB 后自动填写路径。  
+当环境变量中存在可用的 ADB 时，可直接填写 `adb`。  
 :::
 
 ### 使用模拟器提供的 ADB
@@ -34,8 +34,8 @@ MAA 可以通过当前**正在运行的单个模拟器**自动检测并填充 AD
 
 顶层或下层目录中应该会有一个名字中带有 `adb` 的 exe 文件，可以使用搜索功能，然后选择。
 
-:::details 一些例子
-`adb.exe` `HD-adb.exe` `adb_server.exe` `nox_adb.exe`
+::: details 一些例子  
+`adb.exe` `HD-adb.exe` `adb_server.exe` `nox_adb.exe`  
 :::
 
 ### 使用谷歌提供的 ADB
@@ -46,8 +46,8 @@ MAA 可以通过当前**正在运行的单个模拟器**自动检测并填充 AD
 
 ## 连接地址
 
-::: tip
-运行在本机的模拟器连接地址应该是 `127.0.0.1:<端口号>` 或 `emulator-<四位数字>`。
+::: tip  
+运行在本机的模拟器连接地址应该是 `127.0.0.1:<端口号>` 或 `emulator-<四位数字>`。  
 :::
 
 ### 模拟器端口相关文档
@@ -103,33 +103,33 @@ MAA 可以通过当前**正在运行的单个模拟器**自动检测并填充 AD
 
 :::: steps
 
-1. 指定 `Bluestacks.Config.Keyword`
+1. 指定 `ConfigKeyword`
 
-   ::: info 注意
-   如果启用了多开功能或安装了多个模拟器核心，则需要进行额外设置来指定使用的模拟器编号
+   ::: info 注意  
+   如果启用了多开功能或安装了多个模拟器核心，则需要进行额外设置来指定使用的模拟器编号  
    :::
 
-   在 `.\config\gui.json` 中搜索 `Bluestacks.Config.Keyword` 字段，内容为 `"bst.instance.<模拟器编号>.status.adb_port"`，模拟器编号可在模拟器路径的 `BlueStacks_nxt\Engine` 中 看到
+   在 `gui.new.json` 中找到当前配置（可在 设置-切换配置 中查看，默认为 `Default`）下的 `Gui.ConnectSettings.Extras.BluestacksExtra.ConfigKeyword` 字段，内容为 `"bst.instance.<模拟器编号>.status.adb_port"`，模拟器编号可在模拟器路径的 `BlueStacks_nxt\Engine` 中 看到
 
-   ::: details 示例
+   ::: details 示例  
    Nougat64 核心：
 
    ```json
-   "Bluestacks.Config.Keyword":"bst.instance.Nougat64.status.adb_port",
+   "ConfigKeyword": "bst.instance.Nougat64.status.adb_port"
    ```
 
    Pie64_2 核心：（核心名称后的数字代表这是一个多开核心）
 
    ```json
-   "Bluestacks.Config.Keyword": "bst.instance.Pie64_2.status.adb_port",
+   "ConfigKeyword": "bst.instance.Pie64_2.status.adb_port"
    ```
 
    :::
 
-2. 指定 `Bluestacks.Config.Path`
+2. 指定 `ConfigPath`
 
-   ::: info 注意
-   MAA 现在会尝试从注册表中读取 `bluestacks.conf` 的存储位置，当该功能无法工作时，则需要手动指定配置文件路径
+   ::: info 注意  
+   MAA 现在会尝试从注册表中读取 `bluestacks.conf` 的存储位置，当该功能无法工作时，则需要手动指定配置文件路径  
    :::
    1. 在蓝叠模拟器的数据目录下找到 `bluestacks.conf` 这个文件
       - 国际版默认路径为 `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`
@@ -138,17 +138,24 @@ MAA 可以通过当前**正在运行的单个模拟器**自动检测并填充 AD
       注：`C:\ProgramData`为隐藏目录，必要时请在文件资源管理器的地址栏中直接粘贴该地址，以便进入目录并进行寻找。
 
    2. 如果是第一次使用，请运行一次 MAA，使 MAA 自动生成配置文件。
-   3. **先关闭** MAA，**然后**打开 `gui.json`，找到 `Configurations` 下的当前配置名字段（可在 设置-切换配置 中查看，默认为 `Default`），在其中搜索字段 `Bluestacks.Config.Path`， 填 入 `bluestacks.conf` 的完整路径。（注意斜杠要用转义 `\\`）
+   3. **先关闭** MAA，**然后**打开 `gui.new.json`，找到当前配置名字段（可在 设置-切换配置 中查看，默认为 `Default`）下的 `Gui.ConnectSettings.Extras.BluestacksExtra.ConfigPath` 字段， 填 入 `bluestacks.conf` 的完整路径。（注意斜杠要用转义 `\\`）
 
-   ::: details 示例
+   ::: details 示例  
    以 `C:\ProgramData\BlueStacks_nxt\bluestacks.conf` 为例
 
    ```json
    {
      "Configurations": {
        "Default": {
-         "Bluestacks.Config.Path": "C:\\ProgramData\\BlueStacks_nxt\\bluestacks.conf"
-         // 其余配置字段，不要手动输入修改
+         "Gui": {
+           "ConnectSettings": {
+             "Extras": {
+               "BluestacksExtra": {
+                 "ConfigPath": "C:\\ProgramData\\BlueStacks_nxt\\bluestacks.conf"
+               }
+             }
+           }
+         }
        }
      }
    }
@@ -158,31 +165,37 @@ MAA 可以通过当前**正在运行的单个模拟器**自动检测并填充 AD
 
 3. 返回 MAA 并测试
 
-   你可以使用 `设置-运行设置` 中的 `截图测试` 功能来检查连接到的是否为预期的模拟器核心
+   你可以使用 `设置` - `连接设置` 中的 `截图测试` 功能来检查连接到的是否为预期的模拟器核心
 
 ::::
 
 ## 连接配置
 
-需选择对应模拟器的配置，若列表中没有则选择通用配置。若通用配置不可用请尝试并选择其他任一可用的配置。
+需选择对应模拟器的配置，若列表中没有则选择通用模式。若通用模式不可用请尝试并选择其他任一可用的配置。
 
 具体区别可以阅读[源码](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/resource/config.json#L57)。
 
 ### MuMu 截图增强模式
 
+::: tip  
+此处介绍的截图和触控增强功能适用于 Windows x64 版 MuMu。  
+:::
+
 **版本要求**：官版/方舟专版 MuMu V4.1.26 及以上，或国际版 MuMu V5.21.3 及以上。<!-- 官版 V3.8.13 支持初版截图增强 -->
 
-1. `设置` - `连接设置`，勾选 `启用 MuMu 截图增强模式`，MAA 会在勾选开关时自动尝试通过注册表获取安装路径。
+1. `设置` - `连接设置`，勾选 `启用 MuMu 截图增强`，MAA 会在勾选开关时自动尝试通过注册表获取安装路径。
 
-2. `MuMu 安装路径` 填写 `MuMu Player` 或 `MuMuPlayerGlobal-12.0` 或 `YXArkNights-12.0` 文件夹的路径，如 `C:\Program Files\Netease\MuMu Player`。
+2. `MuMu 安装路径` 填写 MuMu 安装目录的根目录（即包含 `nx_device` 或 `shell` 文件夹的目录），如 `C:\Program Files\Netease\MuMuPlayer`。
 
-3. 若正在使用 MuMu 网络桥接，则需勾选 `MuMu 网络桥接模式` 后手动填写 MuMu 多开器内对应模拟器的序号，如主多开为 `0`。
+3. 若正在使用 MuMu 网络桥接，则需勾选 `MuMu 网络桥接模式` 后手动填写 MuMu 多开器内对应模拟器的实例编号，如主多开为 `0`。
+
+**MuMu 触控增强模式**：需官方版 MuMu V6.3.2 及以上，目前方舟专版与国际版均不支持。勾选 `启用 MuMu 截图增强` 后，再勾选其下方的 `启用 MuMu 触控增强` 即可启用。
 
 ### 雷电截图增强模式
 
 需使用官版或国际版雷电模拟器 9 V9.1.32 及更新版本。<!-- 官版 V9.0.78 支持初版截图增强 但存在高分辨率失效问题 V9.1.29 修复-->
 
-1. `设置` - `连接设置`，勾选 `启用 LD 截图增强模式`，MAA 会在勾选开关时自动尝试通过注册表获取安装路径。
+1. `设置` - `连接设置`，勾选 `启用 LD 截图增强`，MAA 会在勾选开关时自动尝试通过注册表获取安装路径。
 
 2. `LD 安装路径` 填写 `LDPlayer9` 文件夹的路径，如 `C:\leidian\LDPlayer9\`。
 
@@ -192,18 +205,19 @@ MAA 可以通过当前**正在运行的单个模拟器**自动检测并填充 AD
 
 需使用 Android Emulator v27.2.9 及更新版本。（只要是方舟开服之后下载的就没问题。）
 
-AVD 截图增强模式在 MaaFramework 中实现，必须选择 MaaFramework 触控模式才能启用 AVD 截图增强。
+AVD 截图增强模式在 MaaFramework 中实现，必须选择 MaaFwAdb 触控模式才能启用 AVD 截图增强。
 
 1. `设置` - `连接设置` - `连接配置` 选择 `Android 虚拟设备（AVD）`。
 
-2. `触控模式` 选择 `MaaFramework`。
+2. `触控模式` 选择 `MaaFwAdb`。
 
 ## 触控模式
 
-1. [Minitouch](https://github.com/DeviceFarmer/minitouch)：使用 C 编写的 Android 触控事件器，操作 `evdev` 设备，提供 Socket 接口供外部程序触发触控事件和手势。从 Android 10 开始，Minitouch 在 SELinux 为 `Enforcing` 模式时不再可用。<sup>[源](https://github.com/DeviceFarmer/minitouch?tab=readme-ov-file#for-android-10-and-up)</sup>
-2. [MaaTouch](https://github.com/MaaAssistantArknights/MaaTouch)：由 MAA 基于 Java 对 Minitouch 的重新实现，使用安卓原生的 `InputDevice`，并添加了额外特性。高版本 Android 可用性尚待测试。~~帮我们做做测试~~
-3. Adb Input：直接调用 ADB 使用安卓的 `input` 命令进行触控操作，兼容性最强，速度最慢。
-4. [MaaFramework](https://maafw.com/)：调用 MaaFramework 控制单元的截图和触控功能。可用性尚待测试。~~帮我们做做测试 x2~~
+1. [Minitouch](https://github.com/DeviceFarmer/minitouch)：使用 C 编写的 Android 触控事件器，操作 `evdev` 设备，提供 Socket 接口供外部程序触发触控事件和手势。从 Android 10 开始，Minitouch 在 SELinux 为 `Enforcing` 模式时不再可用。<sup>[源](https://github.com/DeviceFarmer/minitouch?tab=readme-ov-file#for-android-10-and-up)</sup>（默认）
+2. [MaaTouch](https://github.com/MaaAssistantArknights/MaaTouch)：由 MAA 基于 Java 对 Minitouch 的重新实现，使用安卓原生的 `InputDevice`，并添加了额外特性。（实验功能）
+3. ADB Input：直接调用 ADB 使用安卓的 `input` 命令进行触控操作，仅用于兼容系统版本过低的实体机设备，能用其他模式时不要选择。ADB Input 的滑动容易拖飞，为避免此问题，滑动速度会设置得非常慢，且滑动距离与其他模式不同，在需要精确控制坐标的场景下无法使用。（不推荐使用）
+4. [MaaFwAdb](https://maafw.com/)：调用 MaaFramework 控制单元的截图和触控功能。不支持额外滑动：额外滑动是主滑动结束后沿垂直方向追加一小段的 ｢刹车｣ 滑动（轨迹类似拐 90° 的 L 形），用于抵消列表惯性，依赖额外滑动防止拖飞的页面在该模式下会拖飞。（实验功能）
+5. MuMu 触控增强：调用 MuMu 模拟器外部渲染进程的触控接口，需勾选 `启用 MuMu 截图增强` 后才会出现在触控模式下拉框中，不可用时自动回退为 Minitouch（实验功能）。需官方版 MuMu V6.3.2 及以上，方舟专版与国际版暂不支持。支持 MuMu ｢应用保活｣ （后台挂机）场景下操作。
 
 ## ADB Lite
 
@@ -213,8 +227,8 @@ AVD 截图增强模式在 MaaFramework 中实现，必须选择 MaaFramework 触
 
 ## MAA 和模拟器多开
 
-::: info 如何实现
-若需要多开模拟器同时操作，可将 MAA 文件夹复制多份，使用 **不同的 MAA**、**同一个 adb.exe**、**不同的连接地址** 来进行连接。
+::: info 如何实现  
+若需要多开模拟器同时操作，可将 MAA 文件夹复制多份，使用 **不同的 MAA**、**同一个 adb.exe**、**不同的连接地址** 来进行连接。  
 :::
 
 ### 自动启动多开模拟器
@@ -228,8 +242,8 @@ AVD 截图增强模式在 MaaFramework 中实现，必须选择 MaaFramework 触
 3. 在多出来的 `命令行` 列中找到 `...\Bluestacks_nxt\HD-Player.exe"` 后的内容。
 4. 将找到的类似于 `--instance Nougat32` 的内容填写到 `启动设置` - `附加命令` 中。
 
-::: note
-操作结束后建议重新隐藏 `步骤 2` 中打开的 `命令行` 列以防止卡顿
+::: note  
+操作结束后建议重新隐藏 `步骤 2` 中打开的 `命令行` 列以防止卡顿  
 :::
 
 ::: details 示例
@@ -243,7 +257,7 @@ AVD 截图增强模式在 MaaFramework 中实现，必须选择 MaaFramework 触
 附加命令: --instance Nougat32_1 --cmd launchApp --package "com.hypergryph.arknights.bilibili"
 ```
 
-其中 `--cmd launchApp --package` 部分为启动后自动运行指定包名应用，可自行更改。
+其中 `--cmd launchApp --package` 部分为启动后自动运行指定包名应用，可自行更改。  
 :::
 
 #### 通过模拟器的快捷方式启动

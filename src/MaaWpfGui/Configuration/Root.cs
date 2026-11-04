@@ -1,6 +1,6 @@
 // <copyright file="Root.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -12,26 +12,35 @@
 // </copyright>
 
 #nullable enable
-using System.ComponentModel;
 using System.Text.Json.Serialization;
-using JetBrains.Annotations;
-using MaaWpfGui.Configuration.Factory;
 using MaaWpfGui.Configuration.Global;
 using MaaWpfGui.Configuration.Single;
 using MaaWpfGui.Constants;
+using MaaWpfGui.Constants.Enums;
+using MaaWpfGui.Models;
 using ObservableCollections;
+using static MaaWpfGui.Configuration.Factory.ConfigFactory;
 
 namespace MaaWpfGui.Configuration;
 
-public class Root : INotifyPropertyChanged
+public class Root : NotifyPropertyChangedWithValue
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public void EventBinding(string prefix)
+    {
+        Timers.EventBinding($"{prefix}{nameof(Timers)}.");
+        AnnouncementInfo.PropertyChanged += Handler.OnPropertyChangedFactory($"{prefix}{nameof(AnnouncementInfo)}.");
+        Gui.PropertyChanged += Handler.OnPropertyChangedFactory($"{prefix}{nameof(Gui)}.");
+        Gui.Background.PropertyChanged += Handler.OnPropertyChangedFactory($"{prefix}{nameof(Gui)}.{nameof(Gui.Background)}.");
+        Gui.Performance.PropertyChanged += Handler.OnPropertyChangedFactory($"{prefix}{nameof(Gui)}.{nameof(Gui.Performance)}.");
+        Gui.CollapesStates.CollectionChanged += Handler.OnCollectionChangedFactory<SettingKey>($"{prefix}{nameof(Gui)}.{nameof(Gui.CollapesStates)}.");
+        Update.PropertyChanged += Handler.OnPropertyChangedFactory($"{prefix}{nameof(Update)}.");
+    }
 
     [JsonInclude]
     public ObservableDictionary<string, SpecificConfig> Configurations { get; private set; } = [];
 
     [JsonInclude]
-    public ObservableDictionary<int, Timer> Timers { get; private set; } = [];
+    public TimerSettings Timers { get; private set; } = new();
 
     public int ConfigVersion { get; set; } = 1;
 
@@ -39,13 +48,13 @@ public class Root : INotifyPropertyChanged
     public string Current { get; set; } = ConfigurationKeys.DefaultConfiguration;
 
     [JsonInclude]
-    public VersionUpdate VersionUpdate { get; private set; } = new();
+    public Update Update { get; private set; } = new();
 
     [JsonInclude]
     public AnnouncementInfo AnnouncementInfo { get; private set; } = new();
 
     [JsonInclude]
-    public GUI GUI { get; private set; } = new();
+    public Gui Gui { get; private set; } = new();
 
     [JsonIgnore]
     public SpecificConfig CurrentConfig
@@ -55,11 +64,5 @@ public class Root : INotifyPropertyChanged
             return result!;
         }
         set => Configurations[Current] = value;
-    }
-
-    [UsedImplicitly]
-    public void OnPropertyChanged(string propertyName, object before, object after)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventDetailArgs(propertyName, before, after));
     }
 }

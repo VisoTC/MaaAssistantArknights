@@ -1,6 +1,6 @@
 // <copyright file="AsstStartUpTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -13,6 +13,8 @@
 
 #nullable enable
 using System.ComponentModel;
+using MaaWpfGui.Constants.Enums;
+using MaaWpfGui.Extensions;
 using MaaWpfGui.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -26,8 +28,7 @@ public class AsstStartUpTask : AsstBaseTask
     /// <summary>
     /// Gets or sets 客户端版本
     /// </summary>
-    [JsonProperty("client_type")]
-    public string ClientType { get; set; } = string.Empty;
+    public ClientType ClientType { get; set; } = ClientType.Official;
 
     /// <summary>
     /// Gets or sets a value indicating whether 是否自动启动客户端
@@ -45,9 +46,12 @@ public class AsstStartUpTask : AsstBaseTask
     /// <summary>
     /// 开始唤醒。
     /// </summary>
-    /// <param name="clientType">客户端版本。</param>
-    /// <param name="enable">是否自动启动客户端。</param>
-    /// <param name="accountName">需要切换到的登录名，留空以禁用</param>
     /// <returns>是否成功。</returns>
-    public override (AsstTaskType TaskType, JObject Params) Serialize() => (TaskType, JObject.FromObject(this));
+    public override (AsstTaskType TaskType, JObject Params) Serialize()
+    {
+        var (type, task) = (TaskType, JObject.FromObject(this));
+        task["client_type"] = ClientType.ToCustomString();
+
+        return (type, task);
+    }
 }

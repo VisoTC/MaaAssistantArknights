@@ -10,22 +10,18 @@
     xmlns:helper="clr-namespace:MaaWpfGui.Helper"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:s="https://github.com/canton7/Stylet"
+    xmlns:settings="clr-namespace:MaaWpfGui.Views.UserControl.Settings"
     xmlns:settings_vms="clr-namespace:MaaWpfGui.ViewModels.UserControl.Settings"
+    xmlns:ui_vms="clr-namespace:MaaWpfGui.ViewModels.UI"
     d:Background="White"
     d:DataContext="{d:DesignInstance {x:Type settings_vms:GuiSettingsUserControlModel}}"
-    d:DesignHeight="350"
     d:DesignWidth="550"
     s:View.ActionTarget="{Binding}"
     mc:Ignorable="d">
+    <!--  背景设置整块并入界面设置聚合展示，分区标题由各 Divider 提供  -->
     <StackPanel>
-        <controls:TextBlock
-            HorizontalAlignment="Center"
-            FontWeight="Bold"
-            Text="{DynamicResource GlobalConfigTip}"
-            TextAlignment="Center"
-            Visibility="{c:Binding 'ConfigurationList.Count > 1',
-                                   Source={x:Static helper:Instances.SettingsViewModel}}" />
-        <!--<controls:TextBlock Text="{DynamicResource CustomBackgroundTip}" TextWrapping="Wrap" />-->
+        <controls:GlobalConfigTip />
+        <hc:Divider Margin="0" Content="{DynamicResource Settings.ThemeAnimation}" />
         <Grid
             Margin="10"
             HorizontalAlignment="Center"
@@ -34,50 +30,126 @@
                 <ColumnDefinition Width="200" />
                 <ColumnDefinition Width="200" />
             </Grid.ColumnDefinitions>
-            <StackPanel
-                Grid.Row="0"
-                Grid.Column="0"
-                VerticalAlignment="Top">
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                <ComboBox
+                    Margin="8"
+                    hc:InfoElement.Title="{DynamicResource Settings.Theme}"
+                    DisplayMemberPath="Display"
+                    ItemsSource="{Binding DarkModeList}"
+                    SelectedValue="{Binding DarkMode}"
+                    SelectedValuePath="Value" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                <ComboBox
+                    Margin="8"
+                    hc:InfoElement.Title="{DynamicResource Settings.TransitionSpeed}"
+                    DisplayMemberPath="Display"
+                    ItemsSource="{Binding TransitionSpeedList}"
+                    SelectedValue="{Binding TransitionSpeed}"
+                    SelectedValuePath="Value" />
+            </StackPanel>
+        </Grid>
+        <hc:Divider Margin="0" Content="{DynamicResource Settings.Language.Title}" />
+        <Grid
+            Margin="10"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                <ComboBox
+                    x:Name="LanguageSelector"
+                    Margin="8"
+                    hc:InfoElement.Title="{Binding LanguageInfo}"
+                    DisplayMemberPath="Display"
+                    ItemsSource="{Binding LanguageList}"
+                    SelectedValue="{Binding Language}"
+                    SelectedValuePath="Value" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                <ComboBox
+                    Margin="8"
+                    hc:InfoElement.Title="{DynamicResource Settings.Language.OperName}"
+                    DisplayMemberPath="Display"
+                    ItemsSource="{Binding OperNameLanguageModeList}"
+                    SelectedValue="{Binding OperNameLanguage}"
+                    SelectedValuePath="Value" />
+            </StackPanel>
+        </Grid>
+        <hc:Divider Margin="0" Content="{DynamicResource Settings.TitleBar}" />
+        <Grid
+            Margin="10"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                <StackPanel Margin="8" HorizontalAlignment="Left">
+                    <controls:TextBlock
+                        Margin="8,0,0,5"
+                        HorizontalAlignment="Left"
+                        Text="{DynamicResource Settings.TitleBar.DisplayContent}"
+                        TextWrapping="Wrap" />
+                    <hc:CheckComboBox
+                        Width="180"
+                        HorizontalAlignment="Stretch"
+                        hc:ListBoxAttach.SelectedItems="{Binding WindowTitleSelectShowList}"
+                        DisplayMemberPath="Value"
+                        ItemsSource="{Binding WindowTitleAllShowDict}" />
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                <CheckBox Margin="8" IsChecked="{Binding WindowTitleScrollable}">
+                    <controls:TextBlock Text="{DynamicResource Settings.TitleBar.WindowTitleScrollable}" TextWrapping="Wrap" />
+                </CheckBox>
                 <CheckBox
                     Margin="8"
-                    Content="{DynamicResource UseTray}"
+                    Content="{DynamicResource Settings.TitleBar.HideCloseButton}"
+                    IsChecked="{Binding HideCloseButton}" />
+            </StackPanel>
+        </Grid>
+        <hc:Divider Margin="0" Content="{DynamicResource Tray.Title}" />
+        <Grid
+            Margin="10"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                <CheckBox
+                    Margin="8"
+                    Content="{DynamicResource Tray.Use}"
                     IsChecked="{Binding UseTray}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Top">
                 <CheckBox
                     Margin="8"
-                    Content="{DynamicResource MinimizeToTray}"
                     IsChecked="{Binding MinimizeToTray}"
                     Visibility="{c:Binding UseTray,
-                                           FalseToVisibility=Collapsed}" />
-                <StackPanel Margin="8" Orientation="Horizontal">
-                    <CheckBox Content="{DynamicResource SystemNotification}" IsChecked="{Binding UseNotify}" />
-                    <controls:TooltipBlock TooltipText="{DynamicResource SystemNotificationInfo}" />
-                </StackPanel>
+                                           FalseToVisibility=Collapsed}">
+                    <controls:TextBlock Text="{DynamicResource Tray.MinimizeTo}" TextWrapping="Wrap" />
+                </CheckBox>
+            </StackPanel>
+        </Grid>
+        <hc:Divider Margin="0" Content="{DynamicResource Logging.Title}" />
+        <Grid
+            Margin="10"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
                 <CheckBox
                     Margin="8"
-                    Content="{DynamicResource HideCloseButton}"
-                    IsChecked="{Binding HideCloseButton}" />
-                <CheckBox
-                    Margin="8"
-                    Content="{DynamicResource WindowTitleScrollable}"
-                    IsChecked="{Binding WindowTitleScrollable}" />
-                <StackPanel Margin="8" Orientation="Horizontal">
-                    <CheckBox MaxWidth="200" IsChecked="{Binding MainTasksInvertNullFunction}">
-                        <controls:TextBlock Text="{DynamicResource MainTasksNullFunctionality}" TextWrapping="Wrap" />
-                    </CheckBox>
-                    <controls:TooltipBlock TooltipText="{DynamicResource MainTasksNullFunctionalityTip}" />
-                </StackPanel>
-                <StackPanel Margin="8" Orientation="Horizontal">
-                    <CheckBox IsChecked="{Binding IgnoreBadModulesAndUseSoftwareRendering}">
-                        <controls:TextBlock
-                            MaxWidth="200"
-                            Text="{DynamicResource BadModules.UseSoftwareRendering}"
-                            TextWrapping="Wrap" />
-                    </CheckBox>
-                    <controls:TooltipBlock TooltipText="{DynamicResource BadModules.UseSoftwareRenderingTip}" />
-                </StackPanel>
-                <CheckBox
-                    Margin="8"
-                    Content="{DynamicResource UseCardLog}"
+                    Content="{DynamicResource Logging.UseCardLog}"
                     IsChecked="{Binding UseCardLog}" />
                 <StackPanel
                     Margin="8"
@@ -87,7 +159,7 @@
                         MaxWidth="200"
                         Margin="8,0,0,5"
                         HorizontalAlignment="Left"
-                        Text="{DynamicResource MaxNumberOfLogThumbnails}"
+                        Text="{DynamicResource Logging.MaxNumberOfLogThumbnails}"
                         TextWrapping="Wrap" />
                     <hc:NumericUpDown
                         Width="180"
@@ -96,71 +168,67 @@
                         Minimum="0"
                         Value="{Binding MaxNumberOfLogThumbnails}" />
                 </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Top">
                 <ComboBox
                     Width="180"
                     Margin="8"
                     HorizontalAlignment="Left"
-                    hc:InfoElement.Title="{DynamicResource LogItemDateFormatString}"
+                    hc:InfoElement.Title="{DynamicResource Logging.LogItemDateFormatString}"
                     ItemsSource="{Binding LogItemDateFormatStringList}"
                     SelectedValue="{Binding LogItemDateFormatString}" />
             </StackPanel>
-
-            <StackPanel
-                Grid.Row="0"
-                Grid.Column="1"
-                VerticalAlignment="Top">
+        </Grid>
+        <hc:Divider Margin="0" Content="{DynamicResource Guide.Title}" />
+        <Grid
+            Margin="10"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                <StackPanel Margin="8" Orientation="Horizontal">
+                    <CheckBox MaxWidth="167" IsChecked="{Binding MainTasksInvertNullFunction}">
+                        <controls:TextBlock Text="{DynamicResource TaskQueue.MainTasksNullFunctionality}" TextWrapping="Wrap" />
+                    </CheckBox>
+                    <controls:TooltipBlock TooltipText="{DynamicResource TaskQueue.MainTasksNullFunctionality.Tip}" />
+                </StackPanel>
+                <StackPanel Margin="8" Orientation="Horizontal">
+                    <CheckBox MaxWidth="167" IsChecked="{Binding HideHoverActionButtons}">
+                        <controls:TextBlock Text="{DynamicResource TaskQueue.HideHoverActionButtons}" TextWrapping="Wrap" />
+                    </CheckBox>
+                    <controls:TooltipBlock TooltipText="{DynamicResource TaskQueue.HideHoverActionButtons.Tip}" />
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Top">
                 <ComboBox
-                    x:Name="LanguageSelector"
                     Margin="8"
-                    hc:InfoElement.Title="{Binding LanguageInfo, Mode=OneTime}"
+                    hc:InfoElement.Title="{DynamicResource TaskQueue.MainViewButtonFeature}"
                     DisplayMemberPath="Display"
-                    ItemsSource="{Binding LanguageList}"
-                    SelectedValue="{Binding Language}"
-                    SelectedValuePath="Value" />
-                <ComboBox
-                    Margin="8"
-                    hc:InfoElement.Title="{DynamicResource OperNameLanguage}"
-                    DisplayMemberPath="Display"
-                    ItemsSource="{Binding OperNameLanguageModeList}"
-                    SelectedValue="{Binding OperNameLanguage}"
-                    SelectedValuePath="Value" />
-                <ComboBox
-                    Margin="8"
-                    hc:InfoElement.Title="{DynamicResource UiTheme}"
-                    DisplayMemberPath="Display"
-                    ItemsSource="{Binding DarkModeList}"
-                    SelectedValue="{Binding DarkMode}"
-                    SelectedValuePath="Value" />
-                <ComboBox
-                    Margin="8"
-                    hc:InfoElement.Title="{DynamicResource MainViewButtonFeature}"
-                    DisplayMemberPath="Display"
-                    IsHitTestVisible="{Binding Idle, Source={x:Static helper:Instances.SettingsViewModel}}"
+                    IsHitTestVisible="{Binding Run.Idle, Source={x:Static helper:Instances.SettingsViewModel}}"
                     ItemsSource="{Binding InverseClearModeList}"
                     SelectedValue="{Binding InverseClearMode}"
                     SelectedValuePath="Value" />
-                <StackPanel Margin="8" HorizontalAlignment="Left">
-                    <controls:TextBlock
-                        Margin="8,0,0,5"
-                        HorizontalAlignment="Left"
-                        Text="{DynamicResource TitleBarDisplayContent}"
-                        TextWrapping="Wrap" />
-                    <hc:CheckComboBox
-                        Width="180"
-                        HorizontalAlignment="Stretch"
-                        hc:ListBoxAttach.SelectedItems="{Binding WindowTitleSelectShowList}"
-                        DisplayMemberPath="Value"
-                        ItemsSource="{Binding WindowTitleAllShowDict}" />
-                </StackPanel>
-                <Button
-                    Width="180"
-                    Margin="8"
-                    HorizontalAlignment="Left"
-                    Command="{s:Action RestartGuide,
-                                       Target={x:Static helper:Instances.SettingsViewModel}}"
-                    Content="{DynamicResource RestartGuide}"
-                    Style="{StaticResource ButtonPrimary}" />
             </StackPanel>
+
+            <Button
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                Width="180"
+                Margin="8"
+                HorizontalAlignment="Center"
+                Command="{s:Action RestartGuide,
+                                   Target={x:Static helper:Instances.SettingsViewModel}}"
+                Content="{DynamicResource Guide.Restart}"
+                Style="{StaticResource ButtonPrimary}" />
         </Grid>
+        <hc:Divider Margin="0" Content="{DynamicResource Settings.Background}" />
+        <settings:BackgroundSettingsUserControl Margin="0,20" DataContext="{Binding Source={x:Static ui_vms:SettingsViewModel.BackgroundSettings}}" />
     </StackPanel>
 </UserControl>

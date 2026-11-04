@@ -1,6 +1,6 @@
 // <copyright file="MainWindowManager.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -13,6 +13,7 @@
 
 using System;
 using System.Windows;
+using MaaWpfGui.Configuration.Factory;
 using MaaWpfGui.Constants;
 using MaaWpfGui.Helper;
 using MaaWpfGui.Views.UI;
@@ -44,10 +45,10 @@ public sealed class MainWindowManager : IMainWindowManager
     {
         MainWindow.StateChanged += MainWindowStateChanged;
 
-        bool minimizeToTray = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.MinimizeToTray, false);
+        bool minimizeToTray = ConfigFactory.Root.Gui.MinimizeToTray;
         SetMinimizeToTray(minimizeToTray);
 
-        bool useTrayIcon = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.UseTray, true);
+        bool useTrayIcon = ConfigFactory.Root.Gui.UseTray;
         SetUseTrayIcon(useTrayIcon);
 
         _previousState = GetWindowState();

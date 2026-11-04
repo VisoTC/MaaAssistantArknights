@@ -1,6 +1,6 @@
 // <copyright file="ItemListHelper.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -20,7 +20,9 @@ using System.IO;
 using System.Text.Json;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using MaaWpfGui.Constants;
+using MaaWpfGui.Configuration.Factory;
+using MaaWpfGui.Constants.Enums;
+using MaaWpfGui.Extensions;
 using MaaWpfGui.Models;
 using Serilog;
 
@@ -28,13 +30,26 @@ namespace MaaWpfGui.Helper;
 
 public static class ItemListHelper
 {
-    public static Dictionary<string, ArkItem> ArkItems { get; }
+    public static Dictionary<string, ArkItem> ArkItems { get; private set; }
 
-    private static readonly ILogger _logger = Log.ForContext("SourceContext", "ItemListHelper");
+    private static readonly ILogger _logger = Log.ForContext(typeof(ItemListHelper));
 
     static ItemListHelper()
     {
-        var language = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.Localization, LocalizationHelper.DefaultLanguage);
+        ArkItems = LoadItems();
+    }
+
+    /// <summary>
+    /// 重新加载物品列表（语言切换时调用）。
+    /// </summary>
+    public static void Reload()
+    {
+        ArkItems = LoadItems();
+    }
+
+    private static Dictionary<string, ArkItem> LoadItems()
+    {
+        var language = ConfigFactory.Root.Gui.Localization;
         string filename = string.Empty;
         switch (language)
         {
@@ -46,7 +61,7 @@ public static class ItemListHelper
                 break;
 
             default:
-                filename = Path.Combine(PathsHelper.ResourceDir, "global", DataHelper.ClientDirectoryMapper[language], "resource", "item_index.json");
+                filename = Path.Combine(PathsHelper.ResourceDir, "global", DataHelper.ClientDirectoryMapper[language].ToCustomString(), "resource", "item_index.json");
                 break;
         }
 
@@ -54,9 +69,8 @@ public static class ItemListHelper
 
         if (File.Exists(filename) is false)
         {
-            ArkItems = tempItems;
             _logger.Warning("Item list file not found: {Filename}", filename);
-            return;
+            return tempItems;
         }
 
         try
@@ -70,7 +84,7 @@ public static class ItemListHelper
             _logger.Error(e, "Failed to load item list from {filename}", filename);
         }
 
-        ArkItems = tempItems ?? new Dictionary<string, ArkItem>();
+        return tempItems ?? [];
     }
 
     /// <summary>
@@ -82,7 +96,26 @@ public static class ItemListHelper
     {
         return ArkItems.TryGetValue(itemId, out var item)
             ? item.Name
-            : null;
+            : itemId;
+    }
+
+    /// <summary>
+    /// 反查将指定物品作为合成材料的产物及其配方消耗数，如芯片组 → 对应职业双芯片（每个消耗 2 个芯片组）。
+    /// </summary>
+    /// <param name="materialId">材料物品 id。</param>
+    /// <returns>产物 id 与配方中消耗该材料数量的列表，无合成产物时为空。</returns>
+    public static List<KeyValuePair<string, int>> GetFormulaProducts(string materialId)
+    {
+        List<KeyValuePair<string, int>> products = [];
+        foreach (var (itemId, item) in ArkItems)
+        {
+            if (item.Formula is { } formula && formula.TryGetValue(materialId, out var count) && count > 0)
+            {
+                products.Add(new(itemId, count));
+            }
+        }
+
+        return products;
     }
 
     private static readonly ConcurrentDictionary<string, BitmapSource?> _imageCache = new();

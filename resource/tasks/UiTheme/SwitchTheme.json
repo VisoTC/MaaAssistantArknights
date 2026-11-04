@@ -1,6 +1,7 @@
 {
     "SwitchTheme@ToggleSettingsMenu": {
         "action": "ClickSelf",
+        "template": ["SwitchTheme@ToggleSettingsMenu.png", "SwitchTheme@ToggleSettingsMenu-v2.png"],
         "roi": [227, 327, 159, 152],
         "postDelay": 1000,
         "next": ["SwitchTheme@ChangeTheme", "SwitchTheme@ToggleSettingsMenu"]
@@ -22,7 +23,7 @@
         "action": "Swipe",
         "specificRect": [200, 170, 10, 10],
         "rectMove": [200, 600, 10, 10],
-        "specialParams": [150, 0, 1, 1],
+        "specialParams": [150],
         "postDelay": 500,
         "maxTimes": 10,
         "next": ["SwitchTheme@SelectLightTheme", "SwitchTheme@SwipeToLightTheme"]
@@ -30,7 +31,7 @@
     "SwitchTheme@ConfirmThemeChange": {
         "action": "ClickSelf",
         "roi": [1070, 620, 200, 90],
-        "postDelay": 500,
+        "postDelay": 2000,
         "next": ["SwitchTheme@ReturnTheme"]
     },
     "SwitchTheme@CancelThemeChange": {
@@ -41,6 +42,7 @@
     "SwitchTheme@ReturnTheme": {
         "baseTask": "ReturnButton",
         "template": ["Return.png", "Return-White.png"],
-        "next": ["#next"]
+        "postDelay": 1000,
+        "next": ["#self", "#next"]
     }
 }

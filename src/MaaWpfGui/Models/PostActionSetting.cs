@@ -1,6 +1,6 @@
 // <copyright file="PostActionSetting.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -17,10 +17,9 @@ using System.Collections.Generic;
 using System.Windows.Controls;
 using System.Windows.Input;
 using JetBrains.Annotations;
-using MaaWpfGui.Constants;
+using MaaWpfGui.Configuration.Factory;
 using MaaWpfGui.Helper;
 using MaaWpfGui.ViewModels.UserControl.Settings;
-using Newtonsoft.Json;
 using Stylet;
 
 namespace MaaWpfGui.Models;
@@ -36,7 +35,7 @@ public class PostActionSetting : PropertyChangedBase
         None = 0,
 
         /// <summary>
-        /// 退出明日方舟
+        /// 退出明日方舟（仅模拟器连接时显示与执行）
         /// </summary>
         ExitArknights = 1 << 0,
 
@@ -46,7 +45,7 @@ public class PostActionSetting : PropertyChangedBase
         BackToAndroidHome = 1 << 1,
 
         /// <summary>
-        /// 退出模拟器
+        /// 退出模拟器（仅模拟器连接时显示与执行）
         /// </summary>
         ExitEmulator = 1 << 2,
 
@@ -74,6 +73,21 @@ public class PostActionSetting : PropertyChangedBase
         /// 睡眠
         /// </summary>
         Sleep = 1 << 7,
+
+        /// <summary>
+        /// 任务出错时跳过所有完成后动作
+        /// </summary>
+        SkipOnError = 1 << 8,
+
+        /// <summary>
+        /// 锁屏
+        /// </summary>
+        LockScreen = 1 << 9,
+
+        /// <summary>
+        /// 退出 PC 客户端（仅 PC 端连接时显示与执行）
+        /// </summary>
+        ExitPCClient = 1 << 10,
     }
 
     private PostActions _postActions;
@@ -83,8 +97,7 @@ public class PostActionSetting : PropertyChangedBase
     public bool Once
     {
         get => _once;
-        set
-        {
+        set {
             if (!SetAndNotify(ref _once, value))
             {
                 return;
@@ -95,17 +108,19 @@ public class PostActionSetting : PropertyChangedBase
                 SaveActions();
             }
 
-            ActionTitle = value ? $"{LocalizationHelper.GetString("PostActions")} ({LocalizationHelper.GetString("Once")})" : LocalizationHelper.GetString("PostActions");
+            ActionTitle = value ? $"{LocalizationHelper.GetString("TaskQueue.PostAction")} ({LocalizationHelper.GetString("TaskQueue.PostAction.Once")})" : LocalizationHelper.GetString("TaskQueue.PostAction");
         }
     }
 
     private bool _exitArknights;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether 完成后退出明日方舟。仅模拟器下生效，PC 端由 ｢退出 PC 客户端｣ 代替，勾选予以保留。
+    /// </summary>
     public bool ExitArknights
     {
-        get => _exitArknights;
-        set
-        {
+        get => _exitArknights && !IsPCConnectConfig;
+        set {
             if (!SetAndNotify(ref _exitArknights, value))
             {
                 return;
@@ -125,13 +140,12 @@ public class PostActionSetting : PropertyChangedBase
     /// <summary>
     /// Gets a value indicating whether AttachWindow 模式支持 Android 侧后处理动作。
     /// </summary>
-    public bool AndroidControlPostActionsEnabled => !_exitEmulator && !ConnectSettingsUserControlModel.Instance.UseAttachWindow;
+    public bool AndroidControlPostActionsEnabled => !_exitEmulator && !ConnectSettingsUserControlModel.Instance.IsPCConnectConfig;
 
     public bool BackToAndroidHome
     {
         get => _backToAndroidHome;
-        set
-        {
+        set {
             if (!SetAndNotify(ref _backToAndroidHome, value))
             {
                 return;
@@ -146,23 +160,20 @@ public class PostActionSetting : PropertyChangedBase
         }
     }
 
+    /// <summary>
+    /// Gets a value indicating whether 当前为 PC 端（窗口绑定）连接：只显示 ｢退出 PC 客户端｣，隐藏 ｢退出明日方舟｣ 与 ｢退出模拟器｣。
+    /// </summary>
+    public bool IsPCConnectConfig => ConnectSettingsUserControlModel.Instance.IsPCConnectConfig;
+
     private bool _exitEmulator;
 
     /// <summary>
-    /// Gets a value indicating whether PC 端（窗口绑定）无模拟器进程，完成后不可选择「退出模拟器」。
+    /// Gets or sets a value indicating whether 完成后退出模拟器。仅模拟器下生效，PC 端下勾选予以保留，切回模拟器后恢复。
     /// </summary>
-    public bool ExitEmulatorOptionEnabled => !ConnectSettingsUserControlModel.Instance.UseAttachWindow;
-
     public bool ExitEmulator
     {
-        get => _exitEmulator;
-        set
-        {
-            if (value && ConnectSettingsUserControlModel.Instance.UseAttachWindow)
-            {
-                return;
-            }
-
+        get => _exitEmulator && !IsPCConnectConfig;
+        set {
             if (!SetAndNotify(ref _exitEmulator, value))
             {
                 return;
@@ -180,13 +191,30 @@ public class PostActionSetting : PropertyChangedBase
         }
     }
 
+    private bool _exitPCClient;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 完成后退出 PC 客户端。仅 PC 端下生效，模拟器下勾选予以保留，切回 PC 端后恢复。
+    /// </summary>
+    public bool ExitPCClient
+    {
+        get => _exitPCClient && IsPCConnectConfig;
+        set {
+            if (!SetAndNotify(ref _exitPCClient, value))
+            {
+                return;
+            }
+
+            UpdatePostAction(PostActions.ExitPCClient, value);
+        }
+    }
+
     private bool _exitSelf;
 
     public bool ExitSelf
     {
         get => _exitSelf;
-        set
-        {
+        set {
             if (!SetAndNotify(ref _exitSelf, value))
             {
                 return;
@@ -206,14 +234,11 @@ public class PostActionSetting : PropertyChangedBase
     public bool IfNoOtherMaa
     {
         get => _ifNoOtherMaa;
-        set
-        {
+        set {
             if (!SetAndNotify(ref _ifNoOtherMaa, value))
             {
                 return;
             }
-
-            NotifyOfPropertyChange(nameof(ExitEmulatorOptionEnabled));
 
             if (value)
             {
@@ -224,13 +249,38 @@ public class PostActionSetting : PropertyChangedBase
         }
     }
 
+    private bool _lockScreen;
+
+    public bool LockScreen
+    {
+        get => _lockScreen;
+        set {
+            if (!SetAndNotify(ref _lockScreen, value))
+            {
+                return;
+            }
+
+            if (value)
+            {
+                Hibernate = false;
+                Shutdown = false;
+                Sleep = false;
+            }
+            else if (!Hibernate && !Shutdown && !Sleep)
+            {
+                IfNoOtherMaa = false;
+            }
+
+            UpdatePostAction(PostActions.LockScreen, value);
+        }
+    }
+
     private bool _hibernate;
 
     public bool Hibernate
     {
         get => _hibernate;
-        set
-        {
+        set {
             if (!SetAndNotify(ref _hibernate, value))
             {
                 return;
@@ -240,8 +290,9 @@ public class PostActionSetting : PropertyChangedBase
             {
                 Shutdown = false;
                 Sleep = false;
+                LockScreen = false;
             }
-            else if (!Shutdown && !Sleep)
+            else if (!Shutdown && !Sleep && !LockScreen)
             {
                 IfNoOtherMaa = false;
             }
@@ -255,8 +306,7 @@ public class PostActionSetting : PropertyChangedBase
     public bool Shutdown
     {
         get => _shutdown;
-        set
-        {
+        set {
             if (!SetAndNotify(ref _shutdown, value))
             {
                 return;
@@ -268,8 +318,9 @@ public class PostActionSetting : PropertyChangedBase
                 BackToAndroidHome = false;
                 Hibernate = false;
                 Sleep = false;
+                LockScreen = false;
             }
-            else if (!Hibernate && !Sleep)
+            else if (!Hibernate && !Sleep && !LockScreen)
             {
                 IfNoOtherMaa = false;
             }
@@ -283,8 +334,7 @@ public class PostActionSetting : PropertyChangedBase
     public bool Sleep
     {
         get => _sleep;
-        set
-        {
+        set {
             if (!SetAndNotify(ref _sleep, value))
             {
                 return;
@@ -294,8 +344,9 @@ public class PostActionSetting : PropertyChangedBase
             {
                 Hibernate = false;
                 Shutdown = false;
+                LockScreen = false;
             }
-            else if (!Hibernate && !Shutdown)
+            else if (!Hibernate && !Shutdown && !LockScreen)
             {
                 IfNoOtherMaa = false;
             }
@@ -304,9 +355,27 @@ public class PostActionSetting : PropertyChangedBase
         }
     }
 
+    private bool _skipOnError;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 任务队列中有任务出错时，跳过全部完成后动作。
+    /// </summary>
+    public bool SkipOnError
+    {
+        get => _skipOnError;
+        set {
+            if (!SetAndNotify(ref _skipOnError, value))
+            {
+                return;
+            }
+
+            UpdatePostAction(PostActions.SkipOnError, value);
+        }
+    }
+
     public static PostActionSetting Instance { get; } = new();
 
-    private string _actionTitle = LocalizationHelper.GetString("PostActions");
+    private string _actionTitle = LocalizationHelper.GetString("TaskQueue.PostAction");
 
     public string ActionTitle
     {
@@ -354,11 +423,14 @@ public class PostActionSetting : PropertyChangedBase
         ExitArknights = false;
         BackToAndroidHome = false;
         ExitEmulator = false;
+        ExitPCClient = false;
         ExitSelf = false;
         IfNoOtherMaa = false;
+        LockScreen = false;
         Hibernate = false;
         Shutdown = false;
         Sleep = false;
+        SkipOnError = false;
         RefreshDescription();
     }
 
@@ -368,41 +440,56 @@ public class PostActionSetting : PropertyChangedBase
 
         if (BackToAndroidHome)
         {
-            actions.Add(LocalizationHelper.GetString("BackToAndroidHome"));
+            actions.Add(LocalizationHelper.GetString("TaskQueue.PostAction.BackToAndroidHome"));
         }
 
         if (ExitArknights)
         {
-            actions.Add(LocalizationHelper.GetString("ExitArknights"));
+            actions.Add(LocalizationHelper.GetString("TaskQueue.PostAction.ExitArknights"));
         }
 
         if (ExitEmulator)
         {
-            actions.Add(LocalizationHelper.GetString("ExitEmulator"));
+            actions.Add(LocalizationHelper.GetString("TaskQueue.PostAction.ExitEmulator"));
+        }
+
+        if (ExitPCClient)
+        {
+            actions.Add(LocalizationHelper.GetString("TaskQueue.PostAction.ExitPCClient"));
         }
 
         if (ExitSelf)
         {
-            actions.Add(LocalizationHelper.GetString("ExitSelf"));
+            actions.Add(LocalizationHelper.GetString("TaskQueue.PostAction.ExitSelf"));
         }
 
-        var prefix = IfNoOtherMaa ? LocalizationHelper.GetString("IfNoOtherMaa") : string.Empty;
+        var prefix = IfNoOtherMaa ? LocalizationHelper.GetString("TaskQueue.PostAction.IfNoOtherMaa") : string.Empty;
+        if (LockScreen)
+        {
+            actions.Add(prefix + LocalizationHelper.GetString("TaskQueue.PostAction.LockScreen"));
+        }
+
         if (Hibernate)
         {
-            actions.Add(prefix + LocalizationHelper.GetString("Hibernate"));
+            actions.Add(prefix + LocalizationHelper.GetString("TaskQueue.PostAction.Hibernate"));
         }
 
         if (Shutdown)
         {
-            actions.Add(prefix + LocalizationHelper.GetString("Shutdown"));
+            actions.Add(prefix + LocalizationHelper.GetString("TaskQueue.PostAction.Shutdown"));
         }
 
         if (Sleep)
         {
-            actions.Add(prefix + LocalizationHelper.GetString("Sleep"));
+            actions.Add(prefix + LocalizationHelper.GetString("TaskQueue.PostAction.Sleep"));
         }
 
-        ActionDescription = actions.Count == 0 ? LocalizationHelper.GetString("DoNothing") : string.Join(" -> ", actions);
+        ActionDescription = actions.Count == 0 ? LocalizationHelper.GetString("TaskQueue.PostAction.DoNothing") : string.Join(" -> ", actions);
+
+        if (SkipOnError && actions.Count != 0)
+        {
+            ActionDescription += Environment.NewLine + LocalizationHelper.GetString("TaskQueue.PostAction.SkipOnError");
+        }
     }
 
     private void UpdatePostAction(PostActions postActions, bool value)
@@ -424,31 +511,38 @@ public class PostActionSetting : PropertyChangedBase
     {
         if (!_once)
         {
-            ConfigurationHelper.SetValue(ConfigurationKeys.PostActions, JsonConvert.SerializeObject(_postActions));
+            ConfigFactory.CurrentConfig.Gui.PostActions = _postActions;
         }
     }
 
     public void LoadPostActions()
     {
-        _postActions = JsonConvert.DeserializeObject<PostActions>(ConfigurationHelper.GetValue(ConfigurationKeys.PostActions, "0"));
-        ExitArknights = _postActions.HasFlag(PostActions.ExitArknights);
-        BackToAndroidHome = _postActions.HasFlag(PostActions.BackToAndroidHome);
-        ExitEmulator = _postActions.HasFlag(PostActions.ExitEmulator);
-        ExitSelf = _postActions.HasFlag(PostActions.ExitSelf);
-        IfNoOtherMaa = _postActions.HasFlag(PostActions.IfNoOtherMaa);
-        Hibernate = _postActions.HasFlag(PostActions.Hibernate);
-        Shutdown = _postActions.HasFlag(PostActions.Shutdown);
-        Sleep = _postActions.HasFlag(PostActions.Sleep);
+        var savedActions = ConfigFactory.CurrentConfig.Gui.PostActions;
+        _postActions = savedActions;
+        ExitArknights = savedActions.HasFlag(PostActions.ExitArknights);
+        BackToAndroidHome = savedActions.HasFlag(PostActions.BackToAndroidHome);
+        ExitEmulator = savedActions.HasFlag(PostActions.ExitEmulator);
+        ExitPCClient = savedActions.HasFlag(PostActions.ExitPCClient);
+        ExitSelf = savedActions.HasFlag(PostActions.ExitSelf);
+        LockScreen = savedActions.HasFlag(PostActions.LockScreen);
+        Hibernate = savedActions.HasFlag(PostActions.Hibernate);
+        Shutdown = savedActions.HasFlag(PostActions.Shutdown);
+        Sleep = savedActions.HasFlag(PostActions.Sleep);
+
+        // 互斥选项切换可能清除条件标志，最后从配置快照恢复。
+        IfNoOtherMaa = savedActions.HasFlag(PostActions.IfNoOtherMaa);
+        SkipOnError = savedActions.HasFlag(PostActions.SkipOnError);
         Once = false;
         ClearUnsupportedPostActionsForAttachWindow();
     }
 
     /// <summary>
     /// PC 端（窗口绑定）不支持 ADB 侧后处理动作：移除已保存的相关标志，且不触发额外联动。
+    /// ｢退出明日方舟｣ ｢退出模拟器｣ 在 PC 端由 getter 过滤为不生效，勾选予以保留，切回模拟器后恢复。
     /// </summary>
     private void ClearUnsupportedPostActionsForAttachWindow()
     {
-        if (!ConnectSettingsUserControlModel.Instance.UseAttachWindow)
+        if (!ConnectSettingsUserControlModel.Instance.IsPCConnectConfig)
         {
             return;
         }
@@ -473,14 +567,6 @@ public class PostActionSetting : PropertyChangedBase
         }
         */
 
-        if (_exitEmulator)
-        {
-            _exitEmulator = false;
-            _postActions &= ~PostActions.ExitEmulator;
-            NotifyOfPropertyChange(nameof(ExitEmulator));
-            changed = true;
-        }
-
         if (!changed)
         {
             return;
@@ -493,23 +579,27 @@ public class PostActionSetting : PropertyChangedBase
 
     private PostActionSetting()
     {
-        ConnectSettingsUserControlModel.Instance.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(ConnectSettingsUserControlModel.ConnectConfig) or nameof(ConnectSettingsUserControlModel.UseAttachWindow))
+        ConnectSettingsUserControlModel.Instance.PropertyChanged += (_, e) => {
+            if (e.PropertyName is nameof(ConnectSettingsUserControlModel.ConnectConfig) or nameof(ConnectSettingsUserControlModel.IsPCConnectConfig))
             {
-                if (ConnectSettingsUserControlModel.Instance.UseAttachWindow && ExitEmulator)
-                {
-                    ExitEmulator = false;
-                    ExitArknights = true;
-                }
-
                 NotifyOfPropertyChange(nameof(AndroidControlPostActionsEnabled));
-                NotifyOfPropertyChange(nameof(ExitEmulatorOptionEnabled));
+                NotifyOfPropertyChange(nameof(IsPCConnectConfig));
+                NotifyOfPropertyChange(nameof(ExitArknights));
+                NotifyOfPropertyChange(nameof(ExitEmulator));
+                NotifyOfPropertyChange(nameof(ExitPCClient));
+                RefreshDescription();
                 ClearUnsupportedPostActionsForAttachWindow();
             }
         };
 
         LoadPostActions();
         RefreshDescription();
+
+        LocalizationHelper.LanguageChanged += () => {
+            ActionTitle = _once
+                ? $"{LocalizationHelper.GetString("TaskQueue.PostAction")} ({LocalizationHelper.GetString("TaskQueue.PostAction.Once")})"
+                : LocalizationHelper.GetString("TaskQueue.PostAction");
+            RefreshDescription();
+        };
     }
 }

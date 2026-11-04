@@ -3,6 +3,8 @@
     <!--  Custom Brush  -->
     <SolidColorBrush x:Key="PallasBrush" Color="#CDD1FF" />
     <SolidColorBrush x:Key="SettingsSearchHighlightBrush" Color="#8060A0E0" />
+    <!--  新任务红点 / 公告新标记共用（亮暗同色）  -->
+    <SolidColorBrush x:Key="NewBadgeBrush" Color="#F74C30" />
 
     <!--  HandyControl Brush  -->
     <!--  See https://github.com/ghost1372/HandyControls/blob/v3.4.5/src/Shared/HandyControl_Shared/Themes/Basic/Colors/Dark.xaml  -->
@@ -10,7 +12,7 @@
     <!--  文字颜色  -->
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="#E6E6E6" />
     <SolidColorBrush x:Key="ThirdlyTextBrush" Color="#7FE6E6E6" />
-    <!--  文字颜色  -->
+    <!--  勾选框勾的颜色  -->
     <SolidColorBrush x:Key="TextIconBrush" Color="#E6E6E6" />
 
     <!--  背景颜色  -->
@@ -64,12 +66,20 @@
         <GradientStop Offset="1" Color="#F48FB1" />
     </LinearGradientBrush>
 
+    <SolidColorBrush x:Key="HyperlinkBrush" Color="#326cf3" />
+    <SolidColorBrush x:Key="HyperlinkHoverBrush" Color="#e45649" />
+
+    <!--  StageItemBrush  -->
+    <SolidColorBrush x:Key="StageItemBrush.Primary" Color="#93a5b8" />
+    <SolidColorBrush x:Key="StageItemBrush.Secondary" Color="#b49aa4" />
+    <SolidColorBrush x:Key="StageItemBrush.SkillBook1" Color="#b0b0b0" />
+    <SolidColorBrush x:Key="StageItemBrush.SkillBook2" Color="#9aa887" />
+    <SolidColorBrush x:Key="StageItemBrush.SkillBook3" Color="#6d9fa9" />
+
     <!--  MdXaml Brush  -->
     <SolidColorBrush x:Key="MdXamlBackground" Color="#2d2d30" />
     <SolidColorBrush x:Key="MdXamlCodeBackground" Color="#161b22" />
     <SolidColorBrush x:Key="MdXamlForeground" Color="#E6E6E6" />
-    <SolidColorBrush x:Key="MdXamlHyperlink" Color="#326cf3" />
-    <SolidColorBrush x:Key="MdXamlHyperlinkClicked" Color="#e45649" />
 
     <!--  UiLogColor  -->
     <SolidColorBrush x:Key="SuccessLogBrush" Color="#90EE90" />
@@ -85,6 +95,8 @@
     <SolidColorBrush x:Key="TaskQueue.TaskItemStatus.Completed" Color="#2090EE90" />
     <SolidColorBrush x:Key="TaskQueue.TaskItemStatus.Error" Color="#20FF4444" />
 
+    <SolidColorBrush x:Key="Copilot.RaidBrush" Color="#33FF0000" />
+
     <SolidColorBrush x:Key="Star1OperatorLogBrush" Color="#E6E6E6" />
     <SolidColorBrush x:Key="Star1OperatorLogBrushPotentialFull" Color="#66E6E6E6" />
     <SolidColorBrush x:Key="Star2OperatorLogBrush" Color="#88BB44" />
@@ -97,6 +109,11 @@
     <SolidColorBrush x:Key="Star5OperatorLogBrushPotentialFull" Color="#66EED694" />
     <SolidColorBrush x:Key="Star6OperatorLogBrush" Color="Orange" />
     <SolidColorBrush x:Key="Star6OperatorLogBrushPotentialFull" Color="#66FFA500" />
+
+    <!--  OperBox 技能练度：品字点亮圆与熄灭圆/RANK/模组文字的灰  -->
+    <SolidColorBrush x:Key="OperBox.MasteryOnBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="OperBox.MasteryOffBrush" Color="#777777" />
+    <SolidColorBrush x:Key="OperBox.MasteryTextBrush" Color="DarkGray" />
 
     <SolidColorBrush x:Key="DownloadLogBrush" Color="Violet" />
 

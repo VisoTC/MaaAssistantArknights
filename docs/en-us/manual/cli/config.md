@@ -30,6 +30,12 @@ params = { client_type = "Official", start_game_enabled = true } # The parameter
 
 The specific task types and parameters can be found in the [MAA Integration Document][task-types]. Note that maa-cli does not validate parameter names and values, and no error message will be generated even if an error occurs unless MaaCore detects an error at runtime.
 
+Besides `tasks`, task files also support the following top-level fields:
+
+- `client_type`: Specifies the client type, which is automatically filled into the `client_type` parameter of the `StartUp`, `Fight`, and `CloseDown` tasks;
+- `startup`: Whether to automatically start the game. When set to `true`, if there is no `StartUp` task in the task list, one will be added at the beginning; if a `StartUp` task already exists but `start_game_enabled` is not enabled, it will be enabled automatically;
+- `closedown`: Whether to automatically close the game. When set to `true`, if there is no `CloseDown` task in the task list, one will be added at the end; if a `CloseDown` task already exists but `enable` is `false`, it will be enabled automatically.
+
 ### Task variants and conditions
 
 In some cases, you may want to run a task with different parameters in different conditions. You can define multiple variants for a task, and use the `condition` field to determine whether the variant should be used. For example, you may want to use a different infrastructure plan at different periods of the day:
@@ -259,7 +265,7 @@ alternatives = [
     "SL-7", # will be displayed as "1. SL-7"
     { value = "SL-8", desc = "Manganese Ore" } # will be displayed as "2. SL-8 (Manganese Ore)"
 ]
-default_index = 1 # the index of default value, start from 1, if not given, empty input will re-prompt
+default_index = 1 # the index of default value, start from 1, if not given, the first alternative is used as the default
 description = "a stage to fight in summer event" # description of the input, optional
 allow_custom = true # whether to allow custom value input, default is false; if true, non-integer inputs are treated as custom values
 
@@ -287,7 +293,7 @@ description = "medicine to use"
 ```
 
 For an `Input` type, a prompt will be shown to ask the user to input a value. If a default value is given, it will be used when the user inputs an empty value; otherwise, it will re-prompt.
-For a `Select` type, a prompt will be shown to ask the user to input an index or custom value (if `allow_custom` is `true`). If a default index is given, it will be used when the user inputs an empty value; otherwise, it will re-prompt.
+For a `Select` type, a prompt will be shown to ask the user to input an index or custom value (if `allow_custom` is `true`). If the user inputs an empty value, the default value will be used.
 
 The `--batch` option can be used to run tasks in batch mode, which will use default values for all inputs and error if no default value is given.
 
@@ -301,7 +307,7 @@ The currently available configurations are:
 [connection]
 preset = "MuMuPro"
 adb_path = "adb"
-device = "emulator-5554"
+address = "emulator-5554"
 config = "CompatMac"
 
 [resource]
@@ -318,6 +324,9 @@ touch_mode = "MaaTouch"
 deployment_with_pause = false
 adb_lite_enabled = false
 kill_adb_on_exit = false
+
+[behavior]
+auto_reconnect = true
 ```
 
 ### Connection
@@ -342,7 +351,7 @@ adb_path = "/path/to/adb" # Override the preset's adb path if needed (optional)
 address = "127.0.0.1:7777" # Override the preset's address if needed (optional)
 ```
 
-Currently only `MuMuPro` preset is available. Issues and PRs for more presets are welcome.
+Currently there are two built-in emulator presets, `MuMuPro` and `Androws`. The `Androws` preset targets the Tencent Androws emulator on Windows; it automatically detects the emulator's bundled `adb` from the registry, and the default connection address is `127.0.0.1:5555`. Issues and PRs for more presets are welcome.
 
 #### Special Presets
 
@@ -381,7 +390,7 @@ The `instance_options` section configures MaaCore instance options:
 
 ```toml
 [instance_options]
-touch_mode = "ADB" # Touch mode: "ADB", "MiniTouch", "MaaTouch", or "MacPlayTools"
+touch_mode = "ADB" # Touch mode: "ADB", "MiniTouch", "MaaTouch", "MacPlayTools", or "MaaFwAdb"
 deployment_with_pause = false # Whether to pause game during deployment
 adb_lite_enabled = false # Whether to use adb-lite
 kill_adb_on_exit = false # Whether to kill adb on exit
@@ -389,17 +398,31 @@ kill_adb_on_exit = false # Whether to kill adb on exit
 
 Note: When using `PlayTools` connection, `touch_mode` is forced to `MacPlayTools` regardless of setting.
 
+### Behavior
+
+The `[behavior]` section specifies the runtime behavior of maa-cli itself:
+
+```toml
+[behavior]
+auto_reconnect = true # Whether to automatically reconnect when the game disconnects from the server, default is true
+```
+
+Additionally, the `--no-auto-reconnect` option can be used to disable auto-reconnect for the current run.
+
 ## CLI Related Configurations
 
 CLI-related configurations should be in `$MAA_CONFIG_DIR/cli.toml`. Current configurations include:
 
 ```toml
+# GitHub proxy prefix; when configured, GitHub release download URLs will be transparently rewritten to go through this proxy
+# github_proxy = "https://gh-proxy.org/"
+
 # MaaCore install and update configurations
 [core]
 channel = "Stable" # Update channel: "Alpha", "Beta", or "Stable" (default)
 test_time = 0 # Time to test mirror speeds in seconds; 0 to skip, default is 3
 # API URL to query latest MaaCore version; leave empty for default
-api_url = "https://github.com/MaaAssistantArknights/MaaRelease/raw/main/MaaAssistantArknights/api/version/"
+api_url = "https://api.maa.plus/MaaAssistantArknights/api/version/"
 
 # Component installation config (not recommended to change)
 [core.components]
@@ -408,7 +431,7 @@ resource = true # Whether to install MaaCore resources
 
 # CLI update configurations
 [cli]
-channel = "Stable" # Update channel: "Alpha", "Beta", or "Stable" (default)
+channel = "Stable" # Update channel: "Nightly", "Beta", or "Stable" (default)
 # API URL to query latest maa-cli version; leave empty for default
 api_url = "https://github.com/MaaAssistantArknights/maa-cli/raw/version/"
 # URL to download prebuilt binaries; leave empty for default
@@ -425,7 +448,7 @@ backend = "libgit2" # Hot update backend: "git" or "libgit2"
 
 # Remote repository configuration
 [resource.remote]
-branch = "main" # Branch of remote repository
+branch = "main" # Branch of remote repository; if not set, the default branch of the remote repository is used
 # Repository URL; leave empty for default
 # GitHub repositories support both HTTPS and SSH; HTTPS recommended
 url = "https://github.com/MaaAssistantArknights/MaaResource.git"
@@ -444,6 +467,13 @@ passphrase = "password" # Passphrase for SSH key
 # passphrase = { env = "MAA_SSH_PASSPHRASE" }
 # 3. Use a command output (useful with password managers)
 # passphrase = { cmd = ["pass", "show", "ssh/id_ed25519"] }
+
+# Event information and hot-update resource file download configurations
+[hot_update]
+# API URL for querying event information and downloading hot-update resource files; leave empty for default
+api_url = "https://api.maa.plus/MaaAssistantArknights/api"
+# Check interval (seconds); files older than this will be re-downloaded, 0 disables caching, default is 600
+check_interval = 600
 ```
 
 **NOTE**:
@@ -470,8 +500,8 @@ JSON schemas for configuration files are in the [`schemas` directory][schema-dir
 With these schemas, you can get auto-completion and validation in supported editors with plugins.
 
 [task-types]: ../../protocol/integration.md#list-of-task-types
-[emulator-ports]: ../../manual/connection.md#obtain-port-number
-[playcover-doc]: ../../manual/device/macos.md#%E2%9C%85-playcover-the-software-runs-most-fluently-for-its-nativity-%F0%9F%9A%80
+[emulator-ports]: ../../manual/connection.md#emulator-documentation-and-reference-addresses
+[playcover-doc]: ../../manual/device/macos.md#%E2%9C%85-playcover-runs-most-fluently-as-it-s-native-%F0%9F%9A%80
 [waydroid-doc]: https://github.com/MaaAssistantArknights/maa-cli/blob/main/crates/maa-cli/manual/device/linux.md#✅-waydroid
 [example-config]: https://github.com/MaaAssistantArknights/maa-cli/blob/main/crates/maa-cli/config_examples
 [wangl-cc-dotfiles]: https://github.com/wangl-cc/dotfiles/tree/main/home/dot_config/maa

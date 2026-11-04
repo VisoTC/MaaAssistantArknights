@@ -5,10 +5,9 @@
 #include <ranges>
 
 #include "Config/TaskData.h"
-#include "Controller/Controller.h"
 #include "Task/ProcessTask.h"
+#include "Task/StageNavigationHelper.h"
 #include "Utils/Logger.hpp"
-#include "Vision/OCRer.h"
 
 namespace
 {
@@ -51,6 +50,7 @@ bool asst::StageNavigationTask::set_stage_name(const std::string& stage_name)
     if (Task.get(stage_name)) {
         m_is_directly = true;
         m_directly_task = stage_name;
+        m_stage_code = stage_name;
         Log.info("directly task", m_directly_task);
         return true;
     }
@@ -142,6 +142,13 @@ bool asst::StageNavigationTask::_run()
 {
     LogTraceFunction;
 
+    // 上一次作战与目标关一致时直接点击进入（资源关等复刷收益明显）；
+    // 内部标识与显示代号不一致的关卡（剿灭 "Annihilation"、SSReopen 的 "-OpenOpt" 后缀等）
+    // fullMatch 永不命中，自然回退直接导航
+    if (try_last_battle()) {
+        return true;
+    }
+
     if (m_is_directly) {
         ProcessTask task(*this, { m_directly_task });
         task.set_retry_times(RetryTimesDefault);
@@ -161,6 +168,30 @@ bool asst::StageNavigationTask::_run()
     return chapter_wayfinding() && swipe_and_find_stage() && switch_difficulty_after_stage_selection();
 }
 
+bool asst::StageNavigationTask::try_last_battle()
+{
+    LogTraceFunction;
+
+    if (m_last_battle_checked) {
+        return false;
+    }
+    m_last_battle_checked = true;
+
+    if (m_stage_code.empty()) {
+        return false;
+    }
+
+    // 关卡代号不含难度且快路径不执行难度切换，指定了难度的导航必须走完整流程
+    if (!m_difficulty_tasks.empty()) {
+        return false;
+    }
+
+    Task.get<OcrTaskInfo>("LastBattleStageName")->text = { m_stage_code };
+    Log.info("Try last battle shortcut for", m_stage_code);
+    // 快路径需要快速失败以回退到完整导航，不用默认重试次数
+    return ProcessTask(*this, { "LastBattleStageName" }).set_retry_times(3).run();
+}
+
 void asst::StageNavigationTask::clear() noexcept
 {
     m_is_directly = false;
@@ -169,6 +200,7 @@ void asst::StageNavigationTask::clear() noexcept
     m_difficulty_tasks.clear();
     m_stage_code.clear();
     m_switch_difficulty_after_stage_selection = false;
+    m_last_battle_checked = false;
 }
 
 bool asst::StageNavigationTask::chapter_wayfinding()
@@ -190,6 +222,18 @@ bool asst::StageNavigationTask::swipe_and_find_stage()
 {
     LogTraceFunction;
 
+    // 优先检查是否存在对应活动关卡名的模板资源，如果存在则走模板匹配
+    std::string templ_path = StageNavigationHelper::get_stage_template_path(m_stage_code);
+    if (!templ_path.empty()) {
+        Log.info("Stage template found, using template matching for", m_stage_code, ", templ:", templ_path);
+        Task.get<MatchTaskInfo>(m_stage_code + "@ClickStageByTemplate")->templ_names = { templ_path + ".png" };
+        Task.get<OcrTaskInfo>(m_stage_code + "@ClickedCorrectStageByTemplateOrSwipe")->text = { m_stage_code };
+        return ProcessTask(*this, { m_stage_code + "@StageNavigationByTemplateMatchBegin" })
+            .set_retry_times(RetryTimesDefault)
+            .run();
+    }
+
+    // 无模板，使用 OCR 匹配
     Task.get<OcrTaskInfo>(m_stage_code + "@ClickStageName")->text = { m_stage_code };
     std::string replace_m_stage_code = m_stage_code;
     utils::string_replace_all_in_place(replace_m_stage_code, { { "-", "" } });

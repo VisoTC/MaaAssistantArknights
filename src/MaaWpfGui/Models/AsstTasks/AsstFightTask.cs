@@ -1,6 +1,6 @@
 // <copyright file="AsstFightTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -13,6 +13,8 @@
 
 #nullable enable
 using System.Collections.Generic;
+using MaaWpfGui.Constants.Enums;
+using MaaWpfGui.Extensions;
 using MaaWpfGui.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -103,8 +105,7 @@ public class AsstFightTask : AsstBaseTask
     /// <summary>
     /// Gets or sets 客户端类型
     /// </summary>
-    [JsonProperty("client_type")]
-    public string ClientType { get; set; } = string.Empty;
+    public ClientType ClientType { get; set; } = ClientType.Official;
 
     public override (AsstTaskType TaskType, JObject Params) Serialize()
     {
@@ -123,6 +124,7 @@ public class AsstFightTask : AsstBaseTask
         {
             param["drops"] = JObject.FromObject(Drops);
         }
+        param["client_type"] = ClientType.ToCustomString();
 
         return (TaskType, param);
     }

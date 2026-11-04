@@ -423,7 +423,6 @@ FodyWeavers.xsd
 
 # Claude Code
 .claude/*
-!.claude/skills/
 
 # Windows Installer files from build outputs
 *.cab
@@ -439,6 +438,8 @@ FodyWeavers.xsd
 screen.png
 adb_screen.png
 tools/**/*.png
+# ReadmeShotDemo 演示模式的日志卡片缩略图需进仓库
+!tools/ReadmeShotDemo/thumbnails/**
 enc_temp_folder/*
 
 # RoguelikeRecruitmentTool 导出的 Excel 文件
@@ -454,7 +455,6 @@ tools/RoguelikeRecruitmentTool/output
 /resource/Arknights-Tile-Pos/act2bossrush_04-activities-act2bossrush-level_bossrush2_04.json
 # CF 活动关卡（异格夜刀），手动改的地图
 /resource/Arknights-Tile-Pos/act24side_09-activities-act24side-level_act24side_09.json
-/src/MaaWpfGui/FodyWeavers.xml
 *.lnk
 
 # 链接检查缓存
@@ -488,3 +488,9 @@ install-*
 # CMake user presets
 CMakeUserPresets.json
 .ace-tool/
+
+# zcode
+/.zcode
+
+# mimosa security scan plugin
+/.mimosa

@@ -7,6 +7,7 @@
 
         <!--  按钮与交互控件  -->
         <ResourceDictionary Source="Styles/Button.xaml" />
+        <ResourceDictionary Source="Styles/SplitButton.xaml" />
         <ResourceDictionary Source="Styles/CheckBox.xaml" />
         <ResourceDictionary Source="Styles/CheckComboBox.xaml" />
         <ResourceDictionary Source="Styles/ComboBox.xaml" />
@@ -14,6 +15,7 @@
         <ResourceDictionary Source="Styles/PasswordBox.xaml" />
         <ResourceDictionary Source="Styles/SearchBar.xaml" />
         <ResourceDictionary Source="Styles/TextBox.xaml" />
+        <ResourceDictionary Source="Styles/Menu.xaml" />
 
         <!--  数据展示控件  -->
         <ResourceDictionary Source="Styles/DataGrid.xaml" />

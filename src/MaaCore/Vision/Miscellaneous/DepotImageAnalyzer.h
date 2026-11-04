@@ -25,7 +25,15 @@ public:
     void set_match_begin_pos(size_t pos) noexcept;
     size_t get_match_begin_pos() const noexcept;
 
+    // 手动设置要识别的物品字典，不设置则默认使用 get_ordered_material_item_id
+    void set_item_ids(std::vector<std::string> ids) noexcept { m_item_ids = std::move(ids); }
+
+    // 设置为 true 时，遇到匹配不到的槽位会跳过而不是中断（用于基础物品识别）
+    void set_is_basic(bool is_basic) noexcept { m_is_basic = is_basic; }
+
     const auto& get_result() const noexcept { return m_result; }
+
+    const auto& get_invalid_template_ids() const noexcept { return m_invalid_template_ids; }
 
     static void clear_cached_templates()
     {
@@ -34,8 +42,14 @@ public:
     }
 
 private:
+    static constexpr int QuantityMaskWidth = 80;
+    static constexpr int QuantityMaskHeight = 50;
+
     void resize();
     void prepare_cached_templates();
+    void record_invalid_template(const std::string& item_id);
+    static bool is_template_size_valid(const cv::Mat& templ);
+    const std::vector<std::string>& get_ordered_item_ids() const;
     static double color_diff(const cv::Scalar& a, const cv::Scalar& b);
     static std::vector<std::string> filter_candidates_by_color(
         const cv::Mat& roi,
@@ -55,6 +69,8 @@ private:
     static cv::Mat image_from_function(const cv::Size& size, const F& func);
 
     size_t m_match_begin_pos = 0ULL;
+    std::vector<std::string> m_item_ids; // 为空时使用 get_ordered_material_item_id
+    bool m_is_basic = false;             // 为 true 时匹配不到不中断
     Rect m_resized_rect;
     cv::Mat m_image_resized;
 #ifdef ASST_DEBUG
@@ -62,6 +78,7 @@ private:
 #endif
     std::vector<Rect> m_all_items_roi;
     std::unordered_map<std::string, ItemInfo> m_result;
+    std::vector<std::string> m_invalid_template_ids;
 
     inline static std::unordered_map<std::string, cv::Mat> m_cached_templs;
     inline static std::unordered_map<std::string, cv::Scalar> m_template_mean_colors;

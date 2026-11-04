@@ -1,6 +1,6 @@
 // <copyright file="BaseTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -11,19 +11,18 @@
 // but WITHOUT ANY WARRANTY
 // </copyright>
 #nullable enable
-using System.ComponentModel;
 using System.Text.Json.Serialization;
-using JetBrains.Annotations;
-using MaaWpfGui.Configuration.Factory;
+using MaaWpfGui.Extensions;
 using MaaWpfGui.Helper;
+using MaaWpfGui.Models;
 using static MaaWpfGui.Main.AsstProxy;
 
 namespace MaaWpfGui.Configuration.Single.MaaTask;
 
-// [JsonDerivedType(typeof(VideoRecognition), typeDiscriminator: nameof(VideoRecognition))]
 [JsonDerivedType(typeof(StartUpTask), typeDiscriminator: nameof(StartUpTask))]
 [JsonDerivedType(typeof(CloseDownTask), typeDiscriminator: nameof(CloseDownTask))]
 [JsonDerivedType(typeof(FightTask), typeDiscriminator: nameof(FightTask))]
+[JsonDerivedType(typeof(OperProgressTask), typeDiscriminator: nameof(OperProgressTask))]
 [JsonDerivedType(typeof(AwardTask), typeDiscriminator: nameof(AwardTask))]
 [JsonDerivedType(typeof(MallTask), typeDiscriminator: nameof(MallTask))]
 [JsonDerivedType(typeof(InfrastTask), typeDiscriminator: nameof(InfrastTask))]
@@ -35,16 +34,15 @@ namespace MaaWpfGui.Configuration.Single.MaaTask;
 [JsonDerivedType(typeof(DepotTask), typeDiscriminator: nameof(DepotTask))]
 [JsonDerivedType(typeof(OperBoxTask), typeDiscriminator: nameof(OperBoxTask))]
 [JsonDerivedType(typeof(UserDataUpdateTask), typeDiscriminator: nameof(UserDataUpdateTask))]
-[JsonDerivedType(typeof(ReclamationTask), typeDiscriminator: nameof(ReclamationTask))]
+[JsonDerivedType(typeof(DepotMaintainTask), typeDiscriminator: nameof(DepotMaintainTask))]
+[JsonDerivedType(typeof(SwitchThemeTask), typeDiscriminator: nameof(SwitchThemeTask))]
 [JsonDerivedType(typeof(CustomTask), typeDiscriminator: nameof(CustomTask))]
-public class BaseTask : INotifyPropertyChanged
+public class BaseTask : NotifyPropertyChangedWithValue
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
-
     public string Name { get; set; } = string.Empty;
 
     [JsonIgnore]
-    public string NameOrTaskType => string.IsNullOrEmpty(Name) ? LocalizationHelper.GetString(TaskType.ToString()) : Name;
+    public string NameOrTaskType => string.IsNullOrEmpty(Name) ? LocalizationHelper.GetString(TaskType.LocalizationKey()) : Name;
 
     public bool? IsEnable { get; set; } = true;
 
@@ -52,15 +50,9 @@ public class BaseTask : INotifyPropertyChanged
     /// Gets 任务类型，用于添加任务时使用
     /// </summary>
     public TaskType TaskType { get; init; }
-
-    [UsedImplicitly]
-    public void OnPropertyChanged(string propertyName, object before, object after)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventDetailArgs(propertyName, before, after));
-    }
 }
 
-#pragma warning disable SA1402 // File may only contain a single type
+#pragma warning disable SA1402 // 同族任务小类集中放本文件
 public class CloseDownTask : BaseTask
 {
 }
@@ -85,4 +77,4 @@ public class OperBoxTask : BaseTask
 {
 }
 
-#pragma warning restore SA1402 // File may only contain a single type
+#pragma warning restore SA1402 // 同族任务小类集中放本文件

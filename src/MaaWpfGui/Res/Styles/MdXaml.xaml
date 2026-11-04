@@ -91,10 +91,10 @@
 
             <Style TargetType="{x:Type Hyperlink}">
                 <Setter Property="TextDecorations" Value="None" />
-                <Setter Property="Foreground" Value="{DynamicResource MdXamlHyperlink}" />
+                <Setter Property="Foreground" Value="{DynamicResource HyperlinkBrush}" />
                 <Style.Triggers>
                     <Trigger Property="IsMouseOver" Value="True">
-                        <Setter Property="Foreground" Value="{DynamicResource MdXamlHyperlinkClicked}" />
+                        <Setter Property="Foreground" Value="{DynamicResource HyperlinkHoverBrush}" />
                     </Trigger>
                 </Style.Triggers>
             </Style>
@@ -104,6 +104,17 @@
                 <Style.Triggers>
                     <Trigger Property="Tag" Value="imageright">
                         <Setter Property="Margin" Value="20,5,20,5" />
+                    </Trigger>
+                    <Trigger Property="Tag" Value="avatar">
+                        <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality" />
+                        <Setter Property="Clip">
+                            <Setter.Value>
+                                <EllipseGeometry
+                                    Center="8,8"
+                                    RadiusX="8"
+                                    RadiusY="8" />
+                            </Setter.Value>
+                        </Setter>
                     </Trigger>
                 </Style.Triggers>
             </Style>

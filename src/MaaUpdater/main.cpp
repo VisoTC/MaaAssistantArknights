@@ -6,10 +6,15 @@
 //   MAA.Updater.exe <ParentProcessId> <RootDir> <ExtractDir> <BackupDir>
 //                   <PackagePath> <SuccessStatusFile> <FailureStatusFile>
 //                   <RelaunchExecutablePath> <PlanFile>
-//                   [--mutex-name <name>] [--show-console]
+//                   [--mutex-name <name>] [--show-console] [--no-progress-ui]
 //
 // Plan file format (UTF-8 JSON):
-//   { "packageType": "full|ota", "removeList": ["rel/path", ...], "moveList": ["rel/path", ...] }
+//   {
+//     "packageType": "full|ota",
+//     "removeList": ["rel/path", ...],
+//     "moveList": ["rel/path", ...],
+//     "relaunchArgs": ["--skip-startup-auto-run", ...]   // optional, forwarded to MAA.exe
+//   }
 
 #include <windows.h>
 #include <commctrl.h>
@@ -134,6 +139,8 @@ struct ProgressUiTheme
 
 static std::wstring g_logFile;
 static bool g_writeConsoleLog = false;
+// 用户可通过 --no-progress-ui 显式关闭更新进度窗口
+static bool g_suppressProgressUi = false;
 static UpdateProgressUi g_progressUi;
 static ProgressUiTheme g_progressUiTheme;
 
@@ -147,6 +154,10 @@ static constexpr int PROGRESS_BAR_CONTROL_ID = 1004;
 static constexpr DWORD LEGACY_DWMWA_USE_IMMERSIVE_DARK_MODE = 19;
 static constexpr wchar_t MUTEX_NAME_ARG[] = L"--mutex-name";
 static constexpr DWORD UPDATE_MUTEX_TIMEOUT_MS = 3000;
+// 等待 MAA 主程序退出：先静默等待 fast-wait 时限（不弹窗，避免与正在退出的 MAA 抢前台），
+// 超时后弹窗并进入倒计时；倒计时归零仍未退出则强制结束主程序，防止挂死的进程把更新无限期卡住
+static constexpr DWORD PARENT_EXIT_FAST_WAIT_MS = 15000;
+static constexpr DWORD PARENT_EXIT_COUNTDOWN_MS = 60000;
 #define PENDING_DELETE_SUFFIX L".pendingdelete"
 static constexpr int FILE_OP_MAX_RETRIES = 5;
 static constexpr DWORD FILE_OP_INITIAL_DELAY_MS = 200;
@@ -340,7 +351,8 @@ static bool EnsureProgressWindowClassRegistered()
 
 static bool ShouldShowProgressUi()
 {
-    return !g_writeConsoleLog && GetConsoleWindow() == nullptr;
+    // 控制台输出和进度窗口是两个独立选项，可同时显示；用户可通过 --no-progress-ui 显式关闭进度窗口
+    return !g_suppressProgressUi;
 }
 
 static void PumpProgressUiMessages()
@@ -377,7 +389,7 @@ static bool InitializeProgressUi()
     int originY = (GetSystemMetrics(SM_CYSCREEN) - PROGRESS_WINDOW_HEIGHT) / 2;
 
     HWND window = CreateWindowExW(
-        WS_EX_TOPMOST | WS_EX_APPWINDOW | WS_EX_DLGMODALFRAME,
+        WS_EX_APPWINDOW | WS_EX_DLGMODALFRAME,
         PROGRESS_WINDOW_CLASS_NAME,
         L"MAA 正在更新 | MAA Updating",
         WS_CAPTION,
@@ -392,6 +404,9 @@ static bool InitializeProgressUi()
     if (window == nullptr) {
         return false;
     }
+
+    // 弹出时带到前台一次，不强制永久置顶，避免打断全屏游戏或其他操作
+    SetForegroundWindow(window);
 
     HWND statusLabel = CreateWindowExW(
         0,
@@ -1391,6 +1406,8 @@ struct PendingUpdatePlan
     std::wstring packageType;
     std::vector<std::wstring> removeList;
     std::vector<std::wstring> moveList;
+    // Optional args forwarded to MAA.exe on relaunch (e.g. --skip-startup-auto-run).
+    std::vector<std::wstring> relaunchArgs;
 };
 
 static bool LoadPendingUpdatePlan(
@@ -1424,7 +1441,47 @@ static bool LoadPendingUpdatePlan(
     outPlan.packageType = ParseJsonStringProperty(planJson, "packageType");
     outPlan.removeList = ParseJsonStringArray(planJson, "removeList");
     outPlan.moveList = ParseJsonStringArray(planJson, "moveList");
+    outPlan.relaunchArgs = ParseJsonStringArray(planJson, "relaunchArgs");
     return true;
+}
+
+// Build a CreateProcess command line: "exe" [quoted args...]
+static std::wstring BuildRelaunchCommandLine(
+    const std::wstring& executable,
+    const std::vector<std::wstring>& args)
+{
+    auto needsQuotes = [](const std::wstring& value) {
+        return value.find_first_of(L" \t\"") != std::wstring::npos;
+    };
+    auto appendQuoted = [&](std::wstring& dest, const std::wstring& value) {
+        if (!needsQuotes(value)) {
+            dest += value;
+            return;
+        }
+
+        dest.push_back(L'"');
+        for (wchar_t ch : value) {
+            if (ch == L'"') {
+                dest += L"\\\"";
+            } else {
+                dest.push_back(ch);
+            }
+        }
+        dest.push_back(L'"');
+    };
+
+    std::wstring cmdLine;
+    appendQuoted(cmdLine, executable);
+    for (const std::wstring& arg : args) {
+        if (arg.empty()) {
+            continue;
+        }
+
+        cmdLine.push_back(L' ');
+        appendQuoted(cmdLine, arg);
+    }
+
+    return cmdLine;
 }
 
 static void PrintPlanEntries(const std::wstring& title, const std::vector<std::wstring>& entries)
@@ -1462,6 +1519,7 @@ static int RunPlanParserTest(const std::wstring& initialPlanFile)
         L" | Package type: " + (plan.packageType.empty() ? std::wstring(L"<empty>") : plan.packageType), true);
     PrintPlanEntries(L"待删除文件列表 | Files to remove", plan.removeList);
     PrintPlanEntries(L"待安装文件列表 | Files to install", plan.moveList);
+    PrintPlanEntries(L"重启参数 | Relaunch args", plan.relaunchArgs);
     return 0;
 }
 
@@ -1800,6 +1858,7 @@ int wmain(int argc, wchar_t* argv[])
     std::wstring relaunchExecutable  = argv[8];
     std::wstring planFile            = argv[9];
     g_writeConsoleLog = HasArgument(argc, argv, L"--show-console");
+    g_suppressProgressUi = HasArgument(argc, argv, L"--no-progress-ui");
 
     std::wstring mutexName;
     for (int i = 1; i < argc - 1; ++i) {
@@ -1811,10 +1870,6 @@ int wmain(int argc, wchar_t* argv[])
 
     g_logFile = rootDir + L"\\debug\\pending-update-applier.log";
     RotateLogIfNeeded();
-    InitializeProgressUi();
-    SetProgressUiStatus(
-        L"正在准备更新... | Preparing update...",
-        L"等待 MAA 主程序退出 | Waiting for the main MAA process to exit");
 
     WriteLog(L"MAA.Updater started (C++ external updater).");
     WriteLog((std::wstring(L"Console output: ") + (g_writeConsoleLog ? L"enabled" : L"disabled")).c_str());
@@ -1824,28 +1879,81 @@ int wmain(int argc, wchar_t* argv[])
     bool shouldRelaunch = false;
     bool success = false;
     std::wstring failureReason;
+    // 是否已开始改动安装文件（备份旧文件 / 写入新文件）；预检失败未动任何文件时保持
+    // false。进入应用阶段后不再回退该标志，失败后回滚无论是否完整恢复均按已改动处理
+    bool installationModified = false;
+    // 因另一 MAA 实例占用更新互斥锁而失败：临时性失败，保留更新包供关闭其他实例后重试
+    bool updateMutexBlocked = false;
     HANDLE hUpdateMutex = nullptr;
+    // Copied from plan for CreateProcess after a successful update.
+    std::vector<std::wstring> relaunchArgs;
 
     // ------------------------------------------------------------------
     // Wait for parent process to exit
+    // 进度窗口延后到主程序退出后再显示，避免与正在退出的 MAA 抢前台
     // ------------------------------------------------------------------
+    // 只申请 SYNCHRONIZE 保证能等待；PROCESS_TERMINATE 到强制结束时单独申请，
+    // 避免权限不足时连等待句柄都拿不到而直接开始安装
     HANDLE hParent = OpenProcess(SYNCHRONIZE, FALSE, parentPid);
     if (hParent != nullptr) {
         WriteLog((L"Waiting for parent process to exit, PID=" + std::to_wstring(parentPid)).c_str());
-        while (WaitForSingleObject(hParent, 100) == WAIT_TIMEOUT) {
-            PumpProgressUiMessages();
+        // 快路径：15 秒内父进程退出则不弹窗，避免与正在退出的 MAA 抢前台；
+        // 超时后创建进度窗口并进入倒计时，归零仍未退出则强制结束父进程，
+        // 防止父进程退出卡住时更新被无限期挂起
+        if (WaitForSingleObject(hParent, PARENT_EXIT_FAST_WAIT_MS) == WAIT_TIMEOUT) {
+            InitializeProgressUi();
+            int remainingSeconds = static_cast<int>(PARENT_EXIT_COUNTDOWN_MS / 1000);
+            auto buildCountdownDetail = [&]() {
+                std::wstring secondsText = std::to_wstring(remainingSeconds);
+                return L"MAA 主程序未正常退出，" + secondsText + L" 秒后强制结束 | MAA exit timeout, forcing in " + secondsText + L"s";
+            };
+            SetProgressUiStatus(L"正在准备更新... | Preparing update...", buildCountdownDetail());
+            DWORD elapsedMs = 0;
+            while (WaitForSingleObject(hParent, 100) == WAIT_TIMEOUT) {
+                PumpProgressUiMessages();
+                elapsedMs += 100;
+                if (elapsedMs < PARENT_EXIT_COUNTDOWN_MS) {
+                    int newRemainingSeconds = static_cast<int>((PARENT_EXIT_COUNTDOWN_MS - elapsedMs) / 1000);
+                    if (newRemainingSeconds != remainingSeconds) {
+                        remainingSeconds = newRemainingSeconds;
+                        SetProgressUiStatus(L"正在准备更新... | Preparing update...", buildCountdownDetail());
+                    }
+                    continue;
+                }
+
+                WriteLog(L"Parent exit wait timed out, terminating the parent process.");
+                HANDLE hTerminate = OpenProcess(PROCESS_TERMINATE, FALSE, parentPid);
+                bool terminated = hTerminate != nullptr && TerminateProcess(hTerminate, EXIT_FAILURE);
+                if (hTerminate != nullptr) {
+                    CloseHandle(hTerminate);
+                }
+                if (terminated) {
+                    // TerminateProcess 异步生效，等待进程对象真正有信号后再继续安装
+                    WaitForSingleObject(hParent, 5000);
+                    WriteLog(L"Parent process forcibly terminated.");
+                    break;
+                }
+
+                // 失败通常是父进程恰好自行退出；拿不到 PROCESS_TERMINATE 权限时同样只能继续等待，
+                // 重置倒计时，避免父进程未退出就带文件占用开始安装
+                WriteLog((L"TerminateProcess failed, error=" + std::to_wstring(GetLastError()) + L", restarting the countdown.").c_str());
+                elapsedMs = 0;
+            }
         }
         CloseHandle(hParent);
         WriteLog(L"Parent process exited.");
-        SetProgressUiStatus(
-            L"正在准备更新... | Preparing update...",
-            L"已确认主程序退出，开始读取更新计划 | Parent process exited, reading update plan");
     } else {
         WriteLog((L"Could not open the parent process, it may have already exited, PID=" + std::to_wstring(parentPid) + L". Continuing.").c_str());
-        SetProgressUiStatus(
-            L"正在准备更新... | Preparing update...",
-            L"主程序已退出，开始读取更新计划 | Main process already exited, reading update plan");
     }
+
+    // 主程序已退出（或无法打开句柄时视为已退出）后再弹出进度窗口。
+    // 若超时路径已创建窗口，则跳过，避免重复创建
+    if (!g_progressUi.enabled) {
+        InitializeProgressUi();
+    }
+    SetProgressUiStatus(
+        L"正在准备更新... | Preparing update...",
+        L"已确认主程序退出，开始读取更新计划 | Parent process exited, reading update plan");
 
     // ------------------------------------------------------------------
     // Acquire update mutex to prevent new MAA instances from starting
@@ -1853,6 +1961,7 @@ int wmain(int argc, wchar_t* argv[])
     if (!mutexName.empty()) {
         hUpdateMutex = AcquireUpdateMutex(mutexName);
         if (hUpdateMutex == nullptr) {
+            updateMutexBlocked = true;
             failureReason =
                 L"检测到另一个 MAA 实例正在运行，无法执行更新。请关闭所有 MAA 窗口后重试。\n\n"
                 L"Another MAA instance is running. Please close all MAA windows and try again.";
@@ -1894,6 +2003,8 @@ int wmain(int argc, wchar_t* argv[])
             break;
         }
 
+        relaunchArgs = plan.relaunchArgs;
+
         bool isFullPackage = EqualsIgnoreCase(plan.packageType, L"full");
         const std::vector<std::wstring>& removeList = plan.removeList;
         const std::vector<std::wstring>& moveList = plan.moveList;
@@ -1903,7 +2014,7 @@ int wmain(int argc, wchar_t* argv[])
             L"正在分析更新内容... | Analyzing update contents...",
             L"更新计划读取完成 | Update plan loaded");
 
-        WriteLog((L"Plan loaded, package type: " + plan.packageType + L", remove entries: " + std::to_wstring(removeList.size()) + L", install entries: " + std::to_wstring(moveList.size())).c_str());
+        WriteLog((L"Plan loaded, package type: " + plan.packageType + L", remove entries: " + std::to_wstring(removeList.size()) + L", install entries: " + std::to_wstring(moveList.size()) + L", relaunch args: " + std::to_wstring(relaunchArgs.size())).c_str());
         WriteLogEntries(L"Files to remove", removeList);
         WriteLogEntries(L"Files to install", moveList);
 
@@ -1940,6 +2051,7 @@ int wmain(int argc, wchar_t* argv[])
             }
 
             WriteLog((L"Removing and backing up: " + targetPath + L" -> " + backupPath).c_str());
+            installationModified = true;
             bool backupOk = isFullPackage
                 ? RecycleAndBackupPath(targetPath, backupPath)
                 : MoveExistingPathToBackup(targetPath, backupPath);
@@ -1975,6 +2087,7 @@ int wmain(int argc, wchar_t* argv[])
                 }
 
                 WriteLog((L"Backing up existing entry: " + targetPath).c_str());
+                installationModified = true;
                 bool backupOk = IsRecycleAndReplaceDirectory(rel)
                     ? RecycleAndBackupDirectory(targetPath, backupPath)
                     : MoveExistingPathToBackup(targetPath, backupPath);
@@ -1992,11 +2105,21 @@ int wmain(int argc, wchar_t* argv[])
             bool isSourceFile = (sourceAttr != INVALID_FILE_ATTRIBUTES) &&
                                 !(sourceAttr & FILE_ATTRIBUTE_DIRECTORY);
 
+            // 源存在（文件或目录）才会真正开始改动安装；源缺失（如被杀软隔离）的条目
+            // 最多创建空父目录即失败，不置位以免误写失败标志，让完好的安装被 GUI 误判为资源损坏
+            if (sourceAttr != INVALID_FILE_ATTRIBUTES) {
+                installationModified = true;
+            }
+
             if (isSourceFile) {
                 // Use atomic file replacement for individual files
                 installOk = InstallFileAtomic(sourcePath, targetPath);
             } else {
-                // Directories: use the original move logic
+                // Directories: use the original move logic.
+                // Nested entries (e.g. Res\Video) may target a parent directory that is
+                // missing from the old install (files deleted by antivirus, etc.); create
+                // it before moving, otherwise MoveFileExW fails with ERROR_PATH_NOT_FOUND.
+                EnsureParentDirectory(targetPath);
                 auto moveOp = [&]() -> bool {
                     return MoveFileExW(sourcePath.c_str(), targetPath.c_str(),
                                        MOVEFILE_REPLACE_EXISTING) != FALSE;
@@ -2041,28 +2164,32 @@ int wmain(int argc, wchar_t* argv[])
     apply_failed:
         success = false;
 
-        // Attempt rollback: restore files that were already backed up
-        WriteLog(L"Update failed, attempting rollback from backup directory.");
-        for (const std::wstring& rel : removeList) {
-            std::wstring targetPath, backupPath;
-            if (!TryResolvePathUnderRoot(rootDir, rel, targetPath) ||
-                !TryResolvePathUnderRoot(backupDir, rel, backupPath)) {
-                continue;
+        // 回滚只回滚本次动过的内容；未动过文件（如路径非法在处理任何条目前失败）时
+        // .old 里的内容是更早一轮中断的遗留，还原会与已就位的新位置文件构成重复
+        if (installationModified) {
+            // Attempt rollback: restore files that were already backed up
+            WriteLog(L"Update failed, attempting rollback from backup directory.");
+            for (const std::wstring& rel : removeList) {
+                std::wstring targetPath, backupPath;
+                if (!TryResolvePathUnderRoot(rootDir, rel, targetPath) ||
+                    !TryResolvePathUnderRoot(backupDir, rel, backupPath)) {
+                    continue;
+                }
+                if (PathExistsW(backupPath) && !PathExistsW(targetPath)) {
+                    WriteLog((L"Rollback: restoring " + backupPath + L" -> " + targetPath).c_str());
+                    MovePathEntry(backupPath, targetPath);
+                }
             }
-            if (PathExistsW(backupPath) && !PathExistsW(targetPath)) {
-                WriteLog((L"Rollback: restoring " + backupPath + L" -> " + targetPath).c_str());
-                MovePathEntry(backupPath, targetPath);
-            }
-        }
-        for (const std::wstring& rel : moveList) {
-            std::wstring targetPath, backupPath;
-            if (!TryResolvePathUnderRoot(rootDir, rel, targetPath) ||
-                !TryResolvePathUnderRoot(backupDir, rel, backupPath)) {
-                continue;
-            }
-            if (PathExistsW(backupPath) && !PathExistsW(targetPath)) {
-                WriteLog((L"Rollback: restoring " + backupPath + L" -> " + targetPath).c_str());
-                MovePathEntry(backupPath, targetPath);
+            for (const std::wstring& rel : moveList) {
+                std::wstring targetPath, backupPath;
+                if (!TryResolvePathUnderRoot(rootDir, rel, targetPath) ||
+                    !TryResolvePathUnderRoot(backupDir, rel, backupPath)) {
+                    continue;
+                }
+                if (PathExistsW(backupPath) && !PathExistsW(targetPath)) {
+                    WriteLog((L"Rollback: restoring " + backupPath + L" -> " + targetPath).c_str());
+                    MovePathEntry(backupPath, targetPath);
+                }
             }
         }
     } while (false);
@@ -2071,10 +2198,23 @@ int wmain(int argc, wchar_t* argv[])
     // On failure: write failure status
     // ------------------------------------------------------------------
     if (!success && !failureReason.empty()) {
-        // Convert wstring reason to UTF-8 for file
-        std::string utf8Reason;
-        if (TryConvertWideToUtf8(failureReason, utf8Reason)) {
-            WriteUtf8File(failureStatusFile, utf8Reason);
+        // 失败标志仅用于标记安装可能已损坏（半更新状态）；预检失败（未动任何文件）不写，
+        // 避免完好的安装被 GUI 误判为资源损坏后拦截全部任务
+        if (installationModified) {
+            // Convert wstring reason to UTF-8 for file
+            std::string utf8Reason;
+            if (TryConvertWideToUtf8(failureReason, utf8Reason)) {
+                WriteUtf8File(failureStatusFile, utf8Reason);
+            }
+        } else if (!updateMutexBlocked && PathExistsW(packagePath)) {
+            // 不写失败标志时 GUI 不会清空待更新包，保留包会让下次启动拿同一个包反复委托、反复失败，
+            // 因此直接删包；互斥锁被占用属临时性失败，保留包重试。
+            // 用 ForceDeleteFile 应对杀软扫描等临时占用：删不掉时改名腾出原路径，同样能让 GUI 检测不到待更新包
+            if (ForceDeleteFile(packagePath)) {
+                WriteLog((L"Deleted update package after pre-apply failure: " + packagePath).c_str());
+            } else {
+                WriteLog((L"Failed to delete update package after pre-apply failure: " + packagePath).c_str());
+            }
         }
         if (PathExistsW(successStatusFile))
             DeleteFileW(successStatusFile.c_str());
@@ -2119,7 +2259,9 @@ int wmain(int argc, wchar_t* argv[])
         STARTUPINFOW si {};
         si.cb = sizeof(si);
         PROCESS_INFORMATION pi {};
-        std::wstring cmdLine = L"\"" + relaunchExecutable + L"\"";
+        // Forward plan.relaunchArgs to the next MAA process (e.g. --skip-startup-auto-run).
+        std::wstring cmdLine = BuildRelaunchCommandLine(relaunchExecutable, relaunchArgs);
+        WriteLog((L"Relaunch command line: " + cmdLine).c_str());
         if (CreateProcessW(
                 relaunchExecutable.c_str(),
                 cmdLine.data(),

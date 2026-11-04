@@ -9,7 +9,7 @@ icon: mdi:plug
 
 MAA can automatically detect and fill in the ADB path, connection address, and connection configuration for a **single currently running emulator**.
 
-As of MAA v5.22.3, the following emulators and connection addresses are supported for detection:
+As of MAA v6.16.8, the following emulators and connection addresses are supported for detection:
 
 - BlueStacks 5: `127.0.0.1:5555/5556/5565/5575/5585/5595/5554`
 - MuMu Player: `127.0.0.1:16384/16416/16448/16480/16512/16544/16576`
@@ -22,10 +22,10 @@ If detection fails, try launching MAA with UAC administrator privileges and dete
 
 ## ADB Path
 
-:::info Technical details
-Auto detection uses the emulator's ADB. Manual configuration is only required if auto detection fails.
-`Force Replace ADB` will download Google's ADB and use it automatically.
-If ADB is available in the environment variables, just fill in `adb`.
+::: info Technical details  
+Auto detection uses the emulator's ADB. Manual configuration is only required if auto detection fails.  
+`Force Replace ADB` will download Google's ADB and use it automatically.  
+If ADB is available in the environment variables, just fill in `adb`.  
 :::
 
 ### Use emulator's ADB
@@ -34,8 +34,8 @@ Go to your emulator's installation directory. On Windows, you can right-click th
 
 Look for an exe file with `adb` in its name in the top-level or subdirectories. You can use search to find it.
 
-:::details Examples
-`adb.exe` `HD-adb.exe` `adb_server.exe` `nox_adb.exe`
+::: details Examples  
+`adb.exe` `HD-adb.exe` `adb_server.exe` `nox_adb.exe`  
 :::
 
 ### Use Google's ADB
@@ -46,8 +46,8 @@ We recommend extracting it directly to the MAA folder so you can enter `.\platfo
 
 ## Connection Address
 
-::: tip
-Emulators running on your local machine should use addresses like `127.0.0.1:<port number>` or `emulator-<four digits>`.
+::: tip  
+Emulators running on your local machine should use addresses like `127.0.0.1:<port number>` or `emulator-<four digits>`.  
 :::
 
 ### Emulator documentation and reference addresses
@@ -101,33 +101,33 @@ In `Connection Settings`, set `Connection Configuration` to `BlueStacks`, then c
 
 This should work in most cases. If connection still fails, you may have multiple emulator cores or issues requiring additional settings as explained below.
 
-#### Specifying `Bluestacks.Config.Keyword`
+#### Specifying `ConfigKeyword`
 
-::: info Note
-If you're using multi-instance or have multiple emulator cores installed, you'll need additional settings to specify which emulator number to use
+::: info Note  
+If you're using multi-instance or have multiple emulator cores installed, you'll need additional settings to specify which emulator number to use  
 :::
 
-In `.\config\gui.json`, search for the `Bluestacks.Config.Keyword` field containing `"bst.instance.<emulator number>.status.adb_port"`. Find the emulator number in the `BlueStacks_nxt\Engine` folder in the emulator path.
+In `gui.new.json`, find your current configuration name (viewable in Settings-Switch Configuration, default is `Default`) and locate the `Gui.ConnectSettings.Extras.BluestacksExtra.ConfigKeyword` field containing `"bst.instance.<emulator number>.status.adb_port"`. Find the emulator number in the `BlueStacks_nxt\Engine` folder in the emulator path.
 
-::: details Examples
+::: details Examples  
 Nougat64 core:
 
 ```json
-"Bluestacks.Config.Keyword":"bst.instance.Nougat64.status.adb_port",
+"ConfigKeyword": "bst.instance.Nougat64.status.adb_port"
 ```
 
 Pie64_2 core: (the number after the core name indicates a multi-instance core)
 
 ```json
-"Bluestacks.Config.Keyword": "bst.instance.Pie64_2.status.adb_port",
+"ConfigKeyword": "bst.instance.Pie64_2.status.adb_port"
 ```
 
 :::
 
-#### Specifying `Bluestacks.Config.Path`
+#### Specifying `ConfigPath`
 
-::: info Note
-MAA now attempts to read the `bluestacks.conf` storage location from the registry. When this fails, you need to manually specify the configuration file path
+::: info Note  
+MAA now attempts to read the `bluestacks.conf` storage location from the registry. When this fails, you need to manually specify the configuration file path  
 :::
 
 1. Find the `bluestacks.conf` file in the BlueStacks data directory
@@ -138,17 +138,24 @@ MAA now attempts to read the `bluestacks.conf` storage location from the registr
 
 2. If this is your first time, run MAA once so it automatically generates the configuration file.
 
-3. **First close** MAA, **then** open `gui.json`, find your current configuration name under `Configurations` (viewable in Settings-Switch Configuration, default is `Default`), search for the `Bluestacks.Config.Path` field, and enter the full path to `bluestacks.conf`. (Note: use escaped backslashes `\\`)
+3. **First close** MAA, **then** open `gui.new.json`, find your current configuration name (viewable in Settings-Switch Configuration, default is `Default`), locate the `Gui.ConnectSettings.Extras.BluestacksExtra.ConfigPath` field, and enter the full path to `bluestacks.conf`. (Note: use escaped backslashes `\\`)
 
-::: details Example
+::: details Example  
 For `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`:
 
 ```json
 {
   "Configurations": {
     "Default": {
-      "Bluestacks.Config.Path": "C:\\ProgramData\\BlueStacks_nxt\\bluestacks.conf"
-      // Other configuration fields, don't manually modify
+      "Gui": {
+        "ConnectSettings": {
+          "Extras": {
+            "BluestacksExtra": {
+              "ConfigPath": "C:\\ProgramData\\BlueStacks_nxt\\bluestacks.conf"
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -156,21 +163,31 @@ For `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`:
 
 :::
 
+#### Return to MAA and Test
+
+You can use the `Screenshot Test` function in `Settings` - `Connection Settings` to check that the connected emulator core is the expected one.
+
 ## Connection Configuration
 
-Select the configuration matching your emulator. If not listed, choose General Configuration. If that doesn't work, try any other available configuration.
+Select the configuration matching your emulator. If not listed, choose General Mode. If that doesn't work, try any other available configuration.
 
 For specific differences, see the [source code](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/resource/config.json#L57).
 
 ### MuMu Screenshot Enhanced Mode
 
+::: tip  
+The screenshot and touch enhancements described here apply to MuMu for Windows x64.  
+:::
+
 **Version Requirement**: Official/Arknights-specific MuMu V4.1.26 or above, or Global MuMu V5.21.3 or above. <!-- Official V3.8.13 supports initial enhanced screenshots -->
 
 1. In `Settings` - `Connection Settings`, check `Enable MuMu Screenshot Enhanced Mode`. MAA will automatically try to get the installation path from the registry when you check this option.
 
-2. Enter the path to the `MuMu Player` or `MuMuPlayerGlobal-12.0` or `YXArkNights-12.0` folder in `MuMu Installation Path`, e.g., `C:\Program Files\Netease\MuMu Player`.
+2. Enter the root directory of the MuMu installation (i.e., the directory containing the `nx_device` or `shell` folder) in `MuMu Installation Path`, e.g., `C:\Program Files\Netease\MuMuPlayer`.
 
-3. If using MuMu Network Bridge, check `MuMu Network Bridge Mode` and manually enter the number of the corresponding emulator in the MuMu multi-instance manager, such as `0` for the main instance.
+3. If using MuMu Network Bridge, check `MuMu Network Bridge Mode` and manually enter the instance number of the corresponding emulator in the MuMu multi-instance manager, such as `0` for the main instance.
+
+**MuMu Touch Enhanced Mode**: Requires the official MuMu V6.3.2 or above; the Arknights-specific and Global editions are currently not supported. After `Enable MuMu Screenshot Enhanced Mode` is checked, check the `Enable MuMu Touch Enhancement` option below it to enable.
 
 ### LD Screenshot Enhanced Mode
 
@@ -190,14 +207,15 @@ AVD Screenshot Enhanced Mode is implemented in MaaFramework. Touch mode must be 
 
 1. In `Settings` - `Connection` - `Connection Preset`, select `Android Virtual Device (AVD)`.
 
-2. For `Touch Mode`, select `MaaFramework`.
+2. For `Touch Mode`, select `MaaFwAdb`.
 
 ## Touch Mode
 
-1. [Minitouch](https://github.com/DeviceFarmer/minitouch): An Android touch event handler written in C that operates on `evdev` devices and provides a Socket interface for external programs to trigger touch events and gestures. Starting with Android 10, Minitouch is no longer available when SELinux is in `Enforcing` mode.<sup>[source](https://github.com/DeviceFarmer/minitouch?tab=readme-ov-file#for-android-10-and-up)</sup>
-2. [MaaTouch](https://github.com/MaaAssistantArknights/MaaTouch): MAA's Java reimplementation of Minitouch that uses Android's native `InputDevice` and adds extra features. Compatibility with newer Android versions is still being tested. ~~Help us test it~~
-3. Adb Input: Directly calls ADB to use Android's `input` command for touch operations. Most compatible but slowest.
-4. [MaaFramework](https://maafw.com/): Delegates screenshot and touch commands to MaaFramework's control unit. Still being tested. ~~Help us test it x2~~
+1. [Minitouch](https://github.com/DeviceFarmer/minitouch): An Android touch event handler written in C that operates on `evdev` devices and provides a Socket interface for external programs to trigger touch events and gestures. Starting with Android 10, Minitouch is no longer available when SELinux is in `Enforcing` mode.<sup>[source](https://github.com/DeviceFarmer/minitouch?tab=readme-ov-file#for-android-10-and-up)</sup> (Default)
+2. [MaaTouch](https://github.com/MaaAssistantArknights/MaaTouch): MAA's Java reimplementation of Minitouch that uses Android's native `InputDevice` and adds extra features. (Experimental)
+3. ADB Input: Directly calls ADB to use Android's `input` command for touch operations. Only for physical devices running an older OS version; do not use it if other modes work. ADB Input swipes tend to drift — to avoid this, swipe speed is set very slow and swipe distances differ from other modes, so it cannot be used in scenarios requiring precise coordinate control. (Deprecated)
+4. [MaaFwAdb](https://maafw.com/): Delegates screenshot and touch commands to MaaFramework's control unit. Extra swipe is not supported: an extra swipe is a short "brake" swipe appended perpendicular to the end of the main swipe (tracing an L-shaped 90° turn), used to counteract list inertia, so pages that rely on it to prevent overshooting will overshoot in this mode. (Experimental)
+5. MuMu Touch Enhancement: Calls the touch interface of MuMu's external renderer process. Only appears in the touch mode dropdown after `Enable MuMu's screenshot enhancement mode` is checked, and automatically falls back to Minitouch when unavailable (experimental). Requires the official MuMu V6.3.2 or above; the Arknights-specific and Global editions are not supported yet. Supports operation in the MuMu "App Keep-Alive" (background keep-alive) scenario.
 
 ## ADB Lite
 
@@ -207,8 +225,8 @@ We recommend enabling it, but specific pros and cons need feedback. ~~Help us te
 
 ## Running multiple MAA and emulator instances
 
-::: info How to do it
-To operate multiple emulators simultaneously, copy the MAA folder multiple times and use **different MAA instances**, **the same adb.exe**, and **different connection addresses** to connect.
+::: info How to do it  
+To operate multiple emulators simultaneously, copy the MAA folder multiple times and use **different MAA instances**, **the same adb.exe**, and **different connection addresses** to connect.  
 :::
 
 ### Auto-starting multiple emulator instances
@@ -222,8 +240,8 @@ Using [BlueStacks International](./device/windows.md) as an example, here are tw
 3. In the new `Command line` column, find the content after `...\Bluestacks_nxt\HD-Player.exe"`.
 4. Add the content you found (similar to `--instance Nougat32`) to `Startup Settings` - `Additional Commands`.
 
-::: note
-After finishing, we recommend hiding the `Command line` column opened in `Step 2` to prevent slowdowns
+::: note  
+After finishing, we recommend hiding the `Command line` column opened in `Step 2` to prevent slowdowns  
 :::
 
 ::: details Example
@@ -237,7 +255,7 @@ Emulator Path: C:\Program Files\BlueStacks_nxt\HD-Player.exe
 Additional Commands: --instance Nougat32_1 --cmd launchApp --package "com.hypergryph.arknights.bilibili"
 ```
 
-The `--cmd launchApp --package` part auto-launches the specified package after startup; modify as needed.
+The `--cmd launchApp --package` part auto-launches the specified package after startup; modify as needed.  
 :::
 
 #### Start via emulator shortcuts

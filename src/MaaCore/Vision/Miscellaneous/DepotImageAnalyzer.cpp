@@ -18,9 +18,14 @@ bool asst::DepotImageAnalyzer::analyze()
 
     m_all_items_roi.clear();
     m_result.clear();
+    m_invalid_template_ids.clear();
 
     if (m_cached_templs.empty()) {
         prepare_cached_templates();
+        if (!m_invalid_template_ids.empty()) {
+            clear_cached_templates();
+            return false;
+        }
     }
     // 因为模板素材的尺寸与实际截图中素材尺寸不符，所以这里先对原图进行一下缩放
     resize();
@@ -38,17 +43,45 @@ bool asst::DepotImageAnalyzer::analyze()
     return ret;
 }
 
+const std::vector<std::string>& asst::DepotImageAnalyzer::get_ordered_item_ids() const
+{
+    return m_item_ids.empty() ? ItemData.get_ordered_material_item_id() : m_item_ids;
+}
+
 void asst::DepotImageAnalyzer::prepare_cached_templates()
 {
     LogTraceFunction;
 
-    for (const auto& item_id : ItemData.get_ordered_material_item_id()) {
+    for (const auto& item_id : get_ordered_item_ids()) {
         cv::Mat templ = TemplResource::get_instance().get_templ(item_id).clone();
+        if (!is_template_size_valid(templ)) {
+            LogError << __FUNCTION__ << "invalid templ:" << item_id << "size:" << templ.cols << "x" << templ.rows;
+            record_invalid_template(item_id);
+            continue;
+        }
+
         m_template_mean_colors[item_id] = cv::mean(templ(get_center_rect(templ)));
         // 抹去右下角 80x50 区域（防止影响匹配）
-        templ(cv::Rect { templ.cols - 80, templ.rows - 50, 80, 50 }) = cv::Scalar { 0, 0, 0 };
+        templ(
+            cv::Rect { templ.cols - QuantityMaskWidth,
+                       templ.rows - QuantityMaskHeight,
+                       QuantityMaskWidth,
+                       QuantityMaskHeight }) = cv::Scalar { 0, 0, 0 };
         m_cached_templs[item_id] = std::move(templ);
     }
+}
+
+void asst::DepotImageAnalyzer::record_invalid_template(const std::string& item_id)
+{
+    if (std::find(m_invalid_template_ids.begin(), m_invalid_template_ids.end(), item_id) ==
+        m_invalid_template_ids.end()) {
+        m_invalid_template_ids.emplace_back(item_id);
+    }
+}
+
+bool asst::DepotImageAnalyzer::is_template_size_valid(const cv::Mat& templ)
+{
+    return templ.cols >= QuantityMaskWidth && templ.rows >= QuantityMaskHeight;
 }
 
 // 计算 BGR 均值差
@@ -187,11 +220,16 @@ bool asst::DepotImageAnalyzer::analyze_all_items()
         ItemInfo info;
         size_t cur_pos = match_item(roi, info, m_match_begin_pos);
         if (cur_pos == NPos) {
+            if (m_is_basic) {
+                continue; // 基础物品可能不连续，跳过空槽位
+            }
             break;
         }
         std::string item_id = info.item_id;
 
-        m_match_begin_pos = cur_pos + 1;
+        if (!m_is_basic) {
+            m_match_begin_pos = cur_pos + 1;
+        }
         info.quantity = match_quantity(info);
         info.item_name = ItemData.get_item_name(item_id);
 #ifdef ASST_DEBUG
@@ -261,7 +299,7 @@ size_t asst::DepotImageAnalyzer::match_item(
     std::string matched_item_id;
     size_t matched_index = NPos;
 
-    const auto& all_items = ItemData.get_ordered_material_item_id();
+    const auto& all_items = get_ordered_item_ids();
 
     // 按候选模板ID顺序过滤，且保证 index >= begin_index
     size_t extra_count = 0;
@@ -313,7 +351,19 @@ int asst::DepotImageAnalyzer::match_quantity(const ItemInfo& item)
 {
     auto task_ptr = Task.get<MatchTaskInfo>("DepotQuantity");
     auto item_templ = TemplResource::get_instance().get_templ(item.item_id);
+    if (item_templ.empty()) {
+        record_invalid_template(item.item_id);
+        return 0;
+    }
     auto item_image = m_image_resized(make_rect<cv::Rect>(item.rect));
+    if (!is_template_size_valid(item_templ) || item_templ.size() != item_image.size() ||
+        item_templ.type() != item_image.type()) {
+        LogError << __FUNCTION__ << "templ is incompatible:" << item.item_id << "templ size:" << item_templ.cols << "x"
+                 << item_templ.rows << "item size:" << item_image.cols << "x" << item_image.rows
+                 << "templ type:" << item_templ.type() << "item type:" << item_image.type();
+        record_invalid_template(item.item_id);
+        return 0;
+    }
     cv::Mat quotient;
     cv::divide(
         item_image + cv::Scalar { 1, 1, 1 }, // I've forgot why I should plus 1 here
@@ -381,7 +431,7 @@ int asst::DepotImageAnalyzer::match_quantity(const ItemInfo& item)
     std::string digit_str = result.text;
     int multiple = 1;
     if (size_t w_pos = digit_str.find("万"); w_pos != std::string::npos) {
-        multiple = 10000;
+        multiple = 10'000;
         digit_str.erase(w_pos, digit_str.size());
     }
     /*
@@ -410,7 +460,7 @@ int asst::DepotImageAnalyzer::match_quantity(const ItemInfo& item)
         digit_str.erase(m_pos, digit_str.size());
     }
     else if (size_t n_pos = digit_str.find("만"); n_pos != std::string::npos) {
-        multiple = 10000;
+        multiple = 10'000;
         digit_str.erase(n_pos, digit_str.size());
     }
     else if (size_t o_pos = digit_str.find("억"); o_pos != std::string::npos) {

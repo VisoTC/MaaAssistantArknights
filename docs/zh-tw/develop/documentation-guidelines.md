@@ -5,21 +5,21 @@ icon: jam:write-f
 
 # 文件編寫指南
 
-::: tip
-本文件的目的在於指導文件編寫者更好地使用主題提供的功能，以此達到更易讀的效果。
+::: tip  
+本文件的目的在於指導文件編寫者更好地使用主題提供的功能，以此達到更易讀的效果。  
 :::
 
-我們的文件基於 [VuePress](https://github.com/vuejs/vuepress) 建置，使用了 [vuepress-theme-plume](https://github.com/pengzhanbo/vuepress-theme-plume) 主題。您也可以查看 [官方文件](https://theme-plume.vuejs.press/) 來獲取更詳細的說明。本文僅介紹部分常用功能，或經我們自定義後的特殊功能。
+我們的文件基於 [VuePress](https://github.com/vuejs/vuepress) 建置，使用了 [vuepress-theme-plume](https://github.com/pengzhanbo/vuepress-theme-plume) 主題。您也可以查看 [官方文件](https://theme-plume.vuejs.press/) 來獲取更詳細的說明。本文僅介紹部分常用功能，或經我們自訂後的特殊功能。
 
 ## 本機開發
 
-1. 安裝 [pnpm](https://pnpm.io/installation)，並參考 [Pull Request 流程簡述](./development.md#github-pull-request-流程簡述) 將倉庫複製（Clone）到本機。
+1. 安裝 [pnpm](https://pnpm.io/installation)，並參考 [Pull Request 流程簡述](./development.md) 將倉庫複製（Clone）到本機。
 2. 在 `docs` 目錄下開啟終端機，執行 `pnpm i` 安裝相依套件。
 3. 執行 `pnpm run dev` 啟動開發預覽環境。
 
 ## 容器與卡片
 
-該主題提供了關於提示、註釋、資訊、注意、警告和詳情自定義容器的支援，我們可以利用這一特性來強調部分內容。
+該主題提供了關於提示、註釋、資訊、注意、警告和詳情自訂容器的支援，我們可以利用這一特性來強調部分內容。
 
 需要注意的是，如果容器中嵌套了容器，則父級容器應比子集容器多寫一個冒號 `:` 以進行區分，例如[步驟容器](#步驟)
 
@@ -50,32 +50,32 @@ icon: jam:write-f
 
 ### 容器範例
 
-::: tip
-這是提示容器
+::: tip  
+這是提示容器  
 :::
 
-::: note
-這是註釋容器
+::: note  
+這是註釋容器  
 :::
 
-::: info
-這是資訊容器
+::: info  
+這是資訊容器  
 :::
 
-::: warning
-這是注意容器
+::: warning  
+這是注意容器  
 :::
 
-::: danger
-這是警告容器
+::: danger  
+這是警告容器  
 :::
 
-::: details
-這是詳情容器
+::: details  
+這是詳情容器  
 :::
 
-::: window
-這是一個很特殊的容器
+::: window  
+這是一個很特殊的容器  
 :::
 
 ## 麥克筆標記
@@ -115,7 +115,7 @@ MaaAssistantArknights 是由 ==很多豬== 開發的
 
 有以下配置可以使用：
 
-::: window
+::: window  
 輸入：
 
 ```markdown
@@ -178,8 +178,8 @@ MaaAssistantArknights 是由 ==很多豬== 開發的
 
 3. 步驟 3
 
-   ::: tip
-   提示容器
+   ::: tip  
+   提示容器  
    :::
 
 4. 結束
@@ -238,24 +238,35 @@ MaaAssistantArknights 是由 ==很多豬== 開發的
 
 效果展示如下：
 
-:::: field-group
-::: field name="theme" type="ThemeConfig" required default="{ base: '/' }"
-主題配置
+:::: field-group  
+::: field theme  
+@type ThemeConfig  
+@default { base: '/' }  
+@required  
+主題配置  
 :::
 
-::: field name="enabled" type="boolean" optional default="true"
-是否啟用
+::: field enabled  
+@type boolean  
+@default true  
+@optional  
+是否啟用  
 :::
 
-::: field name="callback" type="(...args: any[]) => void" optional default="() => {}"
+::: field callback  
+@type (...args: any[]) => void  
+@default () => {}  
+@optional  
 <Badge type="tip" text="v1.0.0 新增"  />
-回呼函數
+回呼函式  
 :::
 
-::: field name="other" type="string" deprecated
+::: field other  
+@type string  
+@deprecated  
 <Badge type="danger" text="v0.9.0 棄用"  />
-已棄用屬性
-:::
+已棄用屬性  
+:::  
 ::::
 
 ## 圖示

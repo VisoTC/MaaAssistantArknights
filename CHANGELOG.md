@@ -1,34 +1,49 @@
-## v6.12.2
+## v6.21.4
 
 ### Highlights
 
-泡影苍霆活动关卡暂不支持多作业模式
-由于本次活动关卡的字体与界面结构较为特殊，MAA 无法在活动关卡中正常使用多作业模式。
-使用自动战斗功能时，请关闭 MAA 的「多作业模式」，并在干员编队界面启动任务。
-作业站中的「作业集」仅用于归纳作业，仍可正常导入。导入后可点击关卡名称右侧的文件图标，快速切换至对应关卡的单作业模式使用。
+已适配明日方舟 26.11.1 版本的游戏新界面，修复新版主界面下肉鸽与生息演算入口的识别问题。后续不做日间主题以外的主题适配；如需使用其他主题，可在任务列表末尾自行添加 ｢更换主题｣ 任务。
 
-#### 阵地足球锦标赛
+本版本按功能域全量重写了 WPF 语言资源，个别界面可能出现文案显示异常；如遇到问题，请通过 ｢设置 - 问题反馈｣ 提交反馈。
 
-新增支持阵地足球锦标赛小游戏，可前往 ｢小工具-牛杂-当期活动｣ 进行选择。
+#### 设置指引改为任务设置演示教学，新增用户协议确认
 
-#### 悖论模拟支持跳过战斗失败的关卡
+设置指引 ｢任务设置｣ 步骤改为分步演示教学，按引导顺序完成任务配置；新增用户协议确认步骤，已完成旧版指引的用户升级后重新进入指引。
 
-悖论模拟新增跳过战斗失败的作业选项，仅自动取消已完成的作业，未完成的作业将继续保持勾选状态。
+#### 生息演算迁移到 ｢小工具-牛杂｣，外服支持 ｢重启锚点｣
 
-#### 支持 MuMu 6.0 版本截图增强
+生息演算从任务队列迁移到 ｢小工具-牛杂｣ 独立运行，任务队列中已有的条目与设置升级后自动迁入。YostarEN/JP/KR 新增支持 ｢重启锚点｣ 主题。
 
-支持 MuMu 6.0 版本安卓 15 的截图增强路径，提升截图稳定性和兼容性。
+#### 黑流树海刷开局支持凹第一层实托邦
+
+刷开局新增 ｢凹第一层实托邦｣ 选项，需难度 6 及以上。
+
+#### 编队与选人提速
+
+自动编队优先在当前页匹配待选干员，减少翻页；自定义基建与宿舍选人按职业分桶定位剩余目标干员。
 
 <details>
 <summary><b>English</b></summary>
 
-#### Paradox Simulation Support for Skipping Failed Battle Stages
+Adapted to the new UI in the Arknights 26.11.1 update, and fixed Roguelike and Reclamation Algorithm entry recognition on the new main screen. No themes other than Day will be adapted going forward; to use a different theme, add a ｢Switch Theme｣ task at the end of the task list.
 
-The Paradox Simulation now includes an option to skip failed battle stages, automatically unchecking completed stages while keeping incomplete stages checked.
+The WPF localization resources have been extensively rewritten by feature domain in this version; a few texts may display incorrectly. If you run into any, please report via Settings - Issue Report.
 
-#### Support for MuMu 6.0 Screenshot Enhancement
+#### First-Run Guide Revamped as Task Settings Demo Tutorial with User Agreement Confirmation
 
-Supports the enhanced screenshot path for MuMu 6.0 Android 15, improving screenshot stability and compatibility.
+The ｢Task Settings｣ step of the first-run guide is now a step-by-step demo tutorial that walks through task configuration in a guided order; a user agreement confirmation step has been added, and users who completed the old guide will go through the new one again after upgrading.
+
+#### Reclamation Algorithm Moved to Toolbox "Useful Tasks", "RELAUNCH ANCHOR" on Overseas Servers
+
+Reclamation Algorithm now runs standalone in the Toolbox "Useful Tasks" section; existing entries in the task queue are migrated automatically with their settings preserved. YostarEN/JP/KR now support the "RELAUNCH ANCHOR" theme.
+
+#### BlackFlow Start Run: Reroll Until Floor 1 is 实托邦
+
+New option for start-run farming to reroll until Floor 1 is 实托邦 (a Floor 1 variant); requires difficulty 6 or above.
+
+#### Faster Formation and Operator Selection
+
+Auto formation now matches operators on the current page first, reducing paging; custom infrast and dormitory selection locate remaining targets by class.
 
 </details>
 
@@ -37,99 +52,193 @@ Supports the enhanced screenshot path for MuMu 6.0 Android 15, improving screens
 以下是详细内容：
 
 <details open>
-<summary><b>v6.12.2 (2026-06-14)</b></summary>
+<summary><b>v6.21.4 (2026-11-04)</b></summary>
 
 ### 新增 | New
 
-* MAA 更新器增加文件被占用时重试、互斥量协调与自动回滚机制 (#16703) @soundofautumn
+* 海外源支持填写并验证 GitHub Token，凭个人 Token 的独立配额直接从 GitHub 检查并下载软件与资源更新 ([#19034](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19034)) @Rbqwow @Daydreamer114 @ABA2396
 
 ### 改进 | Improved
 
-* 更新肉鸽招募干员配置，补充赤刃明霄陈、贝洛内、缇缇、焰狐龙梓兰等干员 @Saratoga-Official
-* 修复 POSIX 下 RawByNc 截图等待设备回连可能无限阻塞的问题 (#17027) @Halo5082
-
-### 修复 | Fix
-
-* 修复界园肉鸽"移时换物"事件放弃探索时的异常处理 @Saratoga-Official
-* 修复水月肉鸽事件 DiceConfirm 后事件不处理的问题 @status102
+* 设置指引自 ｢性能设置｣ 步骤起可跳过剩余步骤 @ABA2396
+* 拖动任务时偶发的拖拽异常改为静默忽略 @ABA2396
 
 ### 其他 | Other
 
-* CI 工作流安全加固，防止 fork PR 表达式注入 @ABA2396
-* Windows 构建切换至 VS2026 运行器镜像 (#15806) @soundofautumn
-* 启动初始化期间允许拖拽排序任务列表 @status102
-* 移除未使用的变量、简化 MuMu 加载日志 @ABA2396
+* Android OCR 的 ncnn 模型改为预转换后入库，CI 由构建期转换改为校验入库模型与源模型一致 ([#19088](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19088)) @Aliothmoon
 
 </details>
 
 <details>
-<summary><b>v6.12.1 (2026-06-11)</b></summary>
-
-### 修复 | Fix
-
-* 修复多作业模式关卡导航选错关卡无法重选、关卡名复核失效等多项问题 @status102 @ABA2396
-* 修复界园事件内通宝交换后无法正确处理事件结束页 (#16936) @ZiyinLin
-
-</details>
-
-<details>
-<summary><b>v6.12.0 (2026-06-11)</b></summary>
+<summary><b>v6.21.3 (2026-11-04)</b></summary>
 
 ### 新增 | New
 
-* 繁中服支持「雪山降臨1101」活动导航与「喀蘭貿易技術研發部」小游戏 (#17073) @momomochi987
-* 添加阵地足球锦标赛小游戏 @ABA2396
-* 理智药使用增加使用中的药品信息 @status102
-* 支持 MuMu 6.0 截图增强路径 (#16994) @ABA2396
-* 切换主题时保存当前画面截图 (#16993) @ABA2396
-* 悖论模拟支持跳过战斗失败的作业，自动战斗作业增加对应结构 (#16985) @status102
-* 启动设置添加模拟器启动测试按钮，便于测试是否配置成功 @ABA2396
-* 统一 SearchBar 样式 @ABA2396
+* 任务齿轮右键菜单新增 ｢上移/下移｣，环境异常或触屏设备无法拖动排序时可改用菜单调整任务顺序 @ABA2396
+* PC 端 完成后动作新增 ｢退出 PC 客户端｣，各退出选项按连接方式分开保存，切换连接配置时不再改写 ([#18687](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18687)) @LemonMars
 
 ### 改进 | Improved
 
-* 更新 MuMu 12 关闭命令至 MuMuManager 新版 API (#17067) @Zmjjeff7
-* 贸易站切换产物前先校验当前状态，避免已达成目标时的冗余操作 (#16954) @ZiyinLin
-* 修正小游戏显示名称与提示文案的本地化优先级 @ABA2396
-* 优化阵地足球锦标赛部署坐标与动画时序 @ABA2396
-* 更新 OF-1 信用作战作业干员配置 @ABA2396
-* 优化部分情况下自动战斗导航 OCR 结果中会出现误识别的前缀 @status102
-* 基于灰度阈值预处理的自动战斗导航，适配 H 关及怪猎二期 TD-2 本 (#16990) @status102
-* 肉鸽弹窗类事件处理重构 CloseCollectionClose (#17005) @status102
-* InvokeProcSubTaskMsg 重构 (#16979) @status102
+* 繁中服适配幸运墙搓玉活动界面的识别文字 ([#19059](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19059)) @momomochi987
 
 ### 修复 | Fix
 
-* 修复启动模拟器与 ADB 操作时 Process 对象未释放导致句柄泄漏 (#17060) @Zmjjeff7
-* 修复配置创建失败时回滚不一致的问题 @ABA2396
-* 修复 RainbowAnimation 画刷选择潜在的空引用异常 @ABA2396
-* ConfigFactory Save 锁统一 (#17052) @status102
-* 错误隐藏开局分队与开局干员选项 @ABA2396
-* 修复特克诺干员名 OCR 误识别 (#17030) @ZiyinLin
-* 修复绿票商店状态回退错误及二阶段校验问题 @status102 @ZiyinLin
-* MaskedCcoeffMatcher 稀疏路径累加器改用 CV_64F 防止大数目相减精度损失 (#16983) @Aliothmoon
-* 降低 PlayCover 下肉鸽部分任务的模版匹配分数阈值 (#16968) @Alan-Charred
-* 更新 EN 服 IS6 bosky 模板与文字尺寸 @Constrat
-* 修复 MaaMacGui changelog 贡献者 mention (#16978) @ColdSpellhere
+* 修复黑流树海第五层每次回到地图都左滑的问题 ([#19064](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19064)) @ZiyinLin
+* 修复黑流树海点击 ｢出发前往｣ 后未等待 loading 的问题 @ZiyinLin
+* 黑流树海事件 ｢和平守卫者｣ 改选 ｢离开队伍｣ @ZiyinLin
+* 修复重看设置指引取消重启后状态未完全归位的问题 @ABA2396
+* 繁中服修复干员 ｢凯尔希·思衡托｣ 无法识别的问题，新增干员 ｢GALLUS²｣ 识别 ([#19055](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19055)) @Neko-no-akuma-TW
+* 繁中服修复生息演算产出 ｢萤光棒｣ 识别的 OCR 误读 ([#19059](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19059)) @momomochi987
+
+### 其他 | Other
+
+* CI Android Core 构建改用 Ubuntu runner ([#19053](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19053)) @Aliothmoon
+* CI Markdown 格式化工具由 Prettier 改为 markdownlint，表格恢复紧凑样式 @Rbqwow
+
+</details>
+
+<details>
+<summary><b>v6.21.2 (2026-11-03)</b></summary>
+
+### 改进 | Improved
+
+* 设置指引 ｢任务设置｣ 步骤改为分步演示教学，按引导顺序完成添加任务、选择关卡、重命名排序、周计划与更换主题配置；新增用户协议确认步骤，已完成旧版指引的用户升级后重新进入指引 ([#19050](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19050)) @ABA2396
+* 补全 ｢战时新闻委员会｣ 流程，当日已完成时自动进入下一天，五天完成后自动结束 ([#19039](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19039)) @Daydreamer114
+* 更换主题确认切换后延长等待时间，点击未生效时自动重试 @ABA2396 @XXLC
+
+### 修复 | Fix
+
+* 修复复用上次编队时干员与编队组映射错位、编队干员未被正确恢复的问题 ([#19014](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19014)) @status102
+* 修复 26.11.1 新版主界面下肉鸽与生息演算入口识别失败的问题 ([#19010](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19010)) @moranfanhua @Saratoga-Official
+* 修复黑流树海换层时地图缩放未生效、进层弹窗遮挡导致的层名识别失败问题；识别到误入奇境的标题时重开本局 ([#19052](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19052)) @ZiyinLin
+* 修复萨卡兹肉鸽 ｢已深化｣ 与 ｢可重建｣ 状态节点不显示节点日志的问题 @Constrat
+* YostarJP fix Relaunch Anchor RA-1 wood delivery OCR recognition ([#19028](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19028)) @Radekyspec
+* YostarJP fix Reclamation Algorithm 3 deliver wood OCR regex @Daydreamer114
+* YostarEN fix depot entry icon recognition ([#19005](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/19005)) @Daydreamer114 @Constrat
+* YostarEN fix SanityMatch misreading sanity as 7/1210 @Constrat
 
 ### 文档 | Docs
 
-* README「自动抄作业」更新为「自动战斗」 @Rbqwow
+* 更换 README 的 Ask DeepWiki 徽章 @Constrat
 
 ### 其他 | Other
 
-* 自动战斗视频链接始终显示 @ABA2396
-* 补充可露希尔基建数值 @Saratoga-Official
-* YostarKR winden colorScale for compatibility @HX3N
+* CI 规范化各工作流的 job 名称 @Rbqwow
+* CI 更新 release-ota 的 macOS 镜像版本 @Rbqwow
+* CI 仅允许 base 为 dev-v2 的 PR 触发 CI 工作流 @Rbqwow
 
-### MaaMacGui
+</details>
 
-#### 新增 | New
+<details>
+<summary><b>v6.21.1 (2026-11-02)</b></summary>
 
-* 添加阵地足球锦标赛小游戏入口 @ABA2396
+### 新增 | New
 
-#### 修复 | Fix
+* 小工具-牛杂 新增 ｢战时新闻委员会｣ 小游戏 ([#18991](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18991)) @Daydreamer114 @ABA2396
+* 新增 ｢时间啊，向前！｣ TL-4 搓玉关卡导航 ([#18994](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18994)) @jinghero
 
-* 统一 gui.log 文件日志中的日期与时间格式 ([#93](https://github.com/MaaAssistantArknights/MaaMacGui/pull/93)) @Alan-Charred
+### 改进 | Improved
+
+* 适配 ｢时间啊，向前！｣ 通关后切换形态的活动界面 @ABA2396
+
+### 修复 | Fix
+
+* 修复主题切换按钮模板误缩放导致外服主题切换识别失败的问题 @ABA2396
+* YostarEN/JP/KR fix Reclamation Algorithm 3 Deliver Wood OCR regex ([#18996](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18996)) @Daydreamer114
+* YostarEN fix dormitory icon recognition at 720p @Constrat
+
+### 其他 | Other
+
+* CI 升级 actions/setup-python 至 v7 ([#18947](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18947))
+
+</details>
+
+<details>
+<summary><b>v6.21.0 (2026-11-01)</b></summary>
+
+### 新增 | New
+
+* 生息演算迁移到 ｢小工具-牛杂｣ 独立运行，任务队列中已有的条目与设置自动迁入 ([#18809](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18809)) @ABA2396
+* 黑流树海刷开局新增 ｢凹第一层实托邦｣ 选项，需难度 6 及以上 ([#18840](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18840)) @ZiyinLin @ABA2396
+* 黑流树海支持 ｢在第五层 BOSS 前暂停｣ ([#18913](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18913)) @ZiyinLin
+* 黑流树海开局支援页按所选策略的优先级顺序选取奖励 ([#18837](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18837)) @ZiyinLin
+* 基建收获时识别回收站产出的物品与数量并显示在日志中，鼠标悬停日志可查看物品图标 ([#18924](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18924)) @ABA2396
+* 菲亚梅塔心情恢复的恢复目标新增琴柳、承曦格雷伊、温蒂、槐琥、至简、旅骨 ([#18688](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18688)) @Reverse0xCC @ABA2396
+* 库存保持新增 ｢芯片组计入双芯片折算｣ 选项，统计芯片组时计入双芯片的折算数量 @ABA2396
+* Android 组件附带 NCNN 格式的 OCR 模型，下游可直接使用 ncnn 后端识别 ([#18738](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18738)) @wangl-cc
+* 新增 ｢时间啊，向前！｣ 活动的关卡导航 @ABA2396
+* YostarEN/JP/KR support Reclamation Algorithm 3 ([#18929](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18929), [#18910](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18910), [#18911](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18911), [#18951](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18951), [#18936](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18936)) @dragonheart107 @Manicsteiner @HX3N
+
+### 改进 | Improved
+
+* 自动编队优先在当前页匹配待选干员，减少翻页，编队更快 @ABA2396
+* 自定义基建与宿舍选人按职业分桶定位剩余目标干员，选人更快 @ABA2396 @youzibigg
+* 今日关卡小提示新增 PR 芯片本的双芯片库存显示，掉落名称与库存数按掉落着色 ([#16193](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/16193)) @soundofautumn @ABA2396
+* gui.log 记录 MessageBox 与 Growl 通知的弹出内容及用户选择，新公告只记录带 (NEW!!!) 标记的区块 ([#18915](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18915), [#18916](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18916)) @ABA2396
+* 肉鸽与生息演算的主题下拉框中，当前客户端未适配的主题显示 ｢未适配｣ 后缀 ([#18928](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18928)) @ABA2396 @Constrat
+* 库存刷取与库存保持在无库存数据时跳过刷取并提示更新库存，识别结果为空时保留已有库存数据 ([#18850](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18850)) @ABA2396
+* 基建训练室日志附带当时的界面截图 @ABA2396
+* 基建进入设施时可预期的失败（设施不在当前画面、序号超出实际建造数量）不再保存截图，避免挤掉有排查价值的截图 ([#18923](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18923)) @ABA2396
+* 危险操作确认弹窗默认聚焦取消按钮 @ABA2396
+* 优化小工具干员识别结果卡片布局 @ABA2396
+* 基建房间列表一键全选/清空改为一次写入 @ABA2396
+* 统一黑流树海界面提示的用词并更新说明文案，与当前行为一致 ([#18852](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18852)) @ZiyinLin @ABA2396
+* YostarEN/YostarKR update the Annihilation navigation templates @ABA2396
+
+### 修复 | Fix
+
+* 适配明日方舟 26.11.1 主页界面改版，功能入口识别统一使用日间主题模板（新旧两套并存），主题切换按钮模板同步更新 ([#18955](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18955)) @Daydreamer114 @ABA2396
+* 任务链引用未定义任务时停止任务并提示资源可能损坏，附修复引导 @ABA2396
+* 使用 GPU 推理时若推理设备失效（如运行中更新显卡驱动），停止任务并提示重启 MAA ([#18472](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18472)) @crazysmile-PhD
+* 修复 ｢运行任务时阻止休眠｣ 在定时启动时概率性失效的问题 ([#18849](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18849)) @zytyan
+* 任务完成后动作的确认倒计时期间保持系统唤醒，避免完成后动作不执行 ([#18789](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18789)) @crazysmile-PhD
+* 修复再次启动 MAA 唤醒已有实例时，第二实例误入更新流程导致的更新异常 @ABA2396
+* 修复自动编队复用上一轮编队时多余干员未取消选中与漏选干员的问题 @status102 @ABA2396
+* 修复自定义基建选人完成后未回到干员列表首页，导致后续收尾排序出错的问题 ([#18823](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18823)) @youzibigg @ABA2396
+* 修复基建房间列表出现重复条目的问题 @ABA2396
+* 修复干员培养点击干员卡片顶部无法进入详情页的问题 @ABA2396
+* 材料合成选择干员后增加等待，降低界面动画未刷新导致的误识别 @Lancarus
+* 修复库存保持 ｢手动输入关卡｣ 悬停提示显示错误的问题 @ABA2396
+* 修复水月肉鸽进入商店时投资先于刷新命中，导致刷新商店（指路鳞）不生效的问题 ([#18883](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18883)) @ZiyinLin
+* 缩小萨米肉鸽战斗节点的点击区域，修复与敌人情报区域重合导致的误触 ([#18877](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18877)) @ZiyinLin
+* 黑流树海新增 ｢三重身｣ ｢溯源｣ 节点的识别分派，修复相关节点卡住的问题 ([#18808](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18808)) @ZiyinLin
+* 黑流树海招募确认兼容带藏品增益的按钮外观，修复拿到相关藏品后卡住的问题 ([#18826](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18826)) @ZiyinLin
+* 修复黑流树海第三、五层险路恶敌节点被误标为险路尽头的问题 ([#18966](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18966)) @ZiyinLin
+* 黑流树海第四层地图识别兼容偏上布局 ([#18940](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18940)) @ZiyinLin
+* 黑流树海开局分队与开局奖励确认点击未生效时自动重试，修复卡在分队页或开局奖励页的问题 ([#18856](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18856), [#18965](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18965)) @ZiyinLin
+* 扩大黑流树海开局支援确认框的识别区域，兼容带襁褓动物时的布局 ([#18804](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18804)) @chanshengbinying
+* 修复黑流树海拾取自然物后弹窗未关闭的问题 ([#18822](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18822)) @youzibigg
+* 更正黑流树海结局通关后的跳过按钮模板 @ZiyinLin
+* 修正部分保全与肉鸽作业中部署方向的拼写错误，修复朝向不生效的问题 @Lancarus
+* 修正新活动关卡 TL-10 的地图数据 @status102
+* 修复 ｢领取限时签到活动奖励｣ 通过图标进入时打开专享活动弹窗后未关闭的问题 @HX3N
+* 定时执行的自定义配置提示由 ｢重启游戏｣ 更正为 ｢重启 MAA｣ ([#18851](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18851)) @youzibigg
+* 修复 PC 端连接失败时仅在未找到游戏窗口的情况下尝试启动客户端，修复窗口存在但连接失败（如分辨率不符）时误启动客户端的问题 ([#18890](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18890)) @moranfanhua
+* 修复 PC 端黑流树海商店投资入口识别分数不足导致无法投资的问题 ([#18710](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18710)) @ylv01 @ZiyinLin
+* YostarEN fix various OCR replacements: infrastructure at 720p, Ch'en, and operator name regexes @Constrat
+* YostarJP improve Mizuki floor OCR and squad confirmation ([#18905](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18905)) @wallsman
+* YostarJP fix ocrReplace for Kal'tsit (ケルシー・エスペランタ) @Saratoga-Official
+
+### 文档 | Docs
+
+* 同步近期行为变更到五语言文档，协议文档补 GpuDeviceRemoved 与 UnknownTask 回调及未定义任务名停止任务链的语义，用户手册补库存保持与黑流树海刷开局等小节 ([#18881](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18881)) @ABA2396
+* 文档站 ::: 容器统一补行尾硬换行，便于不支持容器渲染的预览逐行显示 ([#18937](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18937)) @ABA2396
+
+### 其他 | Other
+
+* 本地化 key 按功能域全量重命名，配套排序与引用校验工具 ([#18879](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18879)) @ABA2396
+* 本地化下拉列表条目改为链式配置 ([#18928](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18928)) @ABA2396
+* 静态类日志器统一使用 `Log.ForContext(typeof(T))` ([#18917](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18917)) @ABA2396
+* 将信用商店购买成功图标提取为通用物资获取图标模板 ([#18900](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18900)) @youzibigg
+* Unify the activity rewards claiming tasks and reuse the CreditShop-Bought template @HX3N
+* 调整 NetBeauty 依赖收纳布局，放行运行时核心组件 @ABA2396
+* 统一源码文件无 BOM，并以 pre-commit 钩子强制 @ABA2396
+* 统一界面文案的角引号与单位空格排版 @ABA2396
+* 清理无引用的本地化键与无用代码 @ABA2396
+* 移除未接入 CI 的旧测试脚手架 @ABA2396
+* 库存数据的同步时间统一以 UTC 保存 @ABA2396
+* CoreML 检测限定 Apple 平台，修复非 Apple 平台的编译失败 ([#18833](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18833)) @wangl-cc
+* RoguelikeMapConfig 补缺失的头文件包含 ([#18750](https://github.com/MaaAssistantArknights/MaaAssistantArknights/pull/18750)) @wangl-cc
+* 修订仓库开发约定，补充本地化 key 前缀命名规范、排序脚本用法、本地化下拉列表与文档容器硬换行约定 @ABA2396
 
 </details>

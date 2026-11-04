@@ -1,6 +1,6 @@
 // <copyright file="JsonDataHelper.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -23,7 +23,7 @@ namespace MaaWpfGui.Helper;
 public static class JsonDataHelper
 {
     private static readonly object _lock = new();
-    private static readonly ILogger _logger = Log.ForContext("SourceContext", "JsonDataHelper");
+    private static readonly ILogger _logger = Log.ForContext(typeof(JsonDataHelper));
 
     /// <summary>
     /// 从 data/{key}.json 读取对象，如果不存在则返回 defaultValue
@@ -69,6 +69,12 @@ public static class JsonDataHelper
     /// <returns>是否设置成功</returns>
     public static bool Set<T>(string key, T value, string? dataDir = null)
     {
+        if (MaaWpfGui.Main.Bootstrapper.IsDemoMode)
+        {
+            // README 截图演示模式：不写任何 data/ 缓存文件，进程内状态退出即弃
+            return true;
+        }
+
         var filePath = Path.Combine(dataDir ?? PathsHelper.DataDir, $"{key}.json");
 
         lock (_lock)
@@ -95,6 +101,12 @@ public static class JsonDataHelper
     /// <returns>是否成功删除</returns>
     public static bool Delete(string key)
     {
+        if (MaaWpfGui.Main.Bootstrapper.IsDemoMode)
+        {
+            // README 截图演示模式：不删不写任何 data/ 缓存文件
+            return false;
+        }
+
         var filePath = Path.Combine(PathsHelper.DataDir, $"{key}.json");
 
         try

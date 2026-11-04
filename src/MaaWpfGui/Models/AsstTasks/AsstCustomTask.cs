@@ -1,6 +1,6 @@
 // <copyright file="AsstCustomTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -25,6 +25,10 @@ public class AsstCustomTask : AsstBaseTask
 
     [JsonProperty("task_names")]
     public List<string> CustomTasks { get; set; } = [];
+
+    /// <summary>任务附加参数，如像素画的 params.pixel_paint.groups。无参数时不出现在 JSON 中。</summary>
+    [JsonProperty("params", NullValueHandling = NullValueHandling.Ignore)]
+    public JObject? Params { get; set; }
 
     public override (AsstTaskType TaskType, JObject Params) Serialize() => (TaskType, JObject.FromObject(this));
 }

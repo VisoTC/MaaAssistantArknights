@@ -1,6 +1,6 @@
 // <copyright file="StartSettingsUserControlModel.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -24,6 +24,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using HandyControl.Controls;
 using JetBrains.Annotations;
+using MaaWpfGui.Configuration.Factory;
 using MaaWpfGui.Constants;
 using MaaWpfGui.Helper;
 using MaaWpfGui.States;
@@ -40,6 +41,8 @@ namespace MaaWpfGui.ViewModels.UserControl.Settings;
 /// </summary>
 public class StartSettingsUserControlModel : PropertyChangedBase
 {
+    private readonly RunningState _runningState = RunningState.Instance;
+
     static StartSettingsUserControlModel()
     {
         Instance = new();
@@ -48,8 +51,6 @@ public class StartSettingsUserControlModel : PropertyChangedBase
     public static StartSettingsUserControlModel Instance { get; }
 
     private static readonly ILogger _logger = Log.ForContext<StartSettingsUserControlModel>();
-
-    private static RunningState _runningState => RunningState.Instance;
 
     private static ConnectSettingsUserControlModel ConnectSettings => SettingsViewModel.ConnectSettings;
 
@@ -67,7 +68,7 @@ public class StartSettingsUserControlModel : PropertyChangedBase
             if (!AutoStart.SetStart(value, out var error))
             {
                 _logger.Error("Failed to set startup: {Error}", error);
-                MessageBoxHelper.Show(error, LocalizationHelper.GetString("Warning"), icon: MessageBoxImage.Warning);
+                MessageBoxHelper.Show(error, LocalizationHelper.GetString("Common.Warning"), icon: MessageBoxImage.Warning);
                 return;
             }
 
@@ -76,75 +77,92 @@ public class StartSettingsUserControlModel : PropertyChangedBase
         }
     }
 
-    private bool _runDirectly = ConfigurationHelper.GetValue(ConfigurationKeys.RunDirectly, false);
-
     /// <summary>
     /// Gets or sets a value indicating whether to run directly.
     /// </summary>
     public bool RunDirectly
     {
-        get => _runDirectly;
-        set {
-            SetAndNotify(ref _runDirectly, value);
-            ConfigurationHelper.SetValue(ConfigurationKeys.RunDirectly, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.RunDirectly = value;
         }
-    }
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.RunDirectly;
 
-    private bool _minimizeDirectly = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.MinimizeDirectly, false);
+    /// <summary>
+    /// Gets or sets a value indicating whether to skip startup auto-run when restarting immediately for an update
+    /// (auto-install or choosing restart now). Choosing “later” then starting MAA manually is a normal launch.
+    /// </summary>
+    public bool SkipStartupAutoRunAfterUpdate
+    {
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.SkipStartupAutoRunAfterUpdate = value;
+        }
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.SkipStartupAutoRunAfterUpdate;
 
     /// <summary>
     /// Gets or sets a value indicating whether to minimize directly.
     /// </summary>
     public bool MinimizeDirectly
     {
-        get => _minimizeDirectly;
-        set {
-            SetAndNotify(ref _minimizeDirectly, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.MinimizeDirectly, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.Root.Gui.MinimizeOnStartup = value;
         }
-    }
-
-    private bool _openEmulatorAfterLaunch = ConfigurationHelper.GetValue(ConfigurationKeys.StartEmulator, false);
+    } = ConfigFactory.Root.Gui.MinimizeOnStartup;
 
     /// <summary>
     /// Gets or sets a value indicating whether to start emulator.
     /// </summary>
     public bool OpenEmulatorAfterLaunch
     {
-        get => _openEmulatorAfterLaunch;
-        set {
+        get; set {
             if (string.IsNullOrEmpty(SettingsViewModel.StartSettings.EmulatorPath))
             {
                 MessageBoxHelper.Show(
-                    LocalizationHelper.GetString("RetryOnDisconnectedEmulatorPathEmptyError"),
-                    LocalizationHelper.GetString("Tip"),
+                    LocalizationHelper.GetString("Connection.RetryOnDisconnectedEmulatorPathEmptyError"),
+                    LocalizationHelper.GetString("Common.Tip"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 value = false;
             }
 
-            SetAndNotify(ref _openEmulatorAfterLaunch, value);
-            ConfigurationHelper.SetValue(ConfigurationKeys.StartEmulator, value.ToString());
-            if (SettingsViewModel.GameSettings.ClientType == string.Empty && _runningState.GetIdle())
-            {
-                SettingsViewModel.GameSettings.ClientType = "Official";
-            }
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.StartEmulator = value;
         }
-    }
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.StartEmulator;
 
-    private string _emulatorPath = ConfigurationHelper.GetValue(ConfigurationKeys.EmulatorPath, string.Empty);
+    /// <summary>
+    /// Gets or sets a value indicating whether to start the PC client after MAA launches.
+    /// </summary>
+    public bool OpenPcClientAfterLaunch
+    {
+        get; set {
+            if (value && string.IsNullOrEmpty(PcClientPath))
+            {
+                MessageBoxHelper.Show(
+                    LocalizationHelper.GetString("Settings.Startup.PcClientPathEmptyError"),
+                    LocalizationHelper.GetString("Common.Tip"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                value = false;
+            }
+
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.StartPcClient = value;
+        }
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.StartPcClient;
 
     /// <summary>
     /// Gets or sets the emulator path.
     /// </summary>
     public string EmulatorPath
     {
-        get => _emulatorPath;
-        set {
+        get; set {
             value = value.Trim();
 
             // 这里不用 SetAndNotify 判断
-            if (value == _emulatorPath)
+            if (value == field)
             {
                 return;
             }
@@ -155,12 +173,12 @@ public class StartSettingsUserControlModel : PropertyChangedBase
                 while (count-- > 0)
                 {
                     var result = MessageBoxHelper.Show(
-                        LocalizationHelper.GetString("EmulatorPathSelectionErrorPrompt"),
-                        LocalizationHelper.GetString("Tip"),
+                        LocalizationHelper.GetString("Settings.Startup.EmulatorPathSelectionErrorPrompt"),
+                        LocalizationHelper.GetString("Common.Tip"),
                         MessageBoxButton.OKCancel,
                         MessageBoxImage.Warning,
-                        ok: LocalizationHelper.GetString("EmulatorPathSelectionErrorImSure") + $"({count + 1})",
-                        cancel: LocalizationHelper.GetString("EmulatorPathSelectionErrorSelectAgain"));
+                        ok: LocalizationHelper.GetString("Settings.Startup.EmulatorPathSelectionErrorImSure") + $"({count + 1})",
+                        cancel: LocalizationHelper.GetString("Settings.Startup.EmulatorPathSelectionErrorSelectAgain"));
                     if (result == MessageBoxResult.Cancel)
                     {
                         return;
@@ -174,72 +192,146 @@ public class StartSettingsUserControlModel : PropertyChangedBase
                 {
                     ConnectSettings.RetryOnDisconnected = false;
                     OpenEmulatorAfterLaunch = false;
-                    Growl.Warning(LocalizationHelper.GetString("EmulatorPathEmptyWarning"));
+                    GrowlHelper.Warning(LocalizationHelper.GetString("Settings.Startup.EmulatorPathEmptyWarning"));
                 }
             }
             else if (!File.Exists(value))
             {
-                Growl.Warning(LocalizationHelper.GetString("EmulatorPathNotExist"));
+                GrowlHelper.Warning(LocalizationHelper.GetString("Settings.Startup.EmulatorPathNotExist"));
             }
 
-            SetAndNotify(ref _emulatorPath, value);
-            ConfigurationHelper.SetValue(ConfigurationKeys.EmulatorPath, value);
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.EmulatorPath = value;
         }
-    }
-
-    private string _emulatorAddCommand = ConfigurationHelper.GetValue(ConfigurationKeys.EmulatorAddCommand, string.Empty);
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.EmulatorPath;
 
     /// <summary>
     /// Gets or sets the command to append after the emulator command.
     /// </summary>
     public string EmulatorAddCommand
     {
-        get => _emulatorAddCommand;
-        set {
-            SetAndNotify(ref _emulatorAddCommand, value);
-            ConfigurationHelper.SetValue(ConfigurationKeys.EmulatorAddCommand, value);
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.EmulatorAddCommand = value;
         }
-    }
-
-    private string _emulatorWaitSeconds = ConfigurationHelper.GetValue(ConfigurationKeys.EmulatorWaitSeconds, "60");
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.EmulatorAddCommand;
 
     /// <summary>
     /// Gets or sets the seconds to wait for the emulator.
     /// </summary>
-    public string EmulatorWaitSeconds
+    public int EmulatorWaitSeconds
     {
-        get => _emulatorWaitSeconds;
+        get;
         set {
-            SetAndNotify(ref _emulatorWaitSeconds, value);
-            ConfigurationHelper.SetValue(ConfigurationKeys.EmulatorWaitSeconds, value);
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.EmulatorWaitSeconds = value;
         }
-    }
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.EmulatorWaitSeconds;
 
-    private bool _blockSleep = ConfigurationHelper.GetValue(ConfigurationKeys.BlockSleep, false);
-
-    public bool BlockSleep
+    /// <summary>
+    /// Gets or sets the PC client executable path.
+    /// </summary>
+    public string PcClientPath
     {
-        get => _blockSleep;
-        set {
-            SetAndNotify(ref _blockSleep, value);
-            SleepManagement.SetBlockSleep(value);
-            ConfigurationHelper.SetValue(ConfigurationKeys.BlockSleep, value.ToString());
+        get; set {
+            value = value.Trim();
+            if (value == field)
+            {
+                return;
+            }
+
+            if (Path.GetFileName(value).Contains("maa", StringComparison.OrdinalIgnoreCase))
+            {
+                int count = 3;
+                while (count-- > 0)
+                {
+                    var result = MessageBoxHelper.Show(
+                        LocalizationHelper.GetString("Settings.Startup.EmulatorPathSelectionErrorPrompt"),
+                        LocalizationHelper.GetString("Common.Tip"),
+                        MessageBoxButton.OKCancel,
+                        MessageBoxImage.Warning,
+                        ok: LocalizationHelper.GetString("Settings.Startup.EmulatorPathSelectionErrorImSure") + $"({count + 1})",
+                        cancel: LocalizationHelper.GetString("Settings.Startup.EmulatorPathSelectionErrorSelectAgain"));
+                    if (result == MessageBoxResult.Cancel)
+                    {
+                        return;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(value))
+            {
+                if (ConnectSettings.RetryPcClientOnDisconnected || OpenPcClientAfterLaunch)
+                {
+                    ConnectSettings.RetryPcClientOnDisconnected = false;
+                    OpenPcClientAfterLaunch = false;
+                    GrowlHelper.Warning(LocalizationHelper.GetString("Settings.Startup.PcClientPathEmptyWarning"));
+                }
+            }
+            else if (!File.Exists(value))
+            {
+                GrowlHelper.Warning(LocalizationHelper.GetString("Settings.Startup.PcClientPathNotExist"));
+            }
+
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.PcClientPath = value;
         }
-    }
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.PcClientPath;
 
-    private bool _blockSleepWithScreenOn = ConfigurationHelper.GetValue(ConfigurationKeys.BlockSleepWithScreenOn, true);
-
-    public bool BlockSleepWithScreenOn
+    /// <summary>
+    /// Gets or sets the command to append after the PC client command.
+    /// </summary>
+    public string PcClientAddCommand
     {
-        get => _blockSleepWithScreenOn;
-        set {
-            SetAndNotify(ref _blockSleepWithScreenOn, value);
-            SleepManagement.SetBlockSleepWithScreenOn(value);
-            ConfigurationHelper.SetValue(ConfigurationKeys.BlockSleepWithScreenOn, value.ToString());
+        get; set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.PcClientAddCommand = value;
         }
-    }
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.PcClientAddCommand;
 
-    private (string FileName, string Arguments) ResolveShortcut(string path)
+    /// <summary>
+    /// Gets or sets the seconds to wait for the PC client.
+    /// </summary>
+    public int PcClientWaitSeconds
+    {
+        get;
+        set {
+            SetAndNotify(ref field, value);
+            ConfigFactory.CurrentConfig.Gui.StartUpSettings.PcClientWaitSeconds = value;
+        }
+    } = ConfigFactory.CurrentConfig.Gui.StartUpSettings.PcClientWaitSeconds;
+
+    private readonly record struct ConnectionTargetLaunchSettings(
+        string Path,
+        string AddCommand,
+        int WaitSeconds,
+        bool OpenAfterMaaLaunch,
+        string LogName,
+        string WaitTextKey,
+        string StartFailedTextKey);
+
+    private ConnectionTargetLaunchSettings GetEmulatorLaunchSettings() => new(
+        EmulatorPath,
+        EmulatorAddCommand,
+        EmulatorWaitSeconds,
+        OpenEmulatorAfterLaunch,
+        "emulator",
+        "Settings.Startup.WaitForEmulator",
+        "Settings.Startup.EmulatorStartFailed");
+
+    private ConnectionTargetLaunchSettings GetPcClientLaunchSettings() => new(
+        PcClientPath,
+        PcClientAddCommand,
+        PcClientWaitSeconds,
+        OpenPcClientAfterLaunch,
+        "PC client",
+        "Settings.Startup.WaitForPcClient",
+        "Settings.Startup.PcClientStartFailed");
+
+    private ConnectionTargetLaunchSettings GetCurrentConnectionTargetLaunchSettings() =>
+        ConnectSettings.IsPCConnectConfig ? GetPcClientLaunchSettings() : GetEmulatorLaunchSettings();
+
+    private static (string FileName, string Arguments) ResolveShortcut(string path, string addCommand)
     {
         string fileName = string.Empty;
         string arguments = string.Empty;
@@ -274,38 +366,52 @@ public class StartSettingsUserControlModel : PropertyChangedBase
         else
         {
             fileName = path;
-            arguments = EmulatorAddCommand;
+            arguments = addCommand;
         }
 
         return (fileName, arguments);
     }
 
-    private void WaitForEmulatorStart(int delay)
+    private void WaitForConnectionTargetStart(int delay, ConnectionTargetLaunchSettings settings)
     {
         bool idle = _runningState.GetIdle();
         _runningState.SetIdle(false);
-
-        for (var i = 0; i < delay; ++i)
+        try
         {
-            if (_runningState.GetStopping())
+            for (var i = 0; i < delay; ++i)
             {
-                _logger.Information("Stop waiting for the emulator to start");
-                return;
+                if (_runningState.GetStopping())
+                {
+                    _logger.Information("Stop waiting for the {TargetName} to start", settings.LogName);
+                    return;
+                }
+
+                if (i % 10 == 0)
+                {
+                    Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString(settings.WaitTextKey) + ": " + (delay - i) + "s");
+                    _logger.Information("Waiting for the {TargetName} to start: {RemainingSeconds}s", settings.LogName, delay - i);
+                }
+
+                Thread.Sleep(1000);
             }
 
-            if (i % 10 == 0)
-            {
-                Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("WaitForEmulator") + ": " + (delay - i) + "s");
-                _logger.Information("Waiting for the emulator to start: " + (delay - i) + "s");
-            }
-
-            Thread.Sleep(1000);
+            Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("Settings.Startup.WaitForEmulatorFinish"));
+            _logger.Information("Waiting for the {TargetName} is over", settings.LogName);
         }
+        finally
+        {
+            _runningState.SetIdle(idle);
+        }
+    }
 
-        Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("WaitForEmulatorFinish"));
-        _logger.Information("The wait is over");
-
-        _runningState.SetIdle(idle);
+    /// <summary>
+    /// Starts the launch target associated with the current connection mode.
+    /// </summary>
+    /// <param name="openWithMaaLaunch">Whether the target is being started automatically when MAA launches.</param>
+    /// <param name="test">Whether to test the launch without checking auto-start settings or waiting.</param>
+    public void TryToStartConnectionTarget(bool openWithMaaLaunch = false, bool test = false)
+    {
+        TryToStartConnectionTarget(GetCurrentConnectionTargetLaunchSettings(), openWithMaaLaunch, test);
     }
 
     /// <summary>
@@ -315,62 +421,76 @@ public class StartSettingsUserControlModel : PropertyChangedBase
     /// <param name="test">测试启动模拟器，即使配置中未设置自动启动，不读取等待时间</param>
     public void TryToStartEmulator(bool openWithMaaLaunch = false, bool test = false)
     {
-        if (EmulatorPath.Length == 0 || !File.Exists(EmulatorPath) || (!test && !OpenEmulatorAfterLaunch && openWithMaaLaunch))
+        TryToStartConnectionTarget(GetEmulatorLaunchSettings(), openWithMaaLaunch, test);
+    }
+
+    /// <summary>
+    /// 尝试启动 PC 客户端。
+    /// </summary>
+    /// <param name="openWithMaaLaunch">启动 MAA 后自动开启 PC 客户端。</param>
+    /// <param name="test">测试启动 PC 客户端，即使配置中未设置自动启动，不读取等待时间。</param>
+    public void TryToStartPcClient(bool openWithMaaLaunch = false, bool test = false)
+    {
+        TryToStartConnectionTarget(GetPcClientLaunchSettings(), openWithMaaLaunch, test);
+    }
+
+    private void TryToStartConnectionTarget(
+        ConnectionTargetLaunchSettings settings,
+        bool openWithMaaLaunch,
+        bool test)
+    {
+        if (string.IsNullOrEmpty(settings.Path)
+            || !File.Exists(settings.Path)
+            || (!test && openWithMaaLaunch && !settings.OpenAfterMaaLaunch))
         {
             return;
         }
 
-        int delay = 0;
-        if (!test && !int.TryParse(EmulatorWaitSeconds, out delay))
-        {
-            delay = 60;
-        }
-
+        int delay = test ? 0 : settings.WaitSeconds;
         try
         {
-            var (fileName, arguments) = ResolveShortcut(EmulatorPath);
+            var (fileName, arguments) = ResolveShortcut(settings.Path, settings.AddCommand);
             using Process process = new Process {
                 StartInfo = new ProcessStartInfo(fileName, arguments) {
                     UseShellExecute = false,
                 },
             };
 
-            _logger.Information("Try to start emulator: \nfileName: " + fileName + "\narguments: " + arguments);
+            _logger.Information(
+                "Try to start {TargetName}:\nfileName: {FileName}\narguments: {Arguments}",
+                settings.LogName,
+                fileName,
+                arguments);
             process.Start();
         }
         catch (Exception)
         {
-            _logger.Information("Start emulator error, try to start using the default: \n" +
-                "EmulatorPath: " + EmulatorPath + "\n" +
-                "EmulatorAddCommand: " + EmulatorAddCommand);
+            _logger.Information(
+                "Start {TargetName} error, try to start using the shell:\npath: {Path}\narguments: {Arguments}",
+                settings.LogName,
+                settings.Path,
+                settings.AddCommand);
             try
             {
-                if (EmulatorAddCommand.Length != 0)
-                {
-                    Process.Start(EmulatorPath);
-                }
-                else
-                {
-                    Process.Start(EmulatorPath, EmulatorAddCommand);
-                }
+                Process.Start(new ProcessStartInfo(settings.Path, settings.AddCommand) { UseShellExecute = true, });
             }
             catch (Exception e)
             {
                 if (e is Win32Exception { NativeErrorCode: 740 })
                 {
-                    Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("EmulatorStartFailed"), UiLogColor.Warning);
-                    _logger.Warning("Insufficient permissions to start the emulator:\nEmulatorPath: {EmulatorPath}\n", EmulatorPath);
+                    Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString(settings.StartFailedTextKey), UiLogColor.Warning);
+                    _logger.Warning("Insufficient permissions to start the {TargetName}: {Path}", settings.LogName, settings.Path);
                 }
                 else
                 {
-                    _logger.Warning("Emulator start failed with error: {ErrorMessage}", e.Message);
+                    _logger.Warning("{TargetName} start failed with error: {ErrorMessage}", settings.LogName, e.Message);
                 }
 
                 return;
             }
         }
 
-        WaitForEmulatorStart(delay);
+        WaitForConnectionTargetStart(delay, settings);
     }
 
     /// <summary>
@@ -501,12 +621,28 @@ public class StartSettingsUserControlModel : PropertyChangedBase
     public void SelectEmulatorExec()
     {
         var dialog = new OpenFileDialog {
-            Filter = LocalizationHelper.GetString("Executable") + "|*.exe;*.bat;*.lnk",
+            Filter = LocalizationHelper.GetString("Settings.Startup.Executable") + "|*.exe;*.bat;*.lnk",
         };
 
         if (dialog.ShowDialog() == true)
         {
             EmulatorPath = dialog.FileName;
+        }
+    }
+
+    /// <summary>
+    /// Selects the PC client to execute.
+    /// </summary>
+    [UsedImplicitly]
+    public void SelectPcClientExec()
+    {
+        var dialog = new OpenFileDialog {
+            Filter = LocalizationHelper.GetString("Settings.Startup.Executable") + "|*.exe;*.bat;*.lnk",
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            PcClientPath = dialog.FileName;
         }
     }
 
@@ -519,16 +655,37 @@ public class StartSettingsUserControlModel : PropertyChangedBase
     {
         if (EmulatorPath.Length == 0)
         {
-            MessageBoxHelper.Show(LocalizationHelper.GetString("EmulatorPathEmptyWarning"), LocalizationHelper.GetString("Warning"), icon: MessageBoxImage.Warning);
+            MessageBoxHelper.Show(LocalizationHelper.GetString("Settings.Startup.EmulatorPathEmptyWarning"), LocalizationHelper.GetString("Common.Warning"), icon: MessageBoxImage.Warning);
             return;
         }
 
         if (!File.Exists(EmulatorPath))
         {
-            MessageBoxHelper.Show(LocalizationHelper.GetString("EmulatorPathNotExist"), LocalizationHelper.GetString("Warning"), icon: MessageBoxImage.Warning);
+            MessageBoxHelper.Show(LocalizationHelper.GetString("Settings.Startup.EmulatorPathNotExist"), LocalizationHelper.GetString("Common.Warning"), icon: MessageBoxImage.Warning);
             return;
         }
 
         Task.Run(() => TryToStartEmulator(test: true));
+    }
+
+    /// <summary>
+    /// Tests the PC client path by trying to start it.
+    /// </summary>
+    [UsedImplicitly]
+    public void TestPcClientExec()
+    {
+        if (PcClientPath.Length == 0)
+        {
+            MessageBoxHelper.Show(LocalizationHelper.GetString("Settings.Startup.PcClientPathEmptyError"), LocalizationHelper.GetString("Common.Warning"), icon: MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!File.Exists(PcClientPath))
+        {
+            MessageBoxHelper.Show(LocalizationHelper.GetString("Settings.Startup.PcClientPathNotExist"), LocalizationHelper.GetString("Common.Warning"), icon: MessageBoxImage.Warning);
+            return;
+        }
+
+        Task.Run(() => TryToStartPcClient(test: true));
     }
 }

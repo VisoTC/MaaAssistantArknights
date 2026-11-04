@@ -24,21 +24,56 @@ GetWindowText
 GetWindowTextLengthW
 GetWindowThreadProcessId
 IsIconic
+IsWindow
 IsWindowVisible
 GetWindowRect
+GetSystemMetrics
 SetWindowPos
 ShowWindow
+ShowWindowAsync
 SetWinEventHook
 UnhookWinEvent
 GetWindowLong
 SetWindowLong
 
+// Game audio mute
+GetWindowPlacement
+SetWindowPlacement
+MMDeviceEnumerator
+IMMDeviceEnumerator
+IAudioSessionManager2
+IAudioSessionControl2
+ISimpleAudioVolume
+
 //BadInjectedDllChecker
 GetModuleHandle
 GetModuleFileName
+MessageBox
+MESSAGEBOX_STYLE
+MESSAGEBOX_RESULT
 
 //ToastNotification
 FlashWindowEx
 
 // PowerManagement
 SetSuspendState
+LockWorkStation
+
+// ScheduledWakeUp
+ITaskService
+ITaskFolder
+ITaskDefinition
+ITaskSettings
+IRegistrationInfo
+ITriggerCollection
+IActionCollection
+IExecAction
+IRegisteredTask
+IDailyTrigger
+ITaskNamedValueCollection
+TASK_LOGON_TYPE
+TASK_RUNLEVEL_TYPE
+TASK_CREATION
+TASK_TRIGGER_TYPE2
+TASK_ACTION_TYPE
+CoCreateInstance

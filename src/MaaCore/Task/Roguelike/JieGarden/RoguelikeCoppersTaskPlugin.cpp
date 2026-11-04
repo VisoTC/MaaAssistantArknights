@@ -424,9 +424,11 @@ bool asst::RoguelikeCoppersTaskPlugin::swipe_copper_list(int times, bool to_left
                     cur_point,
                     origin_point,
                     swipe_task->special_params.empty() ? 0 : swipe_task->special_params.at(0),
-                    (swipe_task->special_params.size() < 2) ? false : swipe_task->special_params.at(1),
-                    (swipe_task->special_params.size() < 3) ? 1 : swipe_task->special_params.at(2),
-                    (swipe_task->special_params.size() < 4) ? 1 : swipe_task->special_params.at(3));
+                    (swipe_task->special_params.size() < 2)
+                        ? SwipeExtraDirection::None
+                        : to_swipe_extra_direction(swipe_task->special_params.at(1)),
+                    (swipe_task->special_params.size() < 3) ? 1 : swipe_task->special_params.at(2) / 10.0,
+                    (swipe_task->special_params.size() < 4) ? 1 : swipe_task->special_params.at(3) / 10.0);
                 Log.debug(
                     __FUNCTION__,
                     std::format(
@@ -498,6 +500,7 @@ void asst::RoguelikeCoppersTaskPlugin::click_copper_at_position(int col, int row
 
     // 再滑动到目标列
     swipe_copper_list_right(col - 1);
+    sleep(300);
 
     // 执行点击
     ctrler()->click(click_point);

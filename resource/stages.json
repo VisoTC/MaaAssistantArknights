@@ -6975,266 +6975,221 @@
     },
     {
         "apCost": 9,
-        "code": "TD-1",
+        "code": "TL-1",
         "dropInfos": [
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_1"
+                "itemId": "30011"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_2"
+                "itemId": "30021"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_3"
+                "itemId": "30031"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_4"
+                "itemId": "30041"
+            },
+            {
+                "dropType": "NORMAL_DROP",
+                "itemId": "30051"
+            },
+            {
+                "dropType": "NORMAL_DROP",
+                "itemId": "30061"
             },
             {
                 "dropType": "FURNITURE",
                 "itemId": "furni"
             }
         ],
-        "stageId": "act50side_01"
+        "stageId": "act55side_01"
     },
     {
         "apCost": 9,
-        "code": "TD-2",
+        "code": "TL-2",
         "dropInfos": [
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_1"
+                "itemId": "30011"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_2"
+                "itemId": "30021"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_3"
+                "itemId": "30031"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_4"
+                "itemId": "30041"
+            },
+            {
+                "dropType": "NORMAL_DROP",
+                "itemId": "30051"
+            },
+            {
+                "dropType": "NORMAL_DROP",
+                "itemId": "30061"
             },
             {
                 "dropType": "FURNITURE",
                 "itemId": "furni"
             }
         ],
-        "stageId": "act50side_02"
+        "stageId": "act55side_02"
     },
     {
         "apCost": 9,
-        "code": "TD-3",
+        "code": "TL-3",
         "dropInfos": [
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_1"
+                "itemId": "30011"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_2"
+                "itemId": "30021"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_3"
+                "itemId": "30031"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_4"
+                "itemId": "30041"
+            },
+            {
+                "dropType": "NORMAL_DROP",
+                "itemId": "30051"
+            },
+            {
+                "dropType": "NORMAL_DROP",
+                "itemId": "30061"
             },
             {
                 "dropType": "FURNITURE",
                 "itemId": "furni"
             }
         ],
-        "stageId": "act50side_03"
+        "stageId": "act55side_03"
     },
     {
-        "apCost": 15,
-        "code": "TD-4",
+        "apCost": 12,
+        "code": "TL-4",
         "dropInfos": [
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_1"
+                "itemId": "30012"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_2"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_3"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_4"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_5"
+                "itemId": "30032"
             },
             {
                 "dropType": "FURNITURE",
                 "itemId": "furni"
             }
         ],
-        "stageId": "act50side_04"
+        "stageId": "act55side_04"
     },
     {
-        "apCost": 15,
-        "code": "TD-5",
+        "apCost": 12,
+        "code": "TL-5",
         "dropInfos": [
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_1"
+                "itemId": "30022"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_2"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_3"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_4"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_5"
+                "itemId": "30062"
             },
             {
                 "dropType": "FURNITURE",
                 "itemId": "furni"
             }
         ],
-        "stageId": "act50side_05"
+        "stageId": "act55side_05"
     },
     {
-        "apCost": 21,
-        "code": "TD-6",
+        "apCost": 12,
+        "code": "TL-6",
         "dropInfos": [
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_1"
+                "itemId": "30042"
             },
             {
                 "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_2"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_3"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_4"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_5"
+                "itemId": "30052"
             },
             {
                 "dropType": "FURNITURE",
                 "itemId": "furni"
             }
         ],
-        "stageId": "act50side_06"
+        "stageId": "act55side_06"
     },
     {
         "apCost": 21,
-        "code": "TD-7",
-        "dropInfos": [
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_1"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_2"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_3"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_4"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_5"
-            },
-            {
-                "dropType": "FURNITURE",
-                "itemId": "furni"
-            }
-        ],
-        "stageId": "act50side_07"
-    },
-    {
-        "apCost": 21,
-        "code": "TD-8",
-        "dropInfos": [
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_1"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_2"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_3"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_4"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "act50side_melding_5"
-            },
-            {
-                "dropType": "FURNITURE",
-                "itemId": "furni"
-            }
-        ],
-        "stageId": "act50side_08"
-    },
-    {
-        "apCost": 20,
-        "code": "炼金无限池",
+        "code": "TL-7",
         "dropInfos": [
             {
                 "dropType": "NORMAL_DROP",
                 "itemId": "31043"
             },
             {
+                "dropType": "FURNITURE",
+                "itemId": "furni"
+            }
+        ],
+        "stageId": "act55side_07"
+    },
+    {
+        "apCost": 21,
+        "code": "TL-8",
+        "dropInfos": [
+            {
                 "dropType": "NORMAL_DROP",
                 "itemId": "31083"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "31093"
-            },
-            {
-                "dropType": "NORMAL_DROP",
-                "itemId": "4001_10000"
             },
             {
                 "dropType": "FURNITURE",
                 "itemId": "furni"
             }
         ],
-        "stageId": "act50side_gacha"
+        "stageId": "act55side_08"
+    },
+    {
+        "apCost": 21,
+        "code": "TL-9",
+        "dropInfos": [
+            {
+                "dropType": "NORMAL_DROP",
+                "itemId": "31113"
+            },
+            {
+                "dropType": "FURNITURE",
+                "itemId": "furni"
+            }
+        ],
+        "stageId": "act55side_09"
+    },
+    {
+        "apCost": 10,
+        "code": "TL-10",
+        "dropInfos": [
+            {
+                "dropType": "FURNITURE",
+                "itemId": "furni"
+            }
+        ],
+        "stageId": "act55side_10"
     },
     {
         "apCost": 9,

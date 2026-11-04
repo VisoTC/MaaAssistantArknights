@@ -5,8 +5,8 @@ icon: game-icons:prisoner
 
 # 保全派駐協定
 
-::: tip
-請注意，json 檔案不支援註解。文件中的註解僅供說明參考，請勿直接複製使用。
+::: tip  
+請注意，json 檔案不支援註解。文件中的註解僅供說明參考，請勿直接複製使用。  
 :::
 
 ```json
@@ -44,8 +44,24 @@ icon: game-icons:prisoner
             "skill_usage": 1
         }
     ],
+    "groups": [
+        // 幹員編組，選填，用法同 copilot 協議中的 groups，actions 中的 name 可以填編組名
+        {
+            "name": "地面阻擋",
+            "opers": [
+                {
+                    "name": "棘刺",
+                    "skill": 3
+                },
+                {
+                    "name": "泥岩",
+                    "skill": 2
+                }
+            ]
+        }
+    ],
     "tool_men": {
-        // 剩餘所需各職業人數，按費用排序隨便拿，選填
+        // 剩餘所需各職業人數，按費用排序隨便拿，必選
         // 目前版本暫未實現，只會在介面上顯示一下
         "Pioneer": 13,
         "近衛": 2, // 中英文均可
@@ -127,13 +143,13 @@ icon: game-icons:prisoner
                     "direction": "Left"
                 }
             ],
-            "draw_as_possible": true, // 「調配幹員」按鈕，是否好了就用，選填，預設 true
+            "draw_as_possible": true, // ｢調配幹員｣ 按鈕，是否好了就用，必選
             "actions": [
                 // 選填
                 // 基本複用抄作業的邏輯，可參考 protocol/copilot-schema.md
                 // 符合 action 的條件就執行 action，否則執行上面的 strategies 邏輯
                 {
-                    "type": "調配幹員" // 新 type，「調配幹員」按鈕，點一下，在 "draw_as_possible" 為 true 時無效
+                    "type": "調配幹員" // 新 type， ｢調配幹員｣ 按鈕，點一下，在 "draw_as_possible" 為 true 時無效
                 },
                 {
                     "type": "CheckIfStartOver", // 新 type，檢查幹員在不在，不在就結束重開
@@ -153,7 +169,7 @@ icon: game-icons:prisoner
                     "name": "桃金娘"
                 }
             ],
-            "retry_times": 3 // 戰鬥失敗重試次數，超過次數直接放棄整局
+            "retry_times": 3 // 戰鬥失敗重試次數，選填，預設為 0，超過次數直接放棄整局
         },
         {
             "stage_name": "見者有份"
@@ -166,4 +182,4 @@ icon: game-icons:prisoner
 
 ## 範例檔案
 
-<https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/master/resource/copilot/>
+<https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/resource/copilot/>

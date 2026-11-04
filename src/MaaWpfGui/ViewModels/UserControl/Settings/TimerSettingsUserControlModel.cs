@@ -1,6 +1,6 @@
 // <copyright file="TimerSettingsUserControlModel.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -13,9 +13,17 @@
 
 #nullable enable
 using System;
-using MaaWpfGui.Constants;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Documents;
+using MaaWpfGui.Configuration.Factory;
+using MaaWpfGui.Configuration.Global;
 using MaaWpfGui.Helper;
+using MaaWpfGui.Utilities;
+using MaaWpfGui.ViewModels.UI;
 using Stylet;
+using ScheduledWakeUpRegistrar = MaaWpfGui.Utilities.ScheduledWakeUp;
 
 namespace MaaWpfGui.ViewModels.UserControl.Settings;
 
@@ -29,149 +37,122 @@ public class TimerSettingsUserControlModel : PropertyChangedBase
         Instance = new();
     }
 
-    public static TimerSettingsUserControlModel Instance { get; }
+    public TimerSettingsUserControlModel()
+    {
+        // 订阅现有定时器，并在列表增删时重新订阅，用于触发 ｢时间管理大师｣ 成就
+        SubscribeTimerChanges();
+        TimerList.CollectionChanged += (_, _) =>
+        {
+            SubscribeTimerChanges();
+            ScheduledWakeUpRegistrar.SyncAllDebounced();
+        };
 
-    private bool _forceScheduledStart = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.ForceScheduledStart, false);
+        // 启动对账：按当前开关与定时项状态全量重建计划任务
+        Task.Run(() => ScheduledWakeUpRegistrar.SyncAll(out _));
+    }
+
+    public static TimerSettingsUserControlModel Instance { get; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to force scheduled start.
     /// </summary>
     public bool ForceScheduledStart
     {
-        get => _forceScheduledStart;
-        set {
-            SetAndNotify(ref _forceScheduledStart, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.ForceScheduledStart, value.ToString());
+        get; set {
+            ConfigFactory.Root.Timers.ForceScheduledStart = value;
+            SetAndNotify(ref field, value);
         }
-    }
-
-    private bool _showWindowBeforeForceScheduledStart = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.ShowWindowBeforeForceScheduledStart, false);
+    } = ConfigFactory.Root.Timers.ForceScheduledStart;
 
     /// <summary>
     /// Gets or sets a value indicating whether show window before force scheduled start.
     /// </summary>
     public bool ShowWindowBeforeForceScheduledStart
     {
-        get => _showWindowBeforeForceScheduledStart;
-        set {
-            SetAndNotify(ref _showWindowBeforeForceScheduledStart, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.ShowWindowBeforeForceScheduledStart, value.ToString());
+        get; set {
+            ConfigFactory.Root.Timers.ShowWindowBeforeForceScheduledStart = value;
+            SetAndNotify(ref field, value);
         }
-    }
-
-    private bool _customConfig = ConfigurationHelper.GetGlobalValue(ConfigurationKeys.CustomConfig, false);
+    } = ConfigFactory.Root.Timers.ShowWindowBeforeForceScheduledStart;
 
     /// <summary>
     /// Gets or sets a value indicating whether to use custom config.
     /// </summary>
     public bool CustomConfig
     {
-        get => _customConfig;
-        set {
-            SetAndNotify(ref _customConfig, value);
-            ConfigurationHelper.SetGlobalValue(ConfigurationKeys.CustomConfig, value.ToString());
+        get; set {
+            ConfigFactory.Root.Timers.CustomConfig = value;
+            SetAndNotify(ref field, value);
+        }
+    } = ConfigFactory.Root.Timers.CustomConfig;
+
+    public ObservableCollection<Timer> TimerList => ConfigFactory.Root.Timers.List;
+
+    public ExternalNotificationSettingsUserControlModel ExternalNotificationSettings => SettingsViewModel.ExternalNotificationSettings;
+
+    public bool NotifyBeforeScheduledStart
+    {
+        get; set {
+            ConfigFactory.Root.Timers.NotifyBeforeScheduledStart = value;
+            SetAndNotify(ref field, value);
+        }
+    } = ConfigFactory.Root.Timers.NotifyBeforeScheduledStart;
+
+    public int ScheduledStartNotificationMinutes
+    {
+        get; set {
+            value = Math.Clamp(value, 1, 1439);
+            ConfigFactory.Root.Timers.ScheduledStartNotificationMinutes = value;
+            SetAndNotify(ref field, value);
+        }
+    } = Math.Clamp(ConfigFactory.Root.Timers.ScheduledStartNotificationMinutes, 1, 1439);
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to wake the computer before scheduled timers.
+    /// </summary>
+    public bool ScheduledWakeUp
+    {
+        get; set {
+            ConfigFactory.Root.Timers.ScheduledWakeUp = value;
+            SetAndNotify(ref field, value);
+
+            // COM 注册较慢，放后台线程执行，完成后按结果提示
+            Task.Run(() =>
+            {
+                if (ScheduledWakeUpRegistrar.SyncAll(out var error))
+                {
+                    return;
+                }
+
+                Execute.OnUIThread(() =>
+                    MessageBoxHelper.Show(error, LocalizationHelper.GetString("Common.Warning"), icon: MessageBoxImage.Warning));
+            });
+        }
+    } = ConfigFactory.Root.Timers.ScheduledWakeUp;
+
+    /// <summary>
+    /// 订阅所有定时器的启用状态变化，用于触发 ｢时间管理大师｣ 成就检查。
+    /// </summary>
+    private void SubscribeTimerChanges()
+    {
+        foreach (var timer in TimerList)
+        {
+            timer.PropertyChanged -= OnTimerPropertyChanged;
+            timer.PropertyChanged += OnTimerPropertyChanged;
         }
     }
 
-    public TimerModel TimerModels { get; set; } = new();
-
-    public class TimerModel
+    private void OnTimerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        public class TimerProperties : PropertyChangedBase
+        if (e.PropertyName == nameof(Timer.IsEnabled))
         {
-            public TimerProperties(int timeId, bool? isOn, int hour, int min, string? timerConfig)
-            {
-                TimerId = timeId;
-                _isOn = isOn;
-                _hour = hour;
-                _min = min;
-                if (timerConfig == null || !ConfigurationHelper.GetConfigurationList().Contains(timerConfig))
-                {
-                    _timerConfig = ConfigurationHelper.GetCurrentConfiguration();
-                }
-                else
-                {
-                    _timerConfig = timerConfig;
-                }
-            }
-
-            public int TimerId { get; set; }
-
-            private readonly string _timerName = LocalizationHelper.GetString("Timer");
-
-            public string TimerName => $"{_timerName} {TimerId + 1}";
-
-            private bool? _isOn;
-
-            /// <summary>
-            /// Gets or sets a value indicating whether the timer is set.
-            /// </summary>
-            public bool? IsOn
-            {
-                get => _isOn;
-                set {
-                    SetAndNotify(ref _isOn, value);
-                    ConfigurationHelper.SetTimer(TimerId, value.ToString());
-                    AchievementTrackerHelper.Instance.CheckTimeManagementMaster();
-                }
-            }
-
-            private int _hour;
-
-            /// <summary>
-            /// Gets or sets the hour of the timer.
-            /// </summary>
-            public int Hour
-            {
-                get => _hour;
-                set {
-                    SetAndNotify(ref _hour, value);
-                    ConfigurationHelper.SetTimerHour(TimerId, _hour.ToString());
-                }
-            }
-
-            private int _min;
-
-            /// <summary>
-            /// Gets or sets the minute of the timer.
-            /// </summary>
-            public int Min
-            {
-                get => _min;
-                set {
-                    SetAndNotify(ref _min, value);
-                    ConfigurationHelper.SetTimerMin(TimerId, _min.ToString());
-                }
-            }
-
-            private string? _timerConfig;
-
-            /// <summary>
-            /// Gets or sets the config of the timer.
-            /// </summary>
-            public string? TimerConfig
-            {
-                get => _timerConfig;
-                set {
-                    SetAndNotify(ref _timerConfig, value ?? ConfigurationHelper.GetCurrentConfiguration());
-                    ConfigurationHelper.SetTimerConfig(TimerId, _timerConfig);
-                }
-            }
+            AchievementTrackerHelper.Instance.CheckTimeManagementMaster();
         }
 
-        public TimerProperties[] Timers { get; set; } = new TimerProperties[8];
-
-        public TimerModel()
+        // 启用状态与时间变化都会改变计划任务的触发点，防抖合并后全量重建
+        if (e.PropertyName is nameof(Timer.IsEnabled) or nameof(Timer.Hour) or nameof(Timer.Minute))
         {
-            for (int i = 0; i < 8; i++)
-            {
-                var timerState = ConfigurationHelper.GetTimer(i, bool.FalseString);
-                bool? isOn = bool.TryParse(timerState, out bool parsedBool) ? parsedBool : null;
-                var hour = int.Parse(ConfigurationHelper.GetTimerHour(i, $"{i * 3}"));
-                var minute = int.Parse(ConfigurationHelper.GetTimerMin(i, "0"));
-                var config = ConfigurationHelper.GetTimerConfig(i, ConfigurationHelper.GetCurrentConfiguration());
-                Timers[i] = new(i, isOn, hour, minute, config);
-            }
+            ScheduledWakeUpRegistrar.SyncAllDebounced();
         }
     }
 }

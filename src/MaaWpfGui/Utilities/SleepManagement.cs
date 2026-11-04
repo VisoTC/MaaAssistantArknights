@@ -1,6 +1,6 @@
 // <copyright file="SleepManagement.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -15,9 +15,12 @@
 
 using System;
 using System.Runtime.InteropServices;
-using MaaWpfGui.Constants;
-using MaaWpfGui.Helper;
+using System.Threading;
+using System.Threading.Tasks;
+using MaaWpfGui.Configuration.Factory;
+using MaaWpfGui.States;
 using Serilog;
+using Stylet;
 
 namespace MaaWpfGui.Utilities;
 
@@ -26,21 +29,43 @@ public static class SleepManagement
     [DllImport("kernel32.dll")]
     private static extern ExecutionState SetThreadExecutionState(ExecutionState esFlags);
 
-    private static readonly ILogger _logger = Log.ForContext("SourceContext", "SleepManagement");
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern nint PowerCreateRequest(ref PowerRequestContextSimple context);
 
-    private static bool _allowBlockSleep = ConfigurationHelper.GetValue(ConfigurationKeys.BlockSleep, false);
-    private static bool _blockSleepWithScreenOn = ConfigurationHelper.GetValue(ConfigurationKeys.BlockSleepWithScreenOn, true);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool PowerSetRequest(nint powerRequest, PowerRequestType requestType);
+
+    [DllImport("kernel32.dll")]
+    private static extern bool PowerClearRequest(nint powerRequest, PowerRequestType requestType);
+
+    [DllImport("kernel32.dll")]
+    private static extern bool CloseHandle(nint hObject);
+
+    private enum PowerRequestType
+    {
+        PowerRequestSystemRequired = 1,
+    }
+
+    // 用户态 REASON_CONTEXT 的 SIMPLE 分支：SimpleReasonString 就是普通 LPWSTR，
+    // 不是内核态 COUNTED_REASON_CONTEXT 的 UNICODE_STRING——写成 UNICODE_STRING 布局
+    // 会让系统把 Length/MaximumLength 字节当指针读，PowerCreateRequest 立即访问冲突崩溃
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PowerRequestContextSimple
+    {
+        public uint Version;
+
+        public uint Flags;
+
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string SimpleReasonString;
+    }
+
+    private static readonly ILogger _logger = Log.ForContext(typeof(SleepManagement));
     private static bool _isBlockingSleep = false;
-
-    public static void SetBlockSleep(bool allowBlockSleep)
-    {
-        _allowBlockSleep = allowBlockSleep;
-    }
-
-    public static void SetBlockSleepWithScreenOn(bool blockSleepWithScreenOn)
-    {
-        _blockSleepWithScreenOn = blockSleepWithScreenOn;
-    }
+    private static readonly Lock _keepAwakeLock = new();
+    private static int _keepAwakeGeneration;
+    private static nint _keepAwakePowerRequest;
+    private static DateTime _keepAwakeDeadline;
 
     [Flags]
     private enum ExecutionState : uint
@@ -50,7 +75,7 @@ public static class SleepManagement
         Continuous = 0x80000000,
     }
 
-    public static void AllowSleep()
+    public static void AllowSleep() => Execute.OnUIThreadSync(() =>
     {
         if (!_isBlockingSleep)
         {
@@ -61,22 +86,148 @@ public static class SleepManagement
 
         _logger.Information("Allowing system to sleep");
         SetThreadExecutionState(ExecutionState.Continuous);
-    }
+    });
 
-    public static void BlockSleep(bool? allowBlockSleep = null, bool? blockSleepWithScreenOn = null)
+    public static void BlockSleep(bool? allowBlockSleep = null, bool? blockSleepWithScreenOn = null) => Execute.OnUIThreadSync(() =>
     {
-        if (!(allowBlockSleep ?? _allowBlockSleep))
+        // A stop may have completed while this request was waiting for the UI thread.
+        if (RunningState.Instance.GetIdle())
+        {
+            return;
+        }
+
+        if (!(allowBlockSleep ?? ConfigFactory.CurrentConfig.Gui.RuntimeSettings.BlockSleep))
         {
             return;
         }
 
         _isBlockingSleep = true;
 
-        bool keepDisplayOn = blockSleepWithScreenOn ?? _blockSleepWithScreenOn;
+        bool keepDisplayOn = blockSleepWithScreenOn ?? ConfigFactory.CurrentConfig.Gui.RuntimeSettings.BlockSleepWithScreenOn;
         _logger.Information("Blocking system from sleeping");
         ExecutionState state = ExecutionState.Continuous | ExecutionState.SystemRequired |
             (keepDisplayOn ? ExecutionState.DisplayRequired : 0);
         SetThreadExecutionState(state);
+    });
+
+    /// <summary>
+    /// Creates an independently owned system-required power request.
+    /// </summary>
+    /// <param name="reason">The reason shown by Windows for the power request.</param>
+    /// <returns>A lease that clears only this request when disposed; <see langword="null" /> when creation fails.</returns>
+    public static IDisposable? CreateKeepAwakeRequest(string reason)
+    {
+        nint request = CreatePowerRequest(reason);
+        return request == 0 ? null : new PowerRequestLease(request);
+    }
+
+    /// <summary>
+    /// Gets the remaining time of the current keep-awake window; <see cref="TimeSpan.Zero"/> when
+    /// no window is active. Restart chains forward the remaining time instead of the original
+    /// duration so that restarts never extend the window beyond its original deadline.
+    /// </summary>
+    public static TimeSpan KeepAwakeRemaining
+    {
+        get
+        {
+            lock (_keepAwakeLock)
+            {
+                var remaining = _keepAwakeDeadline - DateTime.UtcNow;
+                return _keepAwakePowerRequest != 0 && remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 在指定时长内保持系统唤醒，到期自动失效；窗口未结束时再次调用会顺延一个完整的新时长。
+    /// 走 PowerRequest 而非线程执行状态：进程级对象，与 <see cref="BlockSleep"/> 的
+    /// SetThreadExecutionState 通道互不干扰，也不受调用线程影响，进程退出时由系统回收。
+    /// </summary>
+    /// <param name="duration">保持唤醒的时长。</param>
+    public static void KeepAwakeFor(TimeSpan duration)
+    {
+        lock (_keepAwakeLock)
+        {
+            // 窗口未结束时复用已有句柄顺延，避免释放到重建之间的空档
+            if (_keepAwakePowerRequest == 0)
+            {
+                nint request = CreatePowerRequest("MAA keep awake after scheduled wake-up");
+                if (request == 0)
+                {
+                    return;
+                }
+
+                _keepAwakePowerRequest = request;
+            }
+
+            _keepAwakeDeadline = DateTime.UtcNow + duration;
+
+            // 递增 generation 作废上一个到期回调，由新回调负责释放
+            int generation = ++_keepAwakeGeneration;
+            _logger.Information("Keeping system awake for {Duration}", duration);
+
+            _ = Task.Delay(duration).ContinueWith(_ => ClearKeepAwakeRequest(generation), TaskScheduler.Default);
+        }
+    }
+
+    private static nint CreatePowerRequest(string reason)
+    {
+        var context = new PowerRequestContextSimple
+        {
+            Version = 0,
+            Flags = 1,
+            SimpleReasonString = reason,
+        };
+        nint request = PowerCreateRequest(ref context);
+        if (request == 0 || request == -1)
+        {
+            _logger.Warning("PowerCreateRequest failed: {ErrorCode}", Marshal.GetLastWin32Error());
+            return 0;
+        }
+
+        if (!PowerSetRequest(request, PowerRequestType.PowerRequestSystemRequired))
+        {
+            _logger.Warning("PowerSetRequest failed: {ErrorCode}", Marshal.GetLastWin32Error());
+            CloseHandle(request);
+            return 0;
+        }
+
+        return request;
+    }
+
+    private static void ClearKeepAwakeRequest(int generation)
+    {
+        lock (_keepAwakeLock)
+        {
+            nint request = _keepAwakePowerRequest;
+            if (request == 0 || generation != _keepAwakeGeneration)
+            {
+                return;
+            }
+
+            _keepAwakePowerRequest = 0;
+            _keepAwakeDeadline = default;
+            PowerClearRequest(request, PowerRequestType.PowerRequestSystemRequired);
+            CloseHandle(request);
+            _logger.Information("Keep-awake window expired");
+        }
+    }
+
+    private sealed class PowerRequestLease(nint request) : IDisposable
+    {
+        private nint _request = request;
+
+        public void Dispose()
+        {
+            nint requestToClear = Interlocked.Exchange(ref _request, 0);
+            if (requestToClear == 0)
+            {
+                return;
+            }
+
+            PowerClearRequest(requestToClear, PowerRequestType.PowerRequestSystemRequired);
+            CloseHandle(requestToClear);
+        }
     }
 
     public static void ResetIdle(bool keepDisplayOn = true)

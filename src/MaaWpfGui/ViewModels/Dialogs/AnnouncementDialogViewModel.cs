@@ -1,6 +1,6 @@
 // <copyright file="AnnouncementDialogViewModel.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -33,7 +33,6 @@ namespace MaaWpfGui.ViewModels.Dialogs;
 /// The view model of version update.
 /// </summary>
 // 通过 container.Get<AnnouncementDialogViewModel>(); 实例化或获取实例
-// ReSharper disable once ClassNeverInstantiated.Global
 public class AnnouncementDialogViewModel : Screen
 {
     private static readonly ILogger _logger = Log.ForContext<AnnouncementDialogViewModel>();
@@ -134,7 +133,7 @@ public class AnnouncementDialogViewModel : Screen
         set {
             if (SetAndNotify(ref _hasEverScrolledToBottom, value) && value)
             {
-                ButtonContent = LocalizationHelper.GetString("Confirm");
+                ButtonContent = LocalizationHelper.GetString("Common.Confirm");
             }
         }
     }
@@ -180,7 +179,6 @@ public class AnnouncementDialogViewModel : Screen
     /// <summary>
     /// Gets the announcement info.
     /// </summary>
-    // ReSharper disable once MemberCanBePrivate.Global
     public string AnnouncementInfo
     {
         get => _announcementInfo;
@@ -254,9 +252,18 @@ public class AnnouncementDialogViewModel : Screen
                 AnnouncementInfo,
                 body);
             */
-            _logger.Information("{Body}", body);
             AnnouncementInfo = body;
             DoNotRemindThisAnnouncementAgain = false;
+
+            var newSections = AnnouncementSections.Where(section => section.IsNew).Select(section => section.Content).ToList();
+            if (newSections.Count == 0)
+            {
+                _logger.Information("Announcement updated without (NEW!!!) section");
+            }
+            else
+            {
+                _logger.Information("New announcement:\n{Content}", string.Join("\n\n", newSections));
+            }
         }
 
         ETagCache.Set(response, url);
@@ -265,12 +272,12 @@ public class AnnouncementDialogViewModel : Screen
 
     private int _notFinishedClick = 0;
     private static readonly string[] _notFinishedMessages = [
-        LocalizationHelper.GetString("AnnouncementNotFinishedConfirm"),
-        LocalizationHelper.GetString("AnnouncementNotFinishedConfirm2"),
-        LocalizationHelper.GetString("AnnouncementNotFinishedConfirm3"),
+        LocalizationHelper.GetString("Announcement.NotFinishedConfirm"),
+        LocalizationHelper.GetString("Announcement.NotFinishedConfirm2"),
+        LocalizationHelper.GetString("Announcement.NotFinishedConfirm3"),
     ];
 
-    private string _buttonContent = LocalizationHelper.GetString("Confirm");
+    private string _buttonContent = LocalizationHelper.GetString("Common.Confirm");
 
     public string ButtonContent
     {

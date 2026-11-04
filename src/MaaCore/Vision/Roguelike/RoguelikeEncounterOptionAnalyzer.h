@@ -12,6 +12,7 @@ public:
         bool enabled;
         cv::Mat templ;
         std::string text;
+        int merged_y = 0; // 标题条在拼接图中的 y，各项之间的差即屏幕上的相对位置
     };
 
     using Result = std::vector<Option>;
@@ -55,7 +56,7 @@ public:
     /// <summary>
     /// 在 <c>image</c> 中匹配 <c>option_templ</c> 所对应的事件选项。
     /// </summary>
-    /// <param name="theme">集成战略主题；目前只适配了界园主题。</param>
+    /// <param name="theme">集成战略主题；目前适配界园和黑流树海主题。</param>
     /// <param name="image">目标图像。</param>
     /// <param name="option_templ">要匹配的事件选项的模版。</param>
     /// <returns>
@@ -66,6 +67,9 @@ public:
     /// </remarks>
     [[nodiscard]] static Matcher::ResultOpt
         match_option(const std::string& theme, const cv::Mat& image, const cv::Mat& option_templ);
+
+    // match_option 的搜索范围，高度随图像高度伸缩。
+    [[nodiscard]] static Rect option_roi(const std::string& theme, int image_rows);
 
     using VisionHelper::save_img;
 
@@ -117,7 +121,7 @@ private:
     static bool save_img(const cv::Mat& image, std::string_view description = "image");
 
     /// <summary>
-    /// 集成战略主题；目前只适配了界园主题。
+    /// 集成战略主题；目前适配界园和黑流树海主题。
     /// </summary>
     std::string m_theme;
 

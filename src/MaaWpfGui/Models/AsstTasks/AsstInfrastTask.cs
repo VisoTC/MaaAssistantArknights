@@ -1,6 +1,6 @@
 // <copyright file="AsstInfrastTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -13,6 +13,7 @@
 
 #nullable enable
 using System.Collections.Generic;
+using System.Linq;
 using MaaWpfGui.Services;
 using MaaWpfGui.ViewModels.UserControl.TaskQueue;
 using Newtonsoft.Json.Linq;
@@ -90,6 +91,21 @@ public class AsstInfrastTask : AsstBaseTask
     /// </summary>
     public bool ReceptionSendClue { get; set; }
 
+    public List<string> FiammettaTargets { get; set; } = ["清流", "可露希尔", "但书"];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 常规模式换班开始时使用菲亚梅塔为恢复目标恢复心情
+    /// </summary>
+    public bool FiammettaRecoveryEnabled { get; set; }
+
+    public bool UsePinusSylvestris { get; set; }
+
+    public bool UsePerceptionInformation { get; set; }
+
+    public bool UseWorldlyPlight { get; set; }
+
+    public bool UseAbyssalHunter { get; set; }
+
     /// <summary>
     /// Gets or sets 自定义配置文件路径
     /// </summary>
@@ -102,6 +118,10 @@ public class AsstInfrastTask : AsstBaseTask
 
     public override (AsstTaskType TaskType, JObject Params) Serialize()
     {
+        var fiammettaTargets = FiammettaTargets
+            .Where(target => !string.IsNullOrWhiteSpace(target))
+            .Distinct()
+            .Take(3);
         var taskParams = new JObject
         {
             ["facility"] = JArray.FromObject(Facilitys),
@@ -114,6 +134,12 @@ public class AsstInfrastTask : AsstBaseTask
             ["reception_message_board"] = ReceptionMessageBoard,
             ["reception_clue_exchange"] = ReceptionClueExchange,
             ["reception_send_clue"] = ReceptionSendClue,
+            ["fiammetta_targets"] = JArray.FromObject(fiammettaTargets),
+            ["fiammetta_recovery_enabled"] = FiammettaRecoveryEnabled,
+            ["use_pinus_sylvestris"] = UsePinusSylvestris,
+            ["use_perception_information"] = UsePerceptionInformation,
+            ["use_worldly_plight"] = UseWorldlyPlight,
+            ["use_abyssal_hunter"] = UseAbyssalHunter,
             ["mode"] = (int)Mode,
         };
 

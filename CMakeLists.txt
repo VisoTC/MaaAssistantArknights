@@ -10,6 +10,7 @@ option(INSTALL_PYTHON "install python ffi" OFF)
 option(INSTALL_RESOURCE "install resource" OFF)
 option(INSTALL_FLATTEN "do not use bin lib include directory" ON)
 option(WITH_EMULATOR_EXTRAS "build with emulator extras" ${WIN32})
+option(WITH_EXTRA_CALLERS "build with extra callers" ${APPLE})
 option(WITH_MAC_SCK "build with macOS ScreenCaptureKit" ${APPLE})
 option(WITH_HASH_VERSION "generate version from git hash" OFF)
 option(BUILD_RESOURCE_UPDATER "build resource updater tool" OFF)
@@ -35,6 +36,7 @@ add_subdirectory(src/MaaCore)
 
 if(BUILD_WPF_GUI)
     add_subdirectory(src/MaaUpdater)
+    add_subdirectory(src/MaaAppHostStub)
 
     include_external_msproject(MaaWpfGui ${PROJECT_SOURCE_DIR}/src/MaaWpfGui/MaaWpfGui.csproj)
 
@@ -61,7 +63,13 @@ if(INSTALL_PYTHON)
 endif()
 
 if(INSTALL_RESOURCE)
-    install(DIRECTORY resource DESTINATION .)
+    if(ANDROID)
+        # Android OCR 用 ncnn，以 resource_android/ 替换 PP-OCR 的 onnx
+        install(DIRECTORY resource DESTINATION . REGEX "/(det|rec)/inference\\.onnx$" EXCLUDE)
+        install(DIRECTORY resource_android/ DESTINATION resource)
+    else()
+        install(DIRECTORY resource DESTINATION .)
+    endif()
 endif()
 
 if(BUILD_DEBUG_DEMO OR BUILD_SMOKE_TEST)

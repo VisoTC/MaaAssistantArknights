@@ -1,6 +1,6 @@
 // <copyright file="MallTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -45,7 +45,7 @@ public class MallTask : BaseTask
     /// <summary>
     /// Gets or sets 上次打信用战斗的时间
     /// </summary>
-    public string CreditFightLastTime { get; set; } = DateTime.UtcNow.ToYjDate().AddDays(-1).ToFormattedString();
+    public string CreditFightLastTime { get; set; } = DateTime.MinValue.ToFormattedString();
 
     /// <summary>
     /// Gets or sets a value indicating whether 信用战斗一天仅一次
@@ -65,17 +65,17 @@ public class MallTask : BaseTask
     /// <summary>
     /// Gets or sets 上次访问好友的时间
     /// </summary>
-    public string VisitFriendsLastTime { get; set; } = DateTime.UtcNow.ToYjDate().AddDays(-1).ToFormattedString();
+    public string VisitFriendsLastTime { get; set; } = DateTime.MinValue.ToFormattedString();
 
     /// <summary>
     /// Gets or sets 优先列表
     /// </summary>
-    public string FirstList { get; set; } = LocalizationHelper.GetString("HighPriorityDefault");
+    public string FirstList { get; set; } = LocalizationHelper.GetString("Mall.HighPriorityDefault");
 
     /// <summary>
     /// Gets or sets 黑名单
     /// </summary>
-    public string BlackList { get; set; } = LocalizationHelper.GetString("BlacklistDefault");
+    public string BlackList { get; set; } = LocalizationHelper.GetString("Mall.BlacklistDefault");
 
     /// <summary>
     /// Gets or sets a value indicating whether 信用溢出时无视黑名单
@@ -94,8 +94,7 @@ public class MallTask : BaseTask
 
     public bool IsCreditFightAvailable
     {
-        get
-        {
+        get {
             if (!CreditFightOnceADay)
             {
                 return CreditFight;
@@ -114,8 +113,7 @@ public class MallTask : BaseTask
 
     public bool IsVisitFriendsAvailable
     {
-        get
-        {
+        get {
             if (!VisitFriendsOnceADay)
             {
                 return VisitFriends;

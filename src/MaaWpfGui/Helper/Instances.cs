@@ -1,6 +1,6 @@
 // <copyright file="Instances.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -11,14 +11,13 @@
 // but WITHOUT ANY WARRANTY
 // </copyright>
 
-#pragma warning disable SA1401
-
 using System;
 using GlobalHotKey;
 using MaaWpfGui.Main;
 using MaaWpfGui.Services;
 using MaaWpfGui.Services.HotKeys;
 using MaaWpfGui.Services.Managers;
+using MaaWpfGui.Services.Notification;
 using MaaWpfGui.Services.RemoteControl;
 using MaaWpfGui.Services.Web;
 using MaaWpfGui.ViewModels.Dialogs;
@@ -44,16 +43,27 @@ public static class Instances
 
         public static bool HasPrintedScreencapWarning { get; set; } = false;
 
+        public static bool HasPrintedFpsHighTip { get; set; } = false;
+
         public static int RecruitConfirmTime { get; set; } = 0;
+
+        /// <summary>
+        /// Gets or sets 本轮任务队列中已证明耗尽的临期药最大天数窗口。
+        /// 无次数上限的战斗任务正常结束且未达库存目标时，取其临期天数与现值的最大值；
+        /// 运行内药剂库存只减不增，窗口只增不减，队列开始时由 <see cref="ClearCache"/> 重置。
+        /// </summary>
+        public static int ProvenExhaustedMedicineDays { get; set; } = 0;
 
         public static void ClearCache()
         {
-            FightSettingsUserControlModel.SanityReport = null;
+            FightTaskUserControlModel.SanityReport = null;
             MedicineUsedTimes = 0;
             ExpiringMedicineUsedTimes = 0;
             StoneUsedTimes = 0;
             RecruitConfirmTime = 0;
+            ProvenExhaustedMedicineDays = 0;
             HasPrintedScreencapWarning = false;
+            HasPrintedFpsHighTip = false;
         }
     }
 
@@ -81,10 +91,11 @@ public static class Instances
 
     public static IMaaHotKeyActionHandler MaaHotKeyActionHandler { get; private set; }
 
+    public static NotificationService NotificationService { get; private set; }
+
     public static OverlayViewModel OverlayViewModel { get; private set; }
 
     // 别的地方有用到这个吗？
-    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public static RemoteControlService RemoteControlService { get; private set; }
 
     public static IMainWindowManager MainWindowManager { get; private set; }
@@ -109,6 +120,7 @@ public static class Instances
 
         // 这些实例化时存在依赖顺序
         StageManager = container.Get<StageManager>();
+        NotificationService = container.Get<NotificationService>();
         TaskQueueViewModel = container.Get<TaskQueueViewModel>();
         ToolboxViewModel = container.Get<ToolboxViewModel>();
 

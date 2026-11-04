@@ -9,23 +9,23 @@ icon: mdi:plug
 
 MAA는 현재 **실행 중인 단일 에뮬레이터**를 통해 ADB 경로, 연결 주소 및 연결 구성을 자동으로 감지하고 채울 수 있습니다.
 
-MAA v5.22.3까지 지원하는 감지 가능한 에뮬레이터 및 연결 주소는 다음과 같습니다:
+MAA v6.16.8까지 지원하는 감지 가능한 에뮬레이터 및 연결 주소는 다음과 같습니다:
 
 - BlueStacks 5: `127.0.0.1:5555/5556/5565/5575/5585/5595/5554`
 - MuMu 에뮬레이터: `127.0.0.1:16384/16416/16448/16480/16512/16544/16576`
 - LDPlayer 9: `emulator-5554/5556/5558/5560`, `127.0.0.1:5555/5557/5559/5561`
-- 逍遥(Xiaoyao): `127.0.0.1:62001/59865`
-- 夜神(Yeshen): `127.0.0.1:21503`
+- MEmu Play: `127.0.0.1:21503`
+- NoxPlayer: `127.0.0.1:62001/59865`
 - 텐센트 앱스토어 (5.10.56.xx 이후): `127.0.0.1:5555`
 
 감지에 실패하면 UAC 관리자 권한으로 MAA를 시작하여 다시 감지해보세요. 여전히 실패한다면 아래 수동 설정을 참고하고, 에뮬레이터와 연결 주소가 위 목록에 포함되어 있는지 확인하세요.
 
 ## ADB 경로
 
-:::info 기술적 정보
-자동 감지는 에뮬레이터의 ADB를 사용하지만, 자동 감지에 문제가 있을 경우 수동 설정이 필요합니다.
-`ADB 강제 교체`는 구글이 제공하는 ADB를 다운로드한 후 교체하는 것으로, 구글 ADB를 설정하면 한 번만 설정해두면 됩니다.
-환경 변수에 사용 가능한 ADB가 존재할 경우, `adb`라고 직접 입력해도 됩니다.
+::: info 기술적 정보  
+자동 감지는 에뮬레이터의 ADB를 사용하지만, 자동 감지에 문제가 있을 경우 수동 설정이 필요합니다.  
+`ADB 강제 교체`는 구글이 제공하는 ADB를 다운로드한 후 교체하는 것으로, 구글 ADB를 설정하면 한 번만 설정해두면 됩니다.  
+환경 변수에 사용 가능한 ADB가 존재할 경우, `adb`라고 직접 입력해도 됩니다.  
 :::
 
 ### 에뮬레이터에서 제공하는 ADB 사용
@@ -34,8 +34,8 @@ MAA v5.22.3까지 지원하는 감지 가능한 에뮬레이터 및 연결 주�
 
 상위 또는 하위 디렉토리에서 `adb`가 포함된 exe 파일을 찾을 수 있습니다. 검색 기능을 사용하여 파일을 찾고 선택하세요.
 
-:::details 예시
-`adb.exe` `HD-adb.exe` `adb_server.exe` `nox_adb.exe`
+::: details 예시  
+`adb.exe` `HD-adb.exe` `adb_server.exe` `nox_adb.exe`  
 :::
 
 ### 구글이 제공하는 ADB 사용
@@ -46,8 +46,8 @@ MAA 폴더에 직접 압축을 푸는 것을 권장합니다. 그러면 ADB 경�
 
 ## 연결 주소
 
-::: tip
-로컬에서 실행되는 에뮬레이터의 연결 주소는 `127.0.0.1:<포트 번호>` 또는 `emulator-<네 자리 숫자>`이어야 합니다.
+::: tip  
+로컬에서 실행되는 에뮬레이터의 연결 주소는 `127.0.0.1:<포트 번호>` 또는 `emulator-<네 자리 숫자>`이어야 합니다.  
 :::
 
 ### 포트 번호 입력
@@ -58,11 +58,11 @@ MAA 폴더에 직접 압축을 푸는 것을 권장합니다. 그러면 ADB 경�
 - [MuMu](https://mumu.163.com/help/20240807/40912_1073151.html?maa) `16384`
 - [MuMu Pro](https://mumu.163.com/mac/function/20240126/40028_1134600.html) `16384`
 - [LDPlayer 9](https://help.ldmnq.com/docs/LD9adbserver#edc3863750608062bcb3feea256413dc) `emulator-5554`
-- [逍遥(Xiaoyao)](https://bbs.xyaz.cn/forum.php?mod=viewthread&tid=365537) `21503`
-- [夜神(Yeshen)](https://support.yeshen.com/zh-CN/qt/ml) `62001`
+- [MEmu Play](https://bbs.xyaz.cn/forum.php?mod=viewthread&tid=365537) `21503`
+- [NoxPlayer](https://support.yeshen.com/zh-CN/qt/ml) `62001`
 - [텐센트 앱스토어](https://sj.qq.com/faq/3878): ADB 포트는 `127.0.0.1:5555` 고정. ADB 경로 예시: `C:\Program Files\Tencent\Androws\Application\버전번호\adb.exe`.
 
-기타 에뮬레이터는 [赵青青의 블로그](https://www.cnblogs.com/zhaoqingqing/p/15238464.html)를 참고하세요.
+기타 에뮬레이터는 [자오칭칭(zhaoqingqing)의 블로그](https://www.cnblogs.com/zhaoqingqing/p/15238464.html)를 참고하세요.
 
 #### 멀티 인스턴스 포트 확인
 
@@ -111,33 +111,33 @@ MAA 폴더에 직접 압축을 푸는 것을 권장합니다. 그러면 ADB 경�
 
 :::: steps
 
-1. `Bluestacks.Config.Keyword` 지정
+1. `ConfigKeyword` 지정
 
-   ::: info 주의
-   멀티 인스턴스 기능을 활성화했거나 여러 에뮬레이터 코어를 설치한 경우, 사용 중인 에뮬레이터 번호를 지정해야 합니다.
+   ::: info 주의  
+   멀티 인스턴스 기능을 활성화했거나 여러 에뮬레이터 코어를 설치한 경우, 사용 중인 에뮬레이터 번호를 지정해야 합니다.  
    :::
 
-   `.\config\gui.json`에서 `Bluestacks.Config.Keyword` 필드를 검색합니다. 내용은 `"bst.instance.<에뮬레이터 번호>.status.adb_port"`입니다. 에뮬레이터 번호는 에뮬레이터 경로의 `BlueStacks_nxt\Engine`에서 확인할 수 있습니다.
+   `gui.new.json`에서 현재 구성 이름 필드(설정-구성 전환에서 확인할 수 있으며, 기본값은 `Default`입니다) 아래의 `Gui.ConnectSettings.Extras.BluestacksExtra.ConfigKeyword` 필드를 찾습니다. 내용은 `"bst.instance.<에뮬레이터 번호>.status.adb_port"`입니다. 에뮬레이터 번호는 에뮬레이터 경로의 `BlueStacks_nxt\Engine`에서 확인할 수 있습니다.
 
-   ::: details 예시
+   ::: details 예시  
    Nougat64 코어：
 
    ```json
-   "Bluestacks.Config.Keyword":"bst.instance.Nougat64.status.adb_port",
+   "ConfigKeyword": "bst.instance.Nougat64.status.adb_port"
    ```
 
    Pie64_2 코어：（코어 이름 뒤의 숫자는 멀티 인스턴스 코어를 나타냅니다）
 
    ```json
-   "Bluestacks.Config.Keyword": "bst.instance.Pie64_2.status.adb_port",
+   "ConfigKeyword": "bst.instance.Pie64_2.status.adb_port"
    ```
 
    :::
 
-2. `Bluestacks.Config.Path` 지정
+2. `ConfigPath` 지정
 
-   ::: info 주의
-   MAA는 이제 레지스트리에서 `bluestacks.conf`의 저장 위치를 읽어오려고 시도합니다. 이 기능이 작동하지 않을 경우 수동으로 구성 파일 경로를 지정해야 합니다.
+   ::: info 주의  
+   MAA는 이제 레지스트리에서 `bluestacks.conf`의 저장 위치를 읽어오려고 시도합니다. 이 기능이 작동하지 않을 경우 수동으로 구성 파일 경로를 지정해야 합니다.  
    :::
    1. 블루스택 데이터 디렉토리에서 `bluestacks.conf` 파일을 찾습니다.
       - 글로벌 버전 `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`
@@ -146,17 +146,24 @@ MAA 폴더에 직접 압축을 푸는 것을 권장합니다. 그러면 ADB 경�
       참고: `C:\ProgramData`는 숨겨진 디렉터리입니다. 필요한 경우, 파일 탐색기의 주소 표시줄에 이 주소를 직접 붙여넣어 접근하세요.
 
    2. 처음 사용하는 경우, MAA를 한 번 실행하여 MAA가 자동으로 구성 파일을 생성하게 합니다.
-   3. **MAA를 종료**한 후, `gui.json`을 열어 `Configurations` 아래의 현재 구성 이름 필드를 찾습니다(설정-구성 전환에서 확인할 수 있으며, 기본값은 `Default`입니다). 그 안에서 `Bluestacks.Config.Path` 필드를 찾아 `bluestacks.conf`의 전체 경로를 입력합니다. (슬래시를 이스케이프 `\\`해서 사용해야 합니다.)
+   3. **MAA를 종료**한 후, `gui.new.json`을 열어 현재 구성 이름 필드(설정-구성 전환에서 확인할 수 있으며, 기본값은 `Default`입니다) 아래의 `Gui.ConnectSettings.Extras.BluestacksExtra.ConfigPath` 필드를 찾아 `bluestacks.conf`의 전체 경로를 입력합니다. (슬래시를 이스케이프 `\\`해서 사용해야 합니다.)
 
-   ::: details 예시
+   ::: details 예시  
    `C:\ProgramData\BlueStacks_nxt\bluestacks.conf` 경로 예시
 
    ```json
    {
      "Configurations": {
        "Default": {
-         "Bluestacks.Config.Path": "C:\\ProgramData\\BlueStacks_nxt\\bluestacks.conf"
-         // 다른 구성 필드, 수동으로 입력하지 마세요.
+         "Gui": {
+           "ConnectSettings": {
+             "Extras": {
+               "BluestacksExtra": {
+                 "ConfigPath": "C:\\ProgramData\\BlueStacks_nxt\\bluestacks.conf"
+               }
+             }
+           }
+         }
        }
      }
    }
@@ -172,19 +179,25 @@ MAA 폴더에 직접 압축을 푸는 것을 권장합니다. 그러면 ADB 경�
 
 ## 연결 구성
 
-해당 에뮬레이터의 구성을 선택해야 합니다. 목록에 없으면 일반 구성을 선택하세요. 일반 구성이 작동하지 않으면 다른 사용 가능한 구성을 시도하세요.
+해당 에뮬레이터의 구성을 선택해야 합니다. 목록에 없으면 일반 모드를 선택하세요. 일반 모드가 작동하지 않으면 다른 사용 가능한 구성을 시도하세요.
 
 자세한 차이점은 [소스 코드](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/resource/config.json#L57)를 참조하세요.
 
 ### MuMu 스크린샷 강화 모드
 
+::: tip  
+여기에서 설명하는 스크린샷 및 터치 강화 기능은 Windows x64용 MuMu에 적용됩니다.  
+:::
+
 **버전 요구사항**: 공식/Arknights Edition MuMu V4.1.26 이상, 또는 글로벌 MuMu V5.21.3 이상. <!-- V3.8.13 -->
 
 1. 설정 → 연결 설정에서 `MuMu 스크린샷 향상 모드 활성화`를 체크합니다. 체크할 경우 MAA는 레지스트리를 통해 설치 경로를 자동으로 입력하려고 시도합니다.
 
-2. MuMu 에뮬레이터 경로에 `MuMu Player` 또는 `MuMuPlayerGlobal-12.0` 또는 `YXArkNights-12.0` 폴더의 경로를 입력합니다. 예: `C:\Program Files\Netease\MuMuPlayerGlobal-12.0`.
+2. MuMu 에뮬레이터 경로에 MuMu 설치 디렉터리의 루트 디렉터리(즉, `nx_device` 또는 `shell` 폴더가 포함된 디렉터리)를 입력합니다. 예: `C:\Program Files\Netease\MuMuPlayer`.
 
-3. MuMu 네트워크 브리징을 사용 중인 경우 `MuMu 네트워크 브리징 모드`를 선택한 후 MuMu 멀티 인스턴스 관리자에서 해당 에뮬레이터의 일련 번호를 수동으로 입력해야 합니다. 예를 들어, 주 인스턴스는 `0`입니다.
+3. MuMu 네트워크 브리징을 사용 중인 경우 `MuMu 네트워크 브리징 모드`를 선택한 후 MuMu 멀티 인스턴스 관리자에서 해당 에뮬레이터의 인스턴스 번호를 수동으로 입력해야 합니다. 예를 들어, 주 인스턴스는 `0`입니다.
+
+**MuMu 터치 강화 모드**: 공식 MuMu V6.3.2 이상이 필요하며, 현재 Arknights Edition과 글로벌 버전은 지원되지 않습니다. `MuMu 스크린샷 강화 기능 활성화`를 체크한 후, 그 아래에 있는 `MuMu 터치 강화 활성화`를 체크하면 활성화됩니다.
 
 ### LD 스크린샷 향상 모드
 
@@ -198,20 +211,21 @@ MAA 폴더에 직접 압축을 푸는 것을 권장합니다. 그러면 ADB 경�
 
 ### AVD 스크린샷 향상 모드
 
-需使用 Android Emulator v27.2.9 及更新版本。（只要是方舟开服之后下载的就没问题。）
+Android Emulator v27.2.9 이상 버전이 필요합니다. (명일방주 출시 이후 에뮬레이터를 다운로드했다면 문제없습니다.)
 
-因为 AVD 截图增强模式在 MaaFramework 中实现，所以必须选择 MaaFramework 触控模式才能启用 AVD 截图增强。
+AVD 스크린샷 향상 모드는 MaaFramework에서 구현되므로, AVD 스크린샷 향상을 활성화하려면 MaaFwAdb 터치 수행 방식을 선택해야 합니다.
 
-1. `设置` - `连接设置` - `连接配置` 选择 `Android 虚拟设备（AVD）`。
+1. `설정` - `연결 설정` - `연결 프리셋`에서 `Android Virtual Device (AVD)`를 선택합니다.
 
-2. `触控模式` 选择 `MaaFramework`。
+2. `터치 수행 방식`에서 `MaaFwAdb`를 선택합니다.
 
 ## 터치 모드
 
-1. [Minitouch](https://github.com/DeviceFarmer/minitouch): C로 작성된 Android 터치 이벤트 핸들러로, 외부 프로그램이 터치 이벤트와 제스처를 트리거할 수 있는 소켓 인터페이스를 제공합니다. Android 10부터는 SELinux가 `Enforcing` 모드일 때 Minitouch가 더 이상 사용되지 않습니다.
-2. [MaaTouch](https://github.com/MaaAssistantArknights/MaaTouch): MAA가 Java 기반으로 Minitouch를 재구현한 것입니다. 높은 버전의 Android에서도 사용 가능성이 테스트 중입니다.
-3. Adb Input: ADB 명령어를 직접 호출하여 터치 작업을 수행하며, 호환성이 가장 좋지만, 속도는 가장 느립니다.
-4. [MaaFramework](https://maafw.com/): 调用 MaaFramework 控制单元的截图和触控功能。可用性尚待测试。~~帮我们做做测试 x2~~
+1. [Minitouch](https://github.com/DeviceFarmer/minitouch): C로 작성된 Android 터치 이벤트 핸들러로, 외부 프로그램이 터치 이벤트와 제스처를 트리거할 수 있는 소켓 인터페이스를 제공합니다. Android 10부터는 SELinux가 `Enforcing` 모드일 때 Minitouch가 더 이상 사용되지 않습니다. (기본값)
+2. [MaaTouch](https://github.com/MaaAssistantArknights/MaaTouch): MAA가 Java 기반으로 Minitouch를 재구현한 것입니다. (실험적)
+3. ADB Input: ADB 명령어를 직접 호출하여 터치 작업을 수행합니다. OS 버전이 낮은 물리적 기기 전용이며, 다른 모드를 사용할 수 있다면 선택하지 마세요. ADB Input 스와이프는 오프셋이 발생하기 쉬워, 이 문제를 방지하기 위해 스와이프 속도가 매우 느리게 설정되고 스와이프 거리도 다른 모드와 다릅니다. 정확한 좌표 제어가 필요한 상황에서는 사용할 수 없습니다. (비권장)
+4. [MaaFwAdb](https://maafw.com/): MaaFramework 제어 유닛의 스크린샷 및 터치 기능을 호출합니다. 추가 스와이프 미지원: 추가 스와이프는 메인 스와이프가 끝난 후 수직 방향으로 짧게 덧붙이는 ｢브레이크｣ 스와이프(궤적이 90° 꺾이는 L자 형태)로, 목록 관성을 상쇄하는 데 사용되며, 추가 스와이프로 드래그 과다를 방지하는 페이지는 이 모드에서 과다하게 드래그됩니다. (실험적)
+5. MuMu 터치 강화: MuMu의 외부 렌더러 프로세스의 터치 인터페이스를 호출합니다. `MuMu 스크린샷 강화 기능 활성화`를 체크해야 터치 모드 드롭다운에 표시되며, 사용할 수 없으면 자동으로 Minitouch로 대체됩니다(실험적). 공식 MuMu V6.3.2 이상이 필요하며, Arknights Edition과 글로벌 버전은 지원되지 않습니다. MuMu ｢앱 유지｣(백그라운드 대기) 시나리오에서의 조작을 지원합니다.
 
 ## ADB Lite
 
@@ -221,8 +235,8 @@ MAA가 독립적으로 구현한 ADB 클라이언트로, 원본 ADB와 비교했
 
 ## MAA와 에뮬레이터의 멀티 인스턴스
 
-::: info
-멀티 인스터스를 사용해 여러 에뮬레이터를 동시에 작동해야 하는 경우, MAA 폴더를 여러 번 복사한 후 **다른 MAA**, **같은 adb.exe**, **다른 연결 주소**를 사용하여 연결할 수 있습니다.
+::: info  
+멀티 인스터스를 사용해 여러 에뮬레이터를 동시에 작동해야 하는 경우, MAA 폴더를 여러 번 복사한 후 **다른 MAA**, **같은 adb.exe**, **다른 연결 주소**를 사용하여 연결할 수 있습니다.  
 :::
 
 ### 멀티 인스턴스 에뮬레이터의 자동 시작
@@ -236,8 +250,8 @@ MAA가 독립적으로 구현한 ADB 클라이언트로, 원본 ADB와 비교했
 3. 새로 추가된 `명령줄` 열에서 `"...\Bluestacks_nxt\HD-Player.exe"` 이후의 내용을 찾습니다.
 4. 찾은 내용을 `--instance Nougat32`와 같이 `시작 설정` - `추가 명령어`에 입력합니다.
 
-::: note 참고
-작업이 완료된 후, `2단계`에서 열었던 `명령줄` 열을 숨겨 프리징을 방지하는 것이 좋습니다.
+::: note 참고  
+작업이 완료된 후, `2단계`에서 열었던 `명령줄` 열을 숨겨 프리징을 방지하는 것이 좋습니다.  
 :::
 
 ::: details 예시
@@ -251,7 +265,7 @@ MAA가 독립적으로 구현한 ADB 클라이언트로, 원본 ADB와 비교했
 추가 명령어: --instance Nougat32_1 --cmd launchApp --package "com.hypergryph.arknights.bilibili"
 ```
 
-`--cmd launchApp --package` 부분은 시작 후 지정된 패키지 이름의 애플리케이션을 자동으로 실행하며, 필요에 따라 변경할 수 있습니다.
+`--cmd launchApp --package` 부분은 시작 후 지정된 패키지 이름의 애플리케이션을 자동으로 실행하며, 필요에 따라 변경할 수 있습니다.  
 :::
 
 ### 에뮬레이터의 바로가기를 통해 시작

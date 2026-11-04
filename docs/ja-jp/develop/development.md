@@ -5,17 +5,17 @@ icon: iconoir:developer
 
 # 開発ガイド
 
-::: tip
-本ページは主に PR プロセスおよび MAA のファイルフォーマット要件について説明します。MAA の実行ロジックを変更する具体的な方法については、[プロトコル文書](../protocol/)を参照してください。
+::: tip  
+本ページは主に PR プロセスおよび MAA のファイルフォーマット要件について説明します。MAA の実行ロジックを変更する具体的な方法については、[プロトコル文書](../protocol/)を参照してください。  
 :::
 
-::: tip
-[DeepWiki に質問して](https://deepwiki.com/MaaAssistantArknights/MaaAssistantArknights)、MAA プロジェクトの全体的なアーキテクチャを概要的に理解することができます。
+::: tip  
+[DeepWiki に質問して](https://deepwiki.com/MaaAssistantArknights/MaaAssistantArknights)、MAA プロジェクトの全体的なアーキテクチャを概要的に理解することができます。  
 :::
 
 ## プログラミングの仕方がわからないので、JSONファイルやドキュメントなどを少し変更したいのですが、どうすればいいですか？
 
-[「パラスちゃん」も理解できるGitHubのPull Requestの使用ガイド](./pr-tutorial.md)へようこそ（純WebサイトのPRチュートリアル）
+[｢パラスちゃん｣ も理解できるGitHubのPull Requestの使用ガイド](./pr-tutorial.md)へようこそ（純WebサイトのPRチュートリアル）
 
 ## 数行のコードを少しだけ変更したいが、環境設定が面倒。純粋なWeb編集も使いにくい。どうすればよいですか？
 
@@ -39,17 +39,17 @@ icon: iconoir:developer
 
 1. かなり前にフォークした場合は、まず自分のリポジトリの `Settings` の一番下で削除します
 2. [MAA メインリポジトリ](https://github.com/MaaAssistantArknights/MaaAssistantArknights)を開き、`Fork` → `Create fork` をクリック
-3. 自身のリポジトリの dev ブランチをクローン（サブモジュール含む）
+3. 自身のリポジトリの `dev-v2` ブランチをクローン（サブモジュール含む）
 
    ```bash
    git clone --recurse-submodules <リポジトリの git リンク> -b dev-v2 --single-branch
    ```
 
-   ::: tip
-   `--single-branch` で取得されるのは `dev-v2` の履歴だけです。あとで別のブランチに切り替えたい場合は、先に `git remote set-branches origin '*'` を実行してから再度 fetch するか、`--single-branch` なしでリポジトリを再度クローンして不足しているブランチ情報を取得してください。
+   ::: tip  
+   `--single-branch` で取得されるのは `dev-v2` の履歴だけです。あとで別のブランチに切り替えたい場合は、先に `git remote set-branches origin '*'` を実行してから再度 fetch するか、`--single-branch` なしでリポジトリを再度クローンして不足しているブランチ情報を取得してください。  
    :::
 
-   ::: warning
+   ::: warning  
    Visual Studio など `--recurse-submodules` パラメータに対応していない Git GUI を使用する場合、クローン後に以下を実行：
 
    ```bash
@@ -83,10 +83,10 @@ icon: iconoir:developer
    - `MaaWpfGui` 右クリック → スタートアップ プロジェクトに設定
    - F5 キーを押して実行
 
-   ::: tip
-   Win32Controller（Windows ウィンドウ制御）/ MaaFwAdbController（MaaFramework のタッチモード）関連機能を実行する場合は、[MaaFramework Releases](https://github.com/MaaXYZ/MaaFramework/releases) から対応プラットフォームのアーカイブをダウンロードし、`bin` ディレクトリ内の `MaaWin32ControlUnit.dll` / `MaaAdbControlUnit.dll` を MAA の DLL と同じディレクトリ（例：`build/bin/Debug`）に配置してください。自動ダウンロードスクリプトの PR 歓迎！
+   ::: tip  
+   Win32Controller（Windows ウィンドウ制御）/ MaaFwAdbController（MaaFramework のタッチモード）関連機能を実行する場合は、`python tools/maafw-control-unit-download.py` を実行すると、対応プラットフォームの `MaaWin32ControlUnit.dll` / `MaaAdbControlUnit.dll` をビルド出力ディレクトリ（デフォルトでは `build/bin` 配下の最新ディレクトリ、`--output-dir` で指定可）に自動で配置します。
 
-   関連機能をデバッグする場合は、[MaaFramework の Debug バージョンを自分でコンパイル](https://maafw.com/docs/4.1-BuildGuide)し、対応する DLL ファイルを使用する必要があります。そうしないと、ブレークポイントデバッグ中に謎のクラッシュが発生します。
+   関連機能をデバッグする場合は、[MaaFramework の Debug バージョンを自分でコンパイル](https://maafw.com/docs/4.1-BuildGuide)し、対応する DLL ファイルを使用する必要があります。そうしないと、ブレークポイントデバッグ中に謎のクラッシュが発生します。  
    :::
 
 9. これで自由に ~~改造~~ 開発を始められます
@@ -106,7 +106,7 @@ icon: iconoir:developer
     git push origin dev-v2
     ```
 
-12. [MAA メインリポジトリ](https://github.com/MaaAssistantArknights/MaaAssistantArknights) で Pull Request を提出（master ではなく dev ブランチを指定）
+12. [MAA メインリポジトリ](https://github.com/MaaAssistantArknights/MaaAssistantArknights) で Pull Request を提出（master-v2 ではなく dev-v2 ブランチを指定）
 13. 上流リポジトリの更新を同期する場合：
     1. 上流リポジトリを追加：
 
@@ -134,14 +134,14 @@ icon: iconoir:developer
 
     4. ステップ8、9、10、11 を繰り返し
 
-::: tip
-Visual Studio 起動後、Git 操作は「Git 変更」画面からコマンドライン不要で可能
+::: tip  
+Visual Studio 起動後、Git 操作は ｢Git 変更｣ 画面からコマンドライン不要で可能  
 :::
 
 ## VSCodeでの開発（オプション）
 
-::: warning
-**Visual Studio での開発を推奨します。** MAA プロジェクトは主に Visual Studio をベースに構築されており、上記の完全な環境セットアップですべての開発ニーズをカバーし、すぐに使える最高の体験を提供します。VSCode ワークフローは、VSCode + CMake + clangd に精通した開発者向けの代替手段としてのみ提供されており、設定のハードルが比較的高くなります。
+::: warning  
+**Visual Studio での開発を推奨します。** MAA プロジェクトは主に Visual Studio をベースに構築されており、上記の完全な環境セットアップですべての開発ニーズをカバーし、すぐに使える最高の体験を提供します。VSCode ワークフローは、VSCode + CMake + clangd に精通した開発者向けの代替手段としてのみ提供されており、設定のハードルが比較的高くなります。  
 :::
 
 VSCodeを好む場合、CMake、clangdなどの拡張機能でコード補完、ナビゲーション、デバッグが可能です。前述の手順1～6（クローン、依存関係、CMake設定）を完了した後、以下の手順で設定できます。
@@ -150,14 +150,14 @@ VSCodeを好む場合、CMake、clangdなどの拡張機能でコード補完、
 
 VS Code Marketplace からインストール：
 
-| 拡張機能                                                                                            | 用途                                                              |
+| 拡張機能 | 用途 |
 | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools)            | CMake の設定、ビルド、デバッグ統合                                |
-| [clangd](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd) | C++ インテリセンス、コードナビゲーション、診断（LSPベース）       |
-| [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)                     | C++ プログラムのデバッグ（CMake Tools または launch.json と連携） |
+| [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools) | CMake の設定、ビルド、デバッグ統合 |
+| [clangd](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd) | C++ インテリセンス、コードナビゲーション、診断（LSPベース） |
+| [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) | C++ プログラムのデバッグ（CMake Tools または launch.json と連携） |
 
-::: tip
-clangd を使用する場合、C/C++ 拡張機能の IntelliSense を無効化（`C_Cpp.intelliSenseEngine` を `disabled` に設定）することを推奨します。競合を避けるためです。
+::: tip  
+clangd を使用する場合、C/C++ 拡張機能の IntelliSense を無効化（`C_Cpp.intelliSenseEngine` を `disabled` に設定）することを推奨します。競合を避けるためです。  
 :::
 
 ### 設定手順
@@ -185,7 +185,7 @@ clangd を使用する場合、C/C++ 拡張機能の IntelliSense を無効化�
 
    :::
 
-4. **デバッグ**：プロジェクトには `.vscode/launch.json` が含まれており、MaaWpfGui や Debug Demo の起動が可能
+4. **デバッグ**：`.vscode/launch.json` は自分で作成する必要があります。設定すると MaaWpfGui や Debug Demo を起動してデバッグできます
 
 ### ビルドとデバッグのショートカット
 
@@ -200,11 +200,13 @@ MAAは、リポジトリ内のコードとリソースファイルが美しく�
 
 現在有効になっているフォーマットツールは次のとおりです：
 
-| ファイルタイプ | フォーマットツール                                              |
+| ファイルタイプ | フォーマットツール |
 | -------------- | --------------------------------------------------------------- |
-| C++            | [clang-format](https://clang.llvm.org/docs/ClangFormat.html)    |
-| JSON/YAML      | [Prettier](https://prettier.io/)                                |
-| Markdown       | [markdownlint](https://github.com/DavidAnson/markdownlint-cli2) |
+| C++ | [clang-format](https://clang.llvm.org/docs/ClangFormat.html) |
+| JSON/YAML | [Prettier](https://prettier.io/) |
+| Markdown | [markdownlint](https://github.com/DavidAnson/markdownlint-cli2) |
+| Python | [ruff-format](https://docs.astral.sh/ruff/formatter/) |
+| PNG | [oxipng](https://github.com/oxipng/oxipng) |
 
 ### Pre-commit Hooksを使用してコードを自動フォーマット
 
@@ -223,7 +225,7 @@ pipインストール後もPre-commitを実行できない場合は、PIPイン�
 
 ### Visual Studioでclang-formatを有効にする
 
-1. clang-format バージョン20.1.0以上をインストールします。
+1. clang-format バージョン23.1.1以上をインストールします。
 
    ```bash
    python -m pip install clang-format

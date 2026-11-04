@@ -1,6 +1,6 @@
 // <copyright file="VersionUpdateSettingsUserControl.xaml.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -138,11 +138,11 @@ public partial class VersionUpdateSettingsUserControl : System.Windows.Controls.
         }
 
         MessageBoxInfo info = new() {
-            Message = LocalizationHelper.GetString("EasterEggsRules"),
-            Caption = LocalizationHelper.GetString("EmployeeGuidelines"),
+            Message = LocalizationHelper.GetString("EasterEgg.Rules"),
+            Caption = LocalizationHelper.GetString("EasterEgg.EmployeeGuidelines"),
             IconKey = "EasterEggsRulesIcon",
             IconBrushKey = "PrimaryTextBrush",
-            ConfirmContent = LocalizationHelper.GetString("ConfirmExitText"),
+            ConfirmContent = LocalizationHelper.GetString("TaskQueue.ConfirmExit.Text"),
         };
         MessageBoxHelper.Show(info);
 
@@ -152,12 +152,12 @@ public partial class VersionUpdateSettingsUserControl : System.Windows.Controls.
         var growlInfo = new GrowlInfo
         {
             IsCustom = true,
-            Message = LocalizationHelper.GetString("BuyWineOnAprilFoolsDay"),
+            Message = LocalizationHelper.GetString("EasterEgg.BuyWineOnAprilFoolsDay"),
             IconKey = "EasterEggsRulesIcon",
             IconBrushKey = "TextIconBrush",
         };
 
-        Growl.Info(growlInfo);
+        GrowlHelper.Info(growlInfo);
         */
     }
 }

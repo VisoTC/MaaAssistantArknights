@@ -1,6 +1,6 @@
 // <copyright file="TaskSettingVisibilityInfo.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -13,9 +13,9 @@
 #nullable enable
 using System;
 using System.Linq;
+using HandyControl.Data;
 using MaaWpfGui.Configuration.Factory;
 using MaaWpfGui.Configuration.Single.MaaTask;
-using MaaWpfGui.Constants;
 using MaaWpfGui.Helper;
 using MaaWpfGui.Main;
 using MaaWpfGui.Utilities;
@@ -30,6 +30,8 @@ namespace MaaWpfGui.Models;
 /// </summary>
 public class TaskSettingVisibilityInfo : PropertyChangedBase
 {
+    private static readonly ILogger _logger = Log.ForContext<TaskSettingVisibilityInfo>();
+
     public TaskSettingVisibilityInfo()
     {
         PropertyDependsOnUtility.InitializePropertyDependencies(this);
@@ -48,11 +50,15 @@ public class TaskSettingVisibilityInfo : PropertyChangedBase
 
     public bool Award { get => field; set => SetAndNotify(ref field, value); }
 
+    public bool OperProgress { get => field; set => SetAndNotify(ref field, value); }
+
     public bool Roguelike { get => field; set => SetAndNotify(ref field, value); }
 
-    public bool Reclamation { get => field; set => SetAndNotify(ref field, value); }
-
     public bool UserDataUpdate { get => field; set => SetAndNotify(ref field, value); }
+
+    public bool DepotMaintain { get => field; set => SetAndNotify(ref field, value); }
+
+    public bool SwitchTheme { get => field; set => SetAndNotify(ref field, value); }
 
     public bool Custom { get => field; set => SetAndNotify(ref field, value); }
 
@@ -110,13 +116,17 @@ public class TaskSettingVisibilityInfo : PropertyChangedBase
         // 边界检查
         if (taskIndex < 0 || taskIndex >= ConfigFactory.CurrentConfig.TaskQueue.Count)
         {
-            Log.Error("尝试设置不存在的任务设置可见性, 索引: {TaskIndex}", taskIndex);
+            _logger.Error("Tried to set task settings visibility for a nonexistent task, index: {TaskIndex}", taskIndex);
             return;
         }
 
         var task = ConfigFactory.CurrentConfig.TaskQueue[taskIndex];
         if (enable)
         {
+            // 过渡方向由控件按 TransitionIndex 变化推导，这里只维护选中索引与可见性。
+            // 重复选择同一任务（如启动恢复选中，CurrentIndex 先由持久化配置返回相同值）时
+            // 索引值不变、绑定去重后不会触发过渡，但可见性属性是内存态、不随配置恢复，
+            // 仍需重设，故不做重复选择特判
             CurrentIndex = taskIndex;
             SetTaskSettingVisible(task, enable);
         }
@@ -145,9 +155,11 @@ public class TaskSettingVisibilityInfo : PropertyChangedBase
             FightTask => Fight = enable,
             MallTask => Mall = enable,
             AwardTask => Award = enable,
+            OperProgressTask => OperProgress = enable,
             RoguelikeTask => Roguelike = enable,
-            ReclamationTask => Reclamation = enable,
             UserDataUpdateTask => UserDataUpdate = enable,
+            DepotMaintainTask => DepotMaintain = enable,
+            SwitchThemeTask => SwitchTheme = enable,
             CustomTask => Custom = enable,
             _ => throw new NotImplementedException(),
         };
@@ -155,24 +167,10 @@ public class TaskSettingVisibilityInfo : PropertyChangedBase
         UpdateAdvancedSettingsVisibility(task);
     }
 
-    /// <summary>
-    /// 根据当前任务配置刷新高级设置可见性
-    /// </summary>
-    public void RefreshAdvancedSettingsVisibility()
-    {
-        if (CurrentIndex < 0 || CurrentIndex >= ConfigFactory.CurrentConfig.TaskQueue.Count)
-        {
-            return;
-        }
-
-        UpdateAdvancedSettingsVisibility(ConfigFactory.CurrentConfig.TaskQueue[CurrentIndex]);
-    }
-
     private void UpdateAdvancedSettingsVisibility(BaseTask task)
     {
         AdvancedSettingsVisibility = task switch {
-            AwardTask or StartUpTask or UserDataUpdateTask => false,
-            ReclamationTask rt => rt.Theme == ReclamationTheme.Tales,
+            AwardTask or StartUpTask or UserDataUpdateTask or OperProgressTask or SwitchThemeTask => false,
             _ => true,
         };
     }
@@ -185,9 +183,11 @@ public class TaskSettingVisibilityInfo : PropertyChangedBase
         Fight = false;
         Mall = false;
         Award = false;
+        OperProgress = false;
         Roguelike = false;
-        Reclamation = false;
         UserDataUpdate = false;
+        DepotMaintain = false;
+        SwitchTheme = false;
         Custom = false;
     }
 
@@ -200,9 +200,36 @@ public class TaskSettingVisibilityInfo : PropertyChangedBase
         PostAction = value;
     }
 
-    public bool EnableAdvancedSettings { get => field; set => SetAndNotify(ref field, value); }
+    public bool EnableAdvancedSettings
+    {
+        get => field;
+        set {
+            if (!SetAndNotify(ref field, value))
+            {
+                // 值未变：跳过，避免重复设置触发一次无意义过渡
+                return;
+            }
 
-    public bool AdvancedSettingsVisibility { get => field; set => SetAndNotify(ref field, value); }
+            // 切到高级自右侧滑入，切回常规自左侧滑入
+            ContentTransitionMode = value ? TransitionMode.Right2LeftWithFade : TransitionMode.Left2RightWithFade;
+        }
+    }
 
-    public bool Guide { get => field; set => SetAndNotify(ref field, value); } = ConfigurationHelper.GetValue(ConfigurationKeys.GuideStepIndex, 0) < SettingsViewModel.GuideMaxStep;
+    private TransitionMode _contentTransitionMode = TransitionMode.Left2RightWithFade;
+
+    /// <summary>
+    /// Gets or sets the transition mode used by the task setting area when switching tasks or the general/advanced tab.
+    /// </summary>
+    public TransitionMode ContentTransitionMode
+    {
+        get => _contentTransitionMode;
+        set {
+            _contentTransitionMode = value;
+            NotifyOfPropertyChange(nameof(ContentTransitionMode));
+        }
+    }
+
+    public bool AdvancedSettingsVisibility { get; set => SetAndNotify(ref field, value); }
+
+    public bool Guide { get; set => SetAndNotify(ref field, value); } = ConfigFactory.Root.Gui.GuideStep < SettingsViewModel.GuideMaxStep;
 }

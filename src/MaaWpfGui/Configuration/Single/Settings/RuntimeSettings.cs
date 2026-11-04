@@ -1,0 +1,62 @@
+// <copyright file="RuntimeSettings.cs" company="MaaAssistantArknights">
+// Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License v3.0 only as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY
+// </copyright>
+#nullable enable
+using System;
+using System.Text.Json.Serialization;
+using MaaWpfGui.Models;
+using MaaWpfGui.ViewModels.UserControl.Settings;
+
+namespace MaaWpfGui.Configuration.Single.Settings;
+
+/// <summary>
+/// wpf运行时设置
+/// </summary>
+public partial class RuntimeSettings : NotifyPropertyChangedWithValue, IJsonOnDeserialized
+{
+    public Constants.Enums.ClientType ClientType { get; set; } = Constants.Enums.ClientType.Official;
+
+    public bool StartGame { get; set; } = true;
+
+    public bool DeployWithPause { get; set; }
+
+    public bool RoguelikeDelayAbortUntilCombatComplete { get; set; }
+
+    public string PreRunScript { get; set; } = string.Empty;
+
+    public string PostRunScript { get; set; } = string.Empty;
+
+    public bool ExecuteScriptOnCopilot { get; set; }
+
+    public bool ExecuteScriptOnManualStop { get; set; }
+
+    /// <summary>
+    /// 运行时阻止进入睡眠
+    /// </summary>
+    public bool BlockSleep { get; set; }
+
+    public bool BlockSleepWithScreenOn { get; set; } = true;
+
+    /// <summary>
+    /// 运行时长上限，从开始任务起计时，到时停止任务；null 为右键半选，仅生效一次
+    /// </summary>
+    public bool? EnableRunDurationLimit { get; set; } = false;
+
+    public int RunDurationLimitMinutes { get; set; } = 240;
+
+    public bool RunDurationLimitExecutePostActions { get; set; } = true;
+
+    public void OnDeserialized()
+    {
+        RunDurationLimitMinutes = Math.Clamp(RunDurationLimitMinutes, 1, GameSettingsUserControlModel.TimeoutMaxMinutes);
+    }
+}

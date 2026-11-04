@@ -1,6 +1,6 @@
 // <copyright file="InfrastRoomType.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -46,6 +46,11 @@ public enum InfrastRoomType
     Office,
 
     /// <summary>
+    /// 回收站
+    /// </summary>
+    Recycle,
+
+    /// <summary>
     /// 宿舍
     /// </summary>
     Dorm,
@@ -59,4 +64,9 @@ public enum InfrastRoomType
     /// 训练室
     /// </summary>
     Training,
+
+    /// <summary>
+    /// 基建副手换人
+    /// </summary>
+    AssistantChange,
 }

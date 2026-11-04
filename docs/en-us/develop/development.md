@@ -5,12 +5,12 @@ icon: iconoir:developer
 
 # Development Guide
 
-::: tip
-This page mainly describes the PR workflow and MAA's file formatting requirements. If you want to learn specifically how to make changes to MAA's operational logic, please refer to the [Protocol Documentation](../protocol/)
+::: tip  
+This page mainly describes the PR workflow and MAA's file formatting requirements. If you want to learn specifically how to make changes to MAA's operational logic, please refer to the [Protocol Documentation](../protocol/)  
 :::
 
-::: tip
-You can [Ask DeepWiki](https://deepwiki.com/MaaAssistantArknights/MaaAssistantArknights) to learn about the overall architecture of the MAA project.
+::: tip  
+You can [Ask DeepWiki](https://deepwiki.com/MaaAssistantArknights/MaaAssistantArknights) to learn about the overall architecture of the MAA project.  
 :::
 
 ## I don't know programming but just want to modify some JSON files/documents, how can I do it?
@@ -39,18 +39,18 @@ We've preset several different development environments for you to choose from:
 
 1. If you forked the repository long ago, first delete it via your repository's `Settings` at the bottom.
 2. Visit the [MAA main repository](https://github.com/MaaAssistantArknights/MaaAssistantArknights), click `Fork`, then `Create fork`.
-3. Clone the dev branch of your repository with submodules:
+3. Clone the dev-v2 branch of your repository with submodules:
 
    ```bash
    git clone --recurse-submodules <your repository link> -b dev-v2 --single-branch
    ```
 
-   ::: tip
-   `--single-branch` only fetches the history for `dev-v2`. If you later want to switch to another branch, run `git remote set-branches origin '*'` and fetch again so Git can download the missing branch data, or re-clone the repository without `--single-branch`.
+   ::: tip  
+   `--single-branch` only fetches the history for `dev-v2`. If you later want to switch to another branch, run `git remote set-branches origin '*'` and fetch again so Git can download the missing branch data, or re-clone the repository without `--single-branch`.  
    :::
 
-   ::: warning
-   If using Git GUI clients like Visual Studio without `--recurse-submodules` support, run `git submodule update --init` after cloning to initialize submodules.
+   ::: warning  
+   If using Git GUI clients like Visual Studio without `--recurse-submodules` support, run `git submodule update --init` after cloning to initialize submodules.  
    :::
 
 4. Download prebuilt third-party libraries  
@@ -77,10 +77,10 @@ We've preset several different development environments for you to choose from:
    - Right-click `MaaWpfGui` - Set as Startup Project
    - Press F5 to run
 
-   ::: tip
-   To run Win32Controller (Windows window control) / MaaFwAdbController (MaaFramework touch mode) features, you need to manually download the package for your platform from [MaaFramework Releases](https://github.com/MaaXYZ/MaaFramework/releases), and place `MaaWin32ControlUnit.dll` / `MaaAdbControlUnit.dll` from the `bin` directory into MAA's DLL directory (e.g. `build/bin/Debug`). PRs for an auto-download script are welcome!
+   ::: tip  
+   To run Win32Controller (Windows window control) / MaaFwAdbController (MaaFramework touch mode) features, run `python tools/maafw-control-unit-download.py` to automatically download the `MaaWin32ControlUnit.dll` / `MaaAdbControlUnit.dll` for your platform into the build output directory (the newest directory under `build/bin` by default, or the one given by `--output-dir`).
 
-   To debug these features, [compile the Debug version of MaaFramework yourself](https://maafw.com/docs/4.1-BuildGuide) and use the corresponding DLLs, or it will randomly crash at breakpoints.
+   To debug these features, [compile the Debug version of MaaFramework yourself](https://maafw.com/docs/4.1-BuildGuide) and use the corresponding DLLs, or it will randomly crash at breakpoints.  
    :::
 
 9. Now you're ready to happily ~~mess around~~ start developing!
@@ -100,7 +100,7 @@ We've preset several different development environments for you to choose from:
     git push origin dev-v2
     ```
 
-12. Submit a Pull Request at the [MAA main repository](https://github.com/MaaAssistantArknights/MaaAssistantArknights). Ensure your changes are based on the `dev-v2` branch, not `master`.
+12. Submit a Pull Request at the [MAA main repository](https://github.com/MaaAssistantArknights/MaaAssistantArknights). Ensure your changes are based on the `dev-v2` branch, not `master-v2`.
 13. To sync upstream changes:
     1. Add upstream repository:
 
@@ -128,14 +128,14 @@ We've preset several different development environments for you to choose from:
 
     4. Repeat steps 8, 9, 10, 11.
 
-::: tip
-After opening Visual Studio, Git operations can be performed using VS's built-in "Git Changes" instead of command-line tools.
+::: tip  
+After opening Visual Studio, Git operations can be performed using VS's built-in "Git Changes" instead of command-line tools.  
 :::
 
 ## Using VS Code for Development (Optional)
 
-::: warning
-**Visual Studio is the recommended IDE for development.** The MAA project is primarily built around Visual Studio, and the complete environment setup described above covers all development needs with the best out-of-the-box experience. The VS Code workflow is provided only as an alternative for developers already familiar with VS Code + CMake + clangd, and requires more configuration effort.
+::: warning  
+**Visual Studio is the recommended IDE for development.** The MAA project is primarily built around Visual Studio, and the complete environment setup described above covers all development needs with the best out-of-the-box experience. The VS Code workflow is provided only as an alternative for developers already familiar with VS Code + CMake + clangd, and requires more configuration effort.  
 :::
 
 If you prefer VS Code, you can use CMake, clangd, and related extensions for code completion, navigation, and debugging. After completing steps 1–6 above (clone, dependencies, CMake configuration), follow these steps:
@@ -144,14 +144,14 @@ If you prefer VS Code, you can use CMake, clangd, and related extensions for cod
 
 Install from the VS Code marketplace:
 
-| Extension                                                                                           | Purpose                                                    |
+| Extension | Purpose |
 | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools)            | CMake configure, build, and debug integration              |
+| [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools) | CMake configure, build, and debug integration |
 | [clangd](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd) | C++ IntelliSense, code navigation, diagnostics (LSP-based) |
-| [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)                     | Debug C++ programs (works with CMake Tools or launch.json) |
+| [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) | Debug C++ programs (works with CMake Tools or launch.json) |
 
-::: tip
-When using clangd, set `C_Cpp.intelliSenseEngine` to `disabled` to avoid conflicts with the C/C++ extension's IntelliSense.
+::: tip  
+When using clangd, set `C_Cpp.intelliSenseEngine` to `disabled` to avoid conflicts with the C/C++ extension's IntelliSense.  
 :::
 
 ### Setup Steps
@@ -181,7 +181,7 @@ When using clangd, set `C_Cpp.intelliSenseEngine` to `disabled` to avoid conflic
 
    :::
 
-4. **Debugging**: The project includes `.vscode/launch.json` for launching MaaWpfGui or Debug Demo
+4. **Debugging**: You need to create `.vscode/launch.json` yourself; once configured, it can launch MaaWpfGui or the Debug Demo for debugging
 
 ### Build and Debug Shortcuts
 
@@ -196,11 +196,13 @@ Please ensure that it has been formatted before submission, or [enable Pre-commi
 
 The currently enabled formatting tools are as follows:
 
-| File Type | Format Tool                                                     |
+| File Type | Format Tool |
 | --------- | --------------------------------------------------------------- |
-| C++       | [clang-format](https://clang.llvm.org/docs/ClangFormat.html)    |
-| JSON/YAML | [Prettier](https://prettier.io/)                                |
-| Markdown  | [markdownlint](https://github.com/DavidAnson/markdownlint-cli2) |
+| C++ | [clang-format](https://clang.llvm.org/docs/ClangFormat.html) |
+| JSON/YAML | [Prettier](https://prettier.io/) |
+| Markdown | [markdownlint](https://github.com/DavidAnson/markdownlint-cli2) |
+| Python | [ruff-format](https://docs.astral.sh/ruff/formatter/) |
+| PNG | [oxipng](https://github.com/oxipng/oxipng) |
 
 ### Use Pre-commit Hooks to Automatically Format Code
 
@@ -219,7 +221,7 @@ The formatting tool will automatically run every time you submit to ensure that 
 
 ### Enable clang-format in Visual Studio
 
-1. Install clang-format version 20.1.0 or higher.
+1. Install clang-format version 23.1.1 or higher.
 
    ```bash
    python -m pip install clang-format

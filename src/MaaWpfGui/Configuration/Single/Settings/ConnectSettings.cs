@@ -1,0 +1,92 @@
+// <copyright file="ConnectSettings.cs" company="MaaAssistantArknights">
+// Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License v3.0 only as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY
+// </copyright>
+#nullable enable
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using MaaWpfGui.Configuration.Single.Settings.ConnectionExtra;
+using MaaWpfGui.Constants.Enums;
+using MaaWpfGui.Models;
+using static MaaWpfGui.Configuration.Factory.ConfigFactory;
+
+namespace MaaWpfGui.Configuration.Single.Settings;
+
+/// <summary>
+/// 模拟器连接设置
+/// </summary>
+public partial class ConnectSettings : NotifyPropertyChangedWithValue, IJsonOnDeserialized
+{
+    private static string _bindingPrefix = string.Empty;
+
+    public void EventBinding(string key)
+    {
+        _bindingPrefix = key;
+        PropertyChanged += Handler.OnPropertyChangedFactory(_bindingPrefix + nameof(ConnectSettings) + ".");
+        Extras.Mumu12.PropertyChanged += Handler.OnPropertyChangedFactory(_bindingPrefix + nameof(ConnectSettings) + "." + nameof(ExtraConfigs) + "." + nameof(Extras.Mumu12) + ".");
+        Extras.LDPlayer.PropertyChanged += Handler.OnPropertyChangedFactory(_bindingPrefix + nameof(ConnectSettings) + "." + nameof(ExtraConfigs) + "." + nameof(Extras.LDPlayer) + ".");
+        Extras.Win32Extra.PropertyChanged += Handler.OnPropertyChangedFactory(_bindingPrefix + nameof(ConnectSettings) + "." + nameof(ExtraConfigs) + "." + nameof(Extras.Win32Extra) + ".");
+    }
+
+    public void OnDeserialized()
+    {
+        // MuMu 触控仅在截图增强开启时可选，残留的 MumuExtras 会让下拉框选中项悬空、Core 派生的控制器无 extras 可用
+        if (!Extras.Mumu12.IsEnabled && TouchMode == TouchMode.MumuExtras)
+        {
+            TouchMode = TouchMode.MiniTouch;
+        }
+    }
+
+    public bool AutoDetect { get; set; } = true;
+
+    public bool AlwaysAutoDetect { get; set; }
+
+    public ConnectConfig Config { get; set; } = ConnectConfig.General;
+
+    public string AdbPath { get; set; } = string.Empty;
+
+    public bool AdbReplaced { get; set; }
+
+    public string Address { get; set; } = string.Empty;
+
+    public List<string> AddressHistory { get; set; } = [];
+
+    public ExtraConfigs Extras { get; set; } = new ExtraConfigs();
+
+    public bool AllowAdbRestart { get; set; } = true;
+
+    public bool AllowAdbHardRestart { get; set; } = true;
+
+    public TouchMode TouchMode { get; set; } = TouchMode.MiniTouch;
+
+    public bool EnableAdbLite { get; set; }
+
+    public bool KillAdbOnExit { get; set; }
+
+    public record class ExtraConfigs
+    {
+        public LdPlayerExtra LDPlayer { get; set; } = new();
+
+        [JsonPropertyName("MuMuEmulator12")]
+        public Mumu12Extra Mumu12 { get; set; } = new();
+
+        public Win32Extra Win32Extra { get; set; } = new();
+
+        public Bluestacks BluestacksExtra { get; set; } = new();
+
+        public record class Bluestacks
+        {
+            public string ConfigKeyword { get; set; } = string.Empty;
+
+            public string ConfigPath { get; set; } = string.Empty;
+        }
+    }
+}

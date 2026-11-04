@@ -134,7 +134,16 @@
     },
     "Sarkaz@Roguelike@CloseEvent": {
         "action": "ClickRect",
-        "specificRect": [153, 79, 63, 29]
+        "specificRect": [153, 79, 63, 29],
+        "next": [
+            "Sarkaz@Roguelike@StageEncounterEnter",
+            "Sarkaz@Roguelike@CloseEvent@(Sarkaz@Roguelike@CloseCollectionContinue)",
+            "Sarkaz@Roguelike@CloseEvent@(Sarkaz@Roguelike@CloseCollectionClose)",
+            "Sarkaz@Roguelike@CloseEvent",
+            "Sarkaz@Roguelike@Stages#next",
+            "Sarkaz@Roguelike@StageEncounterOptions#next",
+            "Sarkaz@Roguelike@DropsFlag"
+        ]
     },
     "Sarkaz@Roguelike@CloseInterview": {
         "template": "Sarkaz@Roguelike@CloseCollectionClose.png"
@@ -318,13 +327,7 @@
     },
     "Sarkaz@Roguelike@GamePass": {},
     "Sarkaz@Roguelike@GamePassSkip1": {},
-    "Sarkaz@Roguelike@GamePassSkip1Confirm": {
-        "next": [
-            "Sarkaz@Roguelike@GamePassSkip2",
-            "Sarkaz@Roguelike@GamePassTheEndConfirm",
-            "Sarkaz@Roguelike@GamePass"
-        ]
-    },
+    "Sarkaz@Roguelike@GamePassSkip1Confirm": {},
     "Sarkaz@Roguelike@GamePassSkip2": {},
     "Sarkaz@Roguelike@GamePassTheEndConfirm": {
         "template": "Sarkaz@Roguelike@Confirm.png"
@@ -420,7 +423,13 @@
     },
     "Sarkaz@Roguelike@NextLevel": {
         "text": ["熔魂之始", "锻铁根须", "灰铸迷城", "或然歧域", "虚实疆界", "辉光天顶", "诡谲断章"],
-        "roi": [550, 564, 184, 64]
+        "roi": [550, 564, 184, 64],
+        "next": [
+            "Sarkaz@Roguelike@NextLevel@(Sarkaz@Roguelike@CloseCollectionContinue)",
+            "Sarkaz@Roguelike@CloseInterview",
+            "Sarkaz@Roguelike@StrategyChange",
+            "Sarkaz@Roguelike@NextLevel"
+        ]
     },
     "Sarkaz@Roguelike@RecruitMain": {
         "template": "Sarkaz@Roguelike@Recruit.png"

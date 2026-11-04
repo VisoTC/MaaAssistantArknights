@@ -1,6 +1,6 @@
 // <copyright file="RoguelikeTask.cs" company="MaaAssistantArknights">
 // Part of the MaaWpfGui project, maintained by the MaaAssistantArknights team (Maa Team)
-// Copyright (C) 2021-2025 MaaAssistantArknights Contributors
+// Copyright (C) 2021-2026 MaaAssistantArknights Contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License v3.0 only as published by
@@ -12,6 +12,9 @@
 // </copyright>
 
 #nullable enable
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Serialization;
 using MaaWpfGui.Constants.Enums;
 using static MaaWpfGui.Main.AsstProxy;
 
@@ -20,14 +23,31 @@ namespace MaaWpfGui.Configuration.Single.MaaTask;
 /// <summary>
 /// 肉鸽任务
 /// </summary>
-public class RoguelikeTask : BaseTask
+public class RoguelikeTask : BaseTask, IJsonOnDeserialized
 {
+    // 支援选取的默认顺序：襁褓天马在最前，其余普通奖励按日常顺序
+    private static readonly RoguelikeBlackFlowStartReward[] _defaultBlackFlowStartRewardPriority =
+    [
+        RoguelikeBlackFlowStartReward.Pegasus,
+        RoguelikeBlackFlowStartReward.SpaceLease,
+        RoguelikeBlackFlowStartReward.ForestRide,
+        RoguelikeBlackFlowStartReward.UnnumberedItem,
+        RoguelikeBlackFlowStartReward.RegressionCompensation,
+        RoguelikeBlackFlowStartReward.SurveyAdvance,
+        RoguelikeBlackFlowStartReward.NestParasitism,
+        RoguelikeBlackFlowStartReward.Hippogriff,
+        RoguelikeBlackFlowStartReward.Dragon,
+        RoguelikeBlackFlowStartReward.Hydra,
+        RoguelikeBlackFlowStartReward.BaiZe,
+        RoguelikeBlackFlowStartReward.GoldenCrow,
+    ];
+
     public RoguelikeTask() => TaskType = TaskType.Roguelike;
 
     /// <summary>
     /// Gets or sets 肉鸽主题
     /// </summary>
-    public RoguelikeTheme Theme { get; set; } = RoguelikeTheme.JieGarden;
+    public RoguelikeTheme Theme { get; set; } = RoguelikeTheme.Phantom;
 
     public int Difficulty { get; set; } = int.MaxValue;
 
@@ -53,7 +73,15 @@ public class RoguelikeTask : BaseTask
     /// </summary>
     public int StartCount { get; set; } = 999999;
 
-    public string CoreChar { get; set; } = string.Empty;
+    /// <summary>
+    /// Gets or sets 开局干员顺位列表，按顺序招募，最多 3 位
+    /// </summary>
+    public List<RoguelikeStartingOper> StartingOpers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 启用第 2、3 位开局干员
+    /// </summary>
+    public bool UseAdditionalStartingOpers { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether 启用投资
@@ -116,9 +144,49 @@ public class RoguelikeTask : BaseTask
     public RoguelikeBoskySubNodeType FindPlaytimeTarget { get; set; } = RoguelikeBoskySubNodeType.Ling;
 
     /// <summary>
-    /// Gets or sets a value indicating whether 使用好友助战
+    /// Gets or sets 刷襁褓动物模式的目标品种
     /// </summary>
-    public bool UseSupport { get; set; }
+    public RoguelikeBlackFlowCultivationTarget BlackFlowCultivationTarget { get; set; } = RoguelikeBlackFlowCultivationTarget.Cat;
+
+    /// <summary>
+    /// Gets or sets 刷等级的目标结局
+    /// </summary>
+    public RoguelikeBlackFlowEnding BlackFlowEnding { get; set; } = RoguelikeBlackFlowEnding.Ending1;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 刷等级时用机械师快速飞三层
+    /// </summary>
+    public bool BlackFlowFastFlight { get; set; }
+
+    /// <summary>
+    /// Gets or sets 刷开局要求的第一只襁褓动物
+    /// </summary>
+    public RoguelikeBlackFlowStartAnimal BlackFlowStartAnimal1 { get; set; } = RoguelikeBlackFlowStartAnimal.None;
+
+    /// <summary>
+    /// Gets or sets 刷开局要求的第二只襁褓动物
+    /// </summary>
+    public RoguelikeBlackFlowStartAnimal BlackFlowStartAnimal2 { get; set; } = RoguelikeBlackFlowStartAnimal.None;
+
+    /// <summary>
+    /// Gets or sets 刷开局的期望奖励，含羽蛇奖励
+    /// </summary>
+    public RoguelikeBlackFlowStartReward BlackFlowStartRewards { get; set; } = RoguelikeBlackFlowStartReward.None;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 刷开局的准备局固定用满天赋机械师开局快速飞三层
+    /// </summary>
+    public bool BlackFlowStartRunFastFlight { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether 刷开局的目标局凹第一层实托邦
+    /// </summary>
+    public bool BlackFlowStartUtopia { get; set; }
+
+    /// <summary>
+    /// Gets or sets 凹第一层实托邦时目标局的支援选取顺序，含全部十二种奖励，和开局动物、期望奖励的勾选无关
+    /// </summary>
+    public List<RoguelikeBlackFlowStartReward> BlackFlowStartRewardPriority { get; set; } = [.. _defaultBlackFlowStartRewardPriority];
 
     /// <summary>
     /// Gets or sets a value indicating whether 使用非好友助战
@@ -172,6 +240,42 @@ public class RoguelikeTask : BaseTask
     public bool StartWithSeed { get; set; }
 
     public string Seed { get; set; } = string.Empty;
+
+    public void OnDeserialized()
+    {
+        // 刷襁褓动物已并入刷开局：原来的培育目标改为刷开局的第一只动物。
+        // 放在读配置时做，没打开过设置页就直接启动的旧任务也能迁移到。
+        // 迁移只用到本类现有的字段，所以照 StartUpTask 写在 OnDeserialized 里；
+        // RoguelikeStartingOpersConverter 那种 Root 转换器用于旧字段已删除、只能从原始 JSON 读取的情况。
+        if (Theme == RoguelikeTheme.BlackFlow && Mode == RoguelikeMode.BlackFlowBabyAnimal)
+        {
+            BlackFlowStartAnimal1 = BlackFlowCultivationTarget switch
+            {
+                RoguelikeBlackFlowCultivationTarget.Dog => RoguelikeBlackFlowStartAnimal.Dog,
+                RoguelikeBlackFlowCultivationTarget.Cerberus => RoguelikeBlackFlowStartAnimal.Cerberus,
+                RoguelikeBlackFlowCultivationTarget.FeatheredSerpent => RoguelikeBlackFlowStartAnimal.FeatheredSerpent,
+                _ => RoguelikeBlackFlowStartAnimal.Cat,
+            };
+            BlackFlowStartAnimal2 = RoguelikeBlackFlowStartAnimal.None;
+            Mode = RoguelikeMode.BlackFlowStartRun;
+        }
+
+        // 手改或缺项的顺序整理成十二种奖励各一次，缺的按默认顺序补在后面
+        BlackFlowStartRewardPriority ??= [.. _defaultBlackFlowStartRewardPriority];
+        var priority = BlackFlowStartRewardPriority.Where(_defaultBlackFlowStartRewardPriority.Contains).Distinct().ToList();
+        priority.AddRange(_defaultBlackFlowStartRewardPriority.Except(priority));
+        BlackFlowStartRewardPriority = priority;
+    }
+
+    /// <summary>
+    /// 开局干员顺位
+    /// </summary>
+    public class RoguelikeStartingOper
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public bool UseSupport { get; set; }
+    }
 }
 
 public enum RoguelikeTheme
@@ -200,6 +304,11 @@ public enum RoguelikeTheme
     /// 界园
     /// </summary>
     JieGarden,
+
+    /// <summary>
+    /// 黑流树海
+    /// </summary>
+    BlackFlow,
 }
 
 public enum RoguelikeMode
@@ -238,6 +347,71 @@ public enum RoguelikeMode
     /// 20001 - 刷常乐节点，第一层进洞，找不到需要的节点就重开
     /// </summary>
     FindPlaytime = 20001,
+
+    /// <summary>
+    /// 30001 - 刷襁褓动物（主题专用 GUI 模式）
+    /// </summary>
+    BlackFlowBabyAnimal = 30001,
+
+    /// <summary>
+    /// 30003 - 刷开局（主题专用 GUI 模式）
+    /// </summary>
+    BlackFlowStartRun = 30003,
+}
+
+/// <summary>
+/// 黑流树海刷等级的目标结局
+/// </summary>
+public enum RoguelikeBlackFlowEnding
+{
+    Ending1 = 1,
+    Ending2 = 2,
+    Ending3 = 3,
+}
+
+/// <summary>
+/// 黑流树海刷开局要求的襁褓动物
+/// </summary>
+public enum RoguelikeBlackFlowStartAnimal
+{
+    None = 0,
+    Cat = 1,
+    Dog = 2,
+    Cerberus = 3,
+    FeatheredSerpent = 4,
+}
+
+/// <summary>
+/// 黑流树海开局行动奖励，后六项由襁褓羽蛇提供
+/// </summary>
+[System.Flags]
+public enum RoguelikeBlackFlowStartReward
+{
+    None = 0,
+    UnnumberedItem = 1 << 0,
+    SurveyAdvance = 1 << 1,
+    SpaceLease = 1 << 2,
+    RegressionCompensation = 1 << 3,
+    ForestRide = 1 << 4,
+    NestParasitism = 1 << 5,
+    Pegasus = 1 << 6,
+    Hippogriff = 1 << 7,
+    Dragon = 1 << 8,
+    Hydra = 1 << 9,
+    BaiZe = 1 << 10,
+    GoldenCrow = 1 << 11,
+    SerpentRewards = Pegasus | Hippogriff | Dragon | Hydra | BaiZe | GoldenCrow,
+}
+
+/// <summary>
+/// 黑流树海襁褓动物目标品种
+/// </summary>
+public enum RoguelikeBlackFlowCultivationTarget
+{
+    Cat = 0,
+    FeatheredSerpent = 1,
+    Dog = 2,
+    Cerberus = 3,
 }
 
 /// <summary>

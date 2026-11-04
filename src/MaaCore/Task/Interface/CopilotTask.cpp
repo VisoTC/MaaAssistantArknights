@@ -2,8 +2,10 @@
 
 #include "Arknights-Tile-Pos/TileCalc2.hpp"
 
+#include "Common/AsstBattleDef.h"
 #include "Config/Miscellaneous/BattleDataConfig.h"
 #include "Config/Miscellaneous/CopilotConfig.h"
+#include "Config/Miscellaneous/OperBoxDataConfig.h"
 #include "Config/TaskData.h"
 #include "Task/Fight/MedicineCounterTaskPlugin.h"
 #include "Task/Miscellaneous/BattleFormationTask.h"
@@ -22,7 +24,8 @@ asst::CopilotTask::CopilotTask(const AsstCallback& callback, Assistant* inst) :
 {
     LogTraceFunction;
 
-    m_multi_copilot_plugin_ptr->set_retry_times(20);
+    m_multi_copilot_plugin_ptr->set_retry_times(0);
+    m_multi_copilot_plugin_ptr->set_formation_task_ptr(m_formation_task_ptr);
     m_multi_copilot_plugin_ptr->set_battle_task_ptr(m_battle_task_ptr);
     m_subtasks.emplace_back(m_multi_copilot_plugin_ptr);
 
@@ -33,7 +36,7 @@ asst::CopilotTask::CopilotTask(const AsstCallback& callback, Assistant* inst) :
     m_medicine_task_ptr = std::make_shared<ProcessTask>(callback, inst, TaskType);
     m_medicine_task_ptr->set_tasks({ "BattleStartPre@UseMedicine", "BattleStartPre@BattleQuickFormation" })
         .set_ignore_error(true);
-    m_medicine_task_ptr->register_plugin<MedicineCounterTaskPlugin>()->set_count(999999);
+    m_medicine_task_ptr->register_plugin<MedicineCounterTaskPlugin>()->set_count(999'999);
     m_subtasks.emplace_back(m_medicine_task_ptr);
 
     m_subtasks.emplace_back(m_formation_task_ptr)->set_retry_times(0);
@@ -58,6 +61,7 @@ bool asst::CopilotTask::set_params(const json::value& params)
     LogTraceFunction;
 
     using SupportUnitUsage = BattleFormationTask::SupportUnitUsage;
+    using OperUsageGroups = battle::copilot::OperUsageGroups;
 
     if (m_has_subtasks_duplicate) {
         Log.error(__FUNCTION__, "CopilotTask set_params failed, already set params");
@@ -73,11 +77,25 @@ bool asst::CopilotTask::set_params(const json::value& params)
     auto support_unit_usage = static_cast<SupportUnitUsage>(
         params.get("support_unit_usage", static_cast<int>(SupportUnitUsage::None))); // 助战干员使用模式
     std::string support_unit_name = params.get("support_unit_name", std::string());
+    std::string operbox_data_path = params.get("operbox_data_path", std::string());  // 干员辅助编队数据路径, 为空则禁用
+    bool use_operbox = !operbox_data_path.empty();
+
+    if (use_operbox) {
+        // 预检失败回调按编队缺干员协议从编队任务对象发出，GUI 侧直接复用 OperatorMissing 分支处理
+        OperBoxData.set_task(m_formation_task_ptr.get());
+        OperBoxData.set_ignore_requirements(ignore_requirements);
+        if (!OperBoxData.load(utils::path(operbox_data_path))) {
+            LogError << __FUNCTION__ << "| OperBox data is empty or invalid, cannot perform precheck";
+            json::value info = basic_info_with_what("OperboxDataParseFailed");
+            callback(AsstMsg::SubTaskError, info);
+            return false;
+        }
+    }
 
     auto filename_opt = params.find<std::string>("filename");
     auto multi_tasks_opt = params.find<json::array>("copilot_list"); // 多任务列表
     if (!filename_opt && !multi_tasks_opt) {
-        Log.error("CopilotTask set_params failed, stage_name or filename not found");
+        LogError << __FUNCTION__ << "CopilotTask set_params failed, stage_name or filename not found";
         return false;
     }
 
@@ -85,9 +103,26 @@ bool asst::CopilotTask::set_params(const json::value& params)
         m_multi_copilot_plugin_ptr->set_enable(false);
         m_battle_task_ptr->set_wait_until_end(false);
         auto copilot_opt = parse_copilot_filename(*filename_opt);
+        if (!copilot_opt) {
+            return false;
+        }
+        if (use_operbox) {
+            auto assignment_opt =
+                OperBoxData.precheck(Copilot.get_data().groups, support_unit_usage != SupportUnitUsage::None);
+            if (!assignment_opt) {
+                return false;
+            }
+            m_formation_task_ptr->set_assigned_groups(std::move(*assignment_opt));
+        }
+        else {
+            m_formation_task_ptr->set_assigned_groups(std::nullopt);
+        }
         m_stage_name = Copilot.get_stage_name();
         if (!m_battle_task_ptr->set_stage_name(m_stage_name)) {
             Log.error("Not support stage");
+            json::value info = basic_info_with_what("CopilotStageNotSupported");
+            info["details"]["stage_name"] = m_stage_name;
+            callback(AsstMsg::SubTaskError, info);
             return false;
         }
     }
@@ -96,18 +131,45 @@ bool asst::CopilotTask::set_params(const json::value& params)
         m_battle_task_ptr->set_wait_until_end(true);
         auto configs = static_cast<std::vector<MultiCopilotConfig>>(*multi_tasks_opt);
         std::vector<MultiCopilotTaskPlugin::MultiCopilotConfig> configs_cvt;
-        for (const auto& [id, filename, stage_name, is_raid] : configs) {
+        std::unordered_map<std::string, std::shared_ptr<OperUsageGroups>> operbox_assignments;
+        for (const auto& [id, filename, nav_name, is_raid] : configs) {
             MultiCopilotTaskPlugin::MultiCopilotConfig config_cvt;
             auto copilot_opt = parse_copilot_filename(filename);
             if (!copilot_opt) {
                 return false;
             }
-            m_stage_name = Copilot.get_stage_name();
-            if (auto result = Tile.find(m_stage_name); !result || !json::open(result->second)) {
+            const auto& stage_name = Copilot.get_stage_name();
+            const auto& map_data = Tile.find(stage_name);
+            if (!map_data || !json::open(map_data->second)) {
                 return false;
             }
+            if (!nav_name) {
+                config_cvt.nav_name = map_data->first.code;
+            }
+            else {
+                LogInfo << __FUNCTION__ << " | navigation name override: " << *nav_name;
+                config_cvt.nav_name = *nav_name;
+            }
+            config_cvt.assigned_groups = nullptr;
+            if (use_operbox) {
+                if (operbox_assignments.find(filename) != operbox_assignments.end()) {
+                    config_cvt.assigned_groups = operbox_assignments[filename];
+                }
+                else {
+                    json::value info = basic_info_with_what("CopilotPrecheckFile");
+                    info["details"]["nav_name"] = config_cvt.nav_name;
+                    info["details"]["filename"] = filename;
+                    callback(AsstMsg::SubTaskExtraInfo, info);
+                    auto assignment_opt =
+                        OperBoxData.precheck(Copilot.get_data().groups, support_unit_usage != SupportUnitUsage::None);
+                    if (!assignment_opt) {
+                        return false;
+                    }
+                    config_cvt.assigned_groups = std::make_shared<OperUsageGroups>(std::move(*assignment_opt));
+                    operbox_assignments[filename] = config_cvt.assigned_groups;
+                }
+            }
             config_cvt.copilot_file = *copilot_opt;
-            config_cvt.nav_name = stage_name;
             config_cvt.is_raid = is_raid;
             config_cvt.id = id; // ID 从0开始
             configs_cvt.emplace_back(std::move(config_cvt));
@@ -151,8 +213,8 @@ bool asst::CopilotTask::set_params(const json::value& params)
             if (name.empty()) {
                 continue;
             }
-            if (BattleData.is_name_invalid(name)) {
-                Log.error(__FUNCTION__, "| User additional oper", name, "is invalid");
+            if (BattleData.is_name_invalid(battle::Role::Unknown, name)) {
+                LogError << __FUNCTION__ << "| User additional oper" << name << "is invalid";
                 json::value info = basic_info_with_what("UserAdditionalOperInvalid");
                 info["details"]["name"] = name;
                 callback(AsstMsg::SubTaskError, info);
@@ -199,6 +261,9 @@ std::optional<std::filesystem::path> asst::CopilotTask::parse_copilot_filename(c
     auto path = utils::path(name);
     if (!Copilot.load(path)) {
         Log.error("CopilotConfig parse failed");
+        // 发结构化错误让 GUI 报准确原因，避免落到通用启动失败兜底
+        json::value info = basic_info_with_what("CopilotFileReadError");
+        callback(AsstMsg::SubTaskError, info);
         return std::nullopt;
     }
     return path;
