@@ -1310,6 +1310,7 @@ DEBUG 目錄下儲存的圖片有數量限制，超出後會自動清理舊圖�
     <system:String x:Key="Infrast.Custom.Plan.Tip">
         若 ｢{key=Infrast.Custom.Plan}｣ 存在執行時間，則在 ｢{key=TaskQueue.Task.Base}｣ 任務開始前或任務執行時不會自動切換，將保持 {key=TaskQueue.LinkStart} 狀態，僅於空閒或任務完成後才會切換。
     </system:String>
+<<<<<<< HEAD
     <system:String x:Key="Infrast.Custom.PlanIndexAutoSwitch">自動儲存為下個計劃</system:String>
     <system:String x:Key="Infrast.Custom.PlanSelectOutOfIndex">自訂基建排班選擇超出索引範圍</system:String>
     <system:String x:Key="Infrast.Custom.TimeSchedule">時間輪換 ({0})</system:String>
@@ -1897,6 +1898,218 @@ DEBUG 目錄下儲存的圖片有數量限制，超出後會自動清理舊圖�
     <system:String x:Key="Settings.Update.AutoCheck.Tip">遊戲內 00:00 / 18:00（對應伺服器當地時間 04:00 / 22:00）</system:String>
     <system:String x:Key="Settings.Update.AutoDownload">自動下載更新檔案</system:String>
     <system:String x:Key="Settings.Update.AutoDownload.Tip" xml:space="preserve">取消勾選後，偵測到新版本時（包含手動觸發 ｢{key=Settings.Update.CheckNow}｣）將不再自動下載，僅透過系統通知提示並附上下載連結，可自行下載更新檔案後拖入 MAA 完成更新。
+=======
+    <system:String x:Key="CustomInfrastPlanIndexAutoSwitch">自動儲存為下個計劃</system:String>
+    <system:String x:Key="CustomizeInfrastSelectionEmpty">自訂設施選擇為空，請檢查設定或關閉自訂功能。</system:String>
+    <system:String x:Key="General">通用模式</system:String>
+    <system:String x:Key="BlueStacks">藍疊模擬器</system:String>
+    <system:String x:Key="MuMuEmulator12">MuMu 模擬器</system:String>
+    <system:String x:Key="LDPlayer">雷電模擬器</system:String>
+    <system:String x:Key="AVD">Android 虛擬裝置（AVD）</system:String>
+    <system:String x:Key="Androws">應用寶模擬器</system:String>
+    <system:String x:Key="Nox">夜神模擬器</system:String>
+    <system:String x:Key="XYAZ">逍遙模擬器</system:String>
+    <system:String x:Key="WSA">WSA 舊版本</system:String>
+    <system:String x:Key="PC">明日方舟 PC 端（社群維護）</system:String>
+    <system:String x:Key="MaaTouch">MaaTouch</system:String>
+    <system:String x:Key="Compatible">相容模式</system:String>
+    <system:String x:Key="SecondResolution">第二解析度</system:String>
+    <system:String x:Key="GeneralWithoutScreencapErr">通用模式（阻擋異常輸出）</system:String>
+    <system:String x:Key="ARPS">ARPS（實驗性）</system:String>
+    <system:String x:Key="ArpsCompression">ARPS 壓縮</system:String>
+    <system:String x:Key="ArpsMaxFps">最大 FPS</system:String>
+    <system:String x:Key="ArpsCaptureMode">擷取模式</system:String>
+    <system:String x:Key="ArpsExitPowerMode">退出電源策略</system:String>
+    <system:String x:Key="ArpsPowerOnIfScreenOff">熄屏時點亮螢幕</system:String>
+    <system:String x:Key="ArpsTurnScreenOff">推流後關閉實體螢幕</system:String>
+    <system:String x:Key="ArpsKeepScreenOn">保持螢幕常亮</system:String>
+    <system:String x:Key="ArpsNotEnabledMessage">ARPS 截圖後端未生效，請檢查相關設定</system:String>
+    <system:String x:Key="DormThreshold">基建工作心情閾值</system:String>
+    <system:String x:Key="InfrastThresholdTip">若啟用自訂換班，該欄位僅針對自動填充 (autofill) 和{key=Operator}編組的房間有效</system:String>
+    <system:String x:Key="RoguelikeStrategyExp">刷等級，盡可能穩定地打更多層數</system:String>
+    <system:String x:Key="RoguelikeStrategyGold">刷源石錠，投資完成後自動退出</system:String>
+    <system:String x:Key="RoguelikeStrategyBlackFlowExp">刷等級，快速前往第三層</system:String>
+    <system:String x:Key="RoguelikeStrategyBlackFlowInvestment">刷源石錠，投資完成後自動退出</system:String>
+    <system:String x:Key="RoguelikeStrategyBlackFlowBabyAnimal">刷襁褓動物</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTarget">目標襁褓動物</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTargetCat">襁褓中的貓</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTargetFeatheredSerpent">襁褓羽蛇</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTargetDog">襁褓中的狗</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTargetCerberus">襁褓三頭犬</system:String>
+    <system:String x:Key="RoguelikeStrategyLastReward">刷開局，刷取熱水壺或精二{key=Operator}開局</system:String>
+    <system:String x:Key="RoguelikeStrategyCollapse">刷坍縮範式，遇到非稀有坍縮範式後直接重開</system:String>
+    <system:String x:Key="RoguelikeCollectibleModeSquad">刷開局使用分隊</system:String>
+    <system:String x:Key="RoguelikeStrategyMonthlySquad">刷月度小隊，盡可能穩定地打更多層數</system:String>
+    <system:String x:Key="RoguelikeStrategyDeepExploration">刷深入調查，盡可能穩定地打更多層數</system:String>
+    <system:String x:Key="RoguelikeStrategyFindPlaytime">刷常樂節點，第一層進洞，找不到需要的節點就重開</system:String>
+    <system:String x:Key="RoguelikeFindPlaytimeTarget">目標常樂節點</system:String>
+    <system:String x:Key="RoguelikePlaytimeLing">令 - 擲地有聲</system:String>
+    <system:String x:Key="RoguelikePlaytimeShu">黍 - 種因得果</system:String>
+    <system:String x:Key="RoguelikePlaytimeNian">年 - 三缺一</system:String>
+    <system:String x:Key="RoguelikeJieGardenTargetFound">發現目標常樂節點 {0}</system:String>
+    <system:String x:Key="StartingSquad">開局分隊</system:String>
+    <system:String x:Key="StartingRoles">開局職業組</system:String>
+    <system:String x:Key="StartingCoreChar">開局{key=Operator}</system:String>
+    <system:String x:Key="StartingCoreCharTip">不填寫則使用預設策略。三個位置的職業不能相同。</system:String>
+    <system:String x:Key="EnableAdditionalStartingCoreChar">啟用第 2、3 位{key=StartingCoreChar}</system:String>
+    <system:String x:Key="EnableAdditionalStartingCoreCharTip" xml:space="preserve">開啟後可在一般設定中填寫第 2、3 位開局幹員，招募按位置順序進行。&#10;招募只在前幾頁內翻找指定幹員，希望消耗低的幹員可能找不到，屆時該位置會回退預設策略。&#10;建議將希望消耗高的幹員排在前面。</system:String>
+    <system:String x:Key="StartingCoreChar2">第 2 位{key=StartingCoreChar}</system:String>
+    <system:String x:Key="StartingCoreChar3">第 3 位{key=StartingCoreChar}</system:String>
+    <system:String x:Key="RoguelikeThemeTipRecommended">←強烈推薦看</system:String>
+    <system:String x:Key="RoguelikeStartingCoreCharNotFound">輸入的{key=Operator}未在戰鬥數據 (battle_data) 中。</system:String>
+    <system:String x:Key="RoguelikeCoreCharSet">已設定{key=StartingCoreChar}: {0}</system:String>
+    <system:String x:Key="RoguelikeCoreCharCleared">已清空{key=StartingCoreChar}</system:String>
+    <system:String x:Key="RoguelikeStartWithEliteTwo">凹 ｢{key=StartingCoreChar}｣ 直升精二</system:String>
+    <system:String x:Key="RoguelikeOnlyStartWithEliteTwo">只凹 ｢{key=StartingCoreChar}｣ 直升精二，不進行作戰</system:String>
+    <system:String x:Key="Roguelike3FirstFloorFoldartal">凹第一層遠見密文板，不進行作戰</system:String>
+    <system:String x:Key="Roguelike3NewSquad2StartingFoldartal">生活隊凹開局密文板</system:String>
+    <system:String x:Key="Roguelike3NewSquad2StartingFoldartalTip">最多填寫三個，並用英文分號 ｢;｣ 隔開</system:String>
+    <system:String x:Key="Roguelike3FirstFloorFoldartalTip">填寫遠見密文板名稱，多個用英文分號 ｢;｣ 隔開</system:String>
+    <system:String x:Key="RoguelikeCollapseList">坍縮範式列表</system:String>
+    <system:String x:Key="RoguelikeCollapseListTip">用英文分號 ｢;｣ 隔開，留白將使用預設列表。</system:String>
+    <system:String x:Key="RoguelikeUseSupportUnitFormat">{0} 使用助戰</system:String>
+    <system:String x:Key="StartingCoreCharPosition1">第 1 位{key=Operator}</system:String>
+    <system:String x:Key="StartingCoreCharPosition2">第 2 位{key=Operator}</system:String>
+    <system:String x:Key="StartingCoreCharPosition3">第 3 位{key=Operator}</system:String>
+    <system:String x:Key="RoguelikeRequireStartingCoreChar">需先填寫 ｢{key=StartingCoreChar}｣</system:String>
+    <system:String x:Key="RoguelikeUseNonFriendSupport">可以使用非好友助戰</system:String>
+    <system:String x:Key="RoguelikeDelayAbortUntilCombatComplete">肉鴿在戰鬥結束前延遲 ｢{key=Stop}｣ 動作</system:String>
+    <system:String x:Key="RoguelikeStopAtFinalBoss">在第五層 BOSS 前暫停</system:String>
+    <system:String x:Key="RoguelikeStopAtMaxLevel">滿級後自動停止</system:String>
+    <system:String x:Key="RoguelikeStartWithSeed">使用指定種子開局</system:String>
+    <!--<system:String x:Key="RoguelikeStartWithSeed">啟用刷錢種子</system:String>-->
+    <system:String x:Key="RoguelikeSeedFormatError">格式不正確</system:String>
+    <system:String x:Key="RoguelikeStartWithSeedTip">示例：2b3c4d,rogue_1,120</system:String>
+    <system:String x:Key="RoguelikeMonthlySquadAutoIterate">月度小隊自動切換</system:String>
+    <system:String x:Key="RoguelikeMonthlySquadCheckComms">月度小隊通訊</system:String>
+    <system:String x:Key="RoguelikeMonthlySquadCheckCommsTip" xml:space="preserve">勾選後，MAA會檢查是否已解鎖目前小隊的全部通訊，全部解鎖後才會切換至下一個月度小隊&#10;若只需取得獎勵，可取消勾選以減少重複探索&#10;MAA不會因為取消勾選此選項而提前在局內結束探索</system:String>
+    <system:String x:Key="RoguelikeDeepExplorationAutoIterate">深入調查自動切換</system:String>
+    <system:String x:Key="DeploymentWithPause">暫停下{key=Operator}（自動戰鬥相關）（不穩定，暫不推薦開啟）</system:String>
+    <system:String x:Key="DeploymentWithPauseTip">自動戰鬥部署{key=Operator}時暫停遊戲，再下{key=Operator}</system:String>
+    <system:String x:Key="AdbLiteEnabled">使用 ADB Lite（實驗性功能）</system:String>
+    <system:String x:Key="AdbLiteEnabledTip">MAA 自行實作的 ADB 功能，避免每次執行 adb 指令都啟動一個 adb.exe 程式</system:String>
+    <system:String x:Key="KillAdbOnExit">關閉時結束 ADB 程式</system:String>
+    <system:String x:Key="DefaultSquad">預設分隊</system:String>
+    <system:String x:Key="IS2NewSquad1">心勝於物分隊</system:String>
+    <system:String x:Key="IS2NewSquad2">物盡其用分隊</system:String>
+    <system:String x:Key="IS2NewSquad3">以人為本分隊</system:String>
+    <system:String x:Key="IS3NewSquad1">永恆狩獵分隊</system:String>
+    <system:String x:Key="IS3NewSquad2">生活至上分隊</system:String>
+    <system:String x:Key="IS3NewSquad3">科學主義分隊</system:String>
+    <system:String x:Key="IS3NewSquad4">特訓分隊</system:String>
+    <system:String x:Key="IS4NewSquad1">魂靈護送分隊</system:String>
+    <system:String x:Key="IS4NewSquad2">博聞廣記分隊</system:String>
+    <system:String x:Key="IS4NewSquad3">藍圖測繪分隊</system:String>
+    <system:String x:Key="IS4NewSquad4">因地制宜分隊</system:String>
+    <system:String x:Key="IS4NewSquad5">異想天開分隊</system:String>
+    <system:String x:Key="IS4NewSquad6">點刺成錠分隊</system:String>
+    <system:String x:Key="IS4NewSquad7">擬態學者分隊</system:String>
+    <system:String x:Key="IS4NewSquad8">專業人士分隊</system:String>
+    <system:String x:Key="IS5NewSquad1">高台突破分隊</system:String>
+    <system:String x:Key="IS5NewSquad2">地面突破分隊</system:String>
+    <system:String x:Key="IS5NewSquad3">遊客分隊</system:String>
+    <system:String x:Key="IS5NewSquad4">司歲台分隊</system:String>
+    <system:String x:Key="IS5NewSquad5">天師府分隊</system:String>
+    <system:String x:Key="IS5NewSquad6">花團錦簇分隊</system:String>
+    <system:String x:Key="IS5NewSquad7">棋行險著分隊</system:String>
+    <system:String x:Key="IS5NewSquad8">歲影回音分隊</system:String>
+    <system:String x:Key="IS5NewSquad9">代理人分隊（不支援）</system:String>
+    <system:String x:Key="IS5NewSquad10">知學分隊</system:String>
+    <system:String x:Key="IS5NewSquad11">商賈分隊</system:String>
+    <system:String x:Key="IS6NewSquad1">本源研修分隊</system:String>
+    <system:String x:Key="IS6NewSquad2">文明開化分隊</system:String>
+    <system:String x:Key="IS6NewSquad3">開拓者分隊</system:String>
+    <system:String x:Key="IS6NewSquad4">多邊貿易分隊</system:String>
+    <system:String x:Key="IS6NewSquad5">地質調查分隊</system:String>
+    <system:String x:Key="SpecialForceSquad">特勤分隊</system:String>
+    <system:String x:Key="LeaderSquad">指揮分隊</system:String>
+    <system:String x:Key="GatheringSquad">集群分隊</system:String>
+    <system:String x:Key="SupportSquad">後勤分隊</system:String>
+    <system:String x:Key="SpearheadSquad">矛頭分隊</system:String>
+    <system:String x:Key="TacticalAssaultOperative">突擊戰術分隊</system:String>
+    <system:String x:Key="TacticalFortificationOperative">堡壘戰術分隊</system:String>
+    <system:String x:Key="TacticalRangedOperative">遠程戰術分隊</system:String>
+    <system:String x:Key="TacticalDestructionOperative">破壞戰術分隊</system:String>
+    <system:String x:Key="ResearchSquad">研究分隊</system:String>
+    <system:String x:Key="First-ClassSquad">高規格分隊</system:String>
+    <system:String x:Key="DefaultRoles">預設職業組</system:String>
+    <system:String x:Key="FirstMoveAdvantage">先手必勝（先鋒、狙擊、特種）</system:String>
+    <system:String x:Key="SlowAndSteadyWinsTheRace">穩紮穩打（重裝、術師、狙擊）</system:String>
+    <system:String x:Key="OvercomingYourWeaknesses">取長補短（近衛、輔助、醫療）</system:String>
+    <system:String x:Key="AsYourHeartDesires">隨心所欲（三張隨機）</system:String>
+    <system:String x:Key="FlexibleDeployment">靈活部署（先鋒、輔助、特種）</system:String>
+    <system:String x:Key="Unbreakable">堅不可摧（重裝、術師、醫療）</system:String>
+    <system:String x:Key="AlgorithmFinish">演算結束</system:String>
+    <system:String x:Key="AlgorithmBadge">繁榮證章</system:String>
+    <system:String x:Key="AlgorithmConstructionPoint">建造點數</system:String>
+    <system:String x:Key="AlgorithmDoneSmeltGold">鍛造赤金</system:String>
+    <system:String x:Key="ReclamationPnsModeError">目前使用無存檔任務模式。請手動刪除現有存檔後再嘗試。若您希望保留存檔，請考慮切換模式。</system:String>
+    <system:String x:Key="ReclamationPisModeError">目前任務模式需要您擁有可合成道具的存檔。請考慮切換模式。</system:String>
+    <system:String x:Key="NotSwitch">不切換</system:String>
+    <system:String x:Key="NotSelected">不選擇</system:String>
+    <system:String x:Key="Official">官服</system:String>
+    <system:String x:Key="Bilibili">Bilibili 服</system:String>
+    <system:String x:Key="YoStarEN">國際服 (YostarEN)</system:String>
+    <system:String x:Key="YoStarJP">日服 (YostarJP)</system:String>
+    <system:String x:Key="YoStarKR">韓服 (YostarKR)</system:String>
+    <system:String x:Key="Txwy">繁中服 (txwy)</system:String>
+    <system:String x:Key="Switchable">可切換</system:String>
+    <system:String x:Key="Executable">可執行檔</system:String>
+    <system:String x:Key="AdbProgram">ADB 程式</system:String>
+    <system:String x:Key="EmulatorException">偵測模擬器出錯\n請使用系統管理員身分執行本軟體\n或手動設定連線</system:String>
+    <system:String x:Key="AdbException">偵測 ADB 出錯\n請使用系統管理員身分執行本軟體\n或手動設定連線</system:String>
+    <system:String x:Key="EmulatorNotFound">未偵測到任何模擬器\n請確認已啟動模擬器\n若模擬器以系統管理員身分執行，則本軟體也需以系統管理員身分執行\n如仍無法偵測，請手動設定連線</system:String>
+    <system:String x:Key="EmulatorTooMany">偵測到多個模擬器\n請關閉不需要的模擬器\n或手動設定連線</system:String>
+    <system:String x:Key="EmulatorStartFailed">無法成功啟動模擬器\n請使用系統管理員權限開啟本軟體\n或手動啟動模擬器。</system:String>
+    <system:String x:Key="SwitchLanguage">切換語言 🌐</system:String>
+    <system:String x:Key="Language">語言</system:String>
+    <system:String x:Key="LanguageChangedTip">語言設定已變更，部分內容可能需要重新啟動才能完全生效。</system:String>
+    <system:String x:Key="LanguageRestartNow">重新啟動</system:String>
+    <system:String x:Key="LanguageSwitchNow">切換</system:String>
+    <system:String x:Key="ManualRestart">稍後</system:String>
+    <system:String x:Key="Tip">提示</system:String>
+    <system:String x:Key="Warning">警告</system:String>
+    <system:String x:Key="Yes">是</system:String>
+    <system:String x:Key="No">否</system:String>
+    <system:String x:Key="Ok">好的</system:String>
+    <system:String x:Key="Cancel">取消</system:String>
+    <system:String x:Key="Confirm">確認</system:String>
+    <system:String x:Key="Rename">重新命名</system:String>
+    <system:String x:Key="Delete">刪除</system:String>
+    <system:String x:Key="RenameTask">重新命名任務</system:String>
+    <system:String x:Key="RenameTaskPrompt">請輸入新的任務名稱：</system:String>
+    <system:String x:Key="AddTaskQueueTask">新增任務</system:String>
+    <system:String x:Key="ConfirmDeleteConfigurationMessage">確定要刪除設定檔 &lt;{0}&gt; 嗎？此操作無法復原。</system:String>
+    <system:String x:Key="ConfirmDeleteTask">確認刪除</system:String>
+    <system:String x:Key="ConfirmDeleteTaskMessage">確定要刪除 {0} 任務 "{1}" 嗎？</system:String>
+    <system:String x:Key="TaskRenamed">任務已重新命名為：{0}</system:String>
+    <system:String x:Key="TaskRenameFailed">任務重新命名失敗</system:String>
+    <system:String x:Key="TaskDeleted">已刪除任務：{0}</system:String>
+    <system:String x:Key="TaskCopied">已複製任務：{0}</system:String>
+    <system:String x:Key="StartGuideDemo">示範中不會真的執行任務</system:String>
+    <system:String x:Key="GuideDemoTaskAddLimitTip">示範列表最多容納 5 個任務，可先刪除部分後再新增</system:String>
+    <system:String x:Key="TaskCopyFailed">任務複製失敗</system:String>
+    <system:String x:Key="HotKeyShowGui">[熱鍵] 顯示/收起 MAA</system:String>
+    <system:String x:Key="HotKeyLinkStart">[熱鍵] Link start/stop</system:String>
+    <system:String x:Key="HotKeyChangingTip">按 Backspace/Esc/Delete 可清除目前熱鍵</system:String>
+    <system:String x:Key="HotKeyRegistrationFailedOccupied">熱鍵註冊失敗：組合鍵可能已被其他程式佔用，請更換組合鍵</system:String>
+    <system:String x:Key="HotKeyRegistrationFailedDuplicate">熱鍵註冊失敗：與其他 MAA 熱鍵重複，請更換組合鍵</system:String>
+    <system:String x:Key="HotKeyNotSet">&lt; 未設定 &gt;</system:String>
+    <system:String x:Key="LabelSequenceTip">標籤順序可拖曳</system:String>
+    <system:String x:Key="CheckBoxesNotSaved">該選項僅生效一次</system:String>
+    <system:String x:Key="CheckBoxesNotSavedAsNull">該選項點擊右鍵選取時僅生效一次</system:String>
+    <system:String x:Key="CheckBoxesNotSavedAsNullInvert">該選項點擊右鍵選取時僅跳過一次</system:String>
+    <system:String x:Key="SpecifiedDropsTip" xml:space="preserve">實際進入的關卡仍由下方 ｢{key=StageSelect}｣ / ｢{key=StageSelect2}｣ 決定。
+• {key=Quantity}：以目前理智作戰任務中該材料的掉落數量為目標，達到設定數量後停止。
+• {key=TargetInventory}：會參考 ｢{key=Toolbox}-{key=DepotRecognition}｣ 中儲存的庫存數據，只補到設定庫存為止。
+  • 庫存數據是快取值，手動刷關、合成或消耗材料後可能與實際不一致；可透過 ｢{key=UserDataUpdate}｣ 或 ｢{key=Toolbox}-{key=DepotRecognition}｣ 同步。
+  • 執行時會根據掉落即時更新庫存，前序任務刷出的材料會影響後續任務的缺口計算。</system:String>
+    <system:String x:Key="StartupUpdateCheck">啟動時檢查更新</system:String>
+    <system:String x:Key="UpdateAutoCheck">定時檢查更新</system:String>
+    <system:String x:Key="UpdateAutoCheckTip">遊戲內 00:00 / 18:00（對應伺服器當地時間 04:00 / 22:00）</system:String>
+    <system:String x:Key="UpdateAutoDownload">自動下載更新檔案</system:String>
+    <system:String x:Key="UpdateAutoDownloadTip" xml:space="preserve">取消勾選後，偵測到新版本時（包含手動觸發 ｢{key=UpdateCheckNow}｣）將不再自動下載，僅透過系統通知提示並附上下載連結，可自行下載更新檔案後拖入 MAA 完成更新。
+>>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
 若系統通知已關閉，則改為軟體內通知，但軟體內通知不提供可互動的下載按鈕。</system:String>
     <system:String x:Key="Settings.Update.AutoInstall">自動安裝更新檔案</system:String>
     <system:String x:Key="Settings.Update.AutoInstall.Tip">偵測到新版本後不再彈出視窗詢問，將在任務空閒時自動更新並重新啟動 MAA</system:String>

@@ -1,0 +1,65 @@
+name: Fork ARPS Stable Tag Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要同步的官方稳定标签；留空则使用最新稳定标签。"
+        required: false
+        type: string
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: fork-arps-stable-tag-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Reapply ARPS overlay to upstream tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ARPS branch
+        uses: actions/checkout@v6
+        with:
+          ref: arps/master-v2
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Sync stable upstream tag
+        id: sync
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+          OPEN_PR: "true"
+        run: |
+          set -euo pipefail
+          set +e
+          bash tools/fork/sync-arps-release-tag.sh
+          sync_status=$?
+          set -e
+
+          if [[ "$sync_status" -eq 2 ]]; then
+            echo "冲突已交接到草稿 PR，等待 Codex 或人工解决。"
+            exit 0
+          fi
+
+          exit "$sync_status"
+
+      - name: Trigger tag build
+        if: steps.sync.outputs.pushed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.sync.outputs.tag }}
+        run: |
+          gh workflow run fork-release-win-x64.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref arps/master-v2 \
+            -f tag="$RELEASE_TAG"

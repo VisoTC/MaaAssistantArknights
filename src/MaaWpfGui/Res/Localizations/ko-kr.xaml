@@ -1310,6 +1310,7 @@ DEBUG 디렉토리에 저장된 이미지는 수량 제한이 있으며 초과 �
     <system:String x:Key="Infrast.Custom.Plan.Tip">
         ｢{key=Infrast.Custom.Plan}｣에 실행 시간이 존재할 경우, ｢{key=TaskQueue.Task.Base}｣ 작업 시작 전이나 작업 중에는 자동으로 전환되지 않으며, {key=TaskQueue.LinkStart} 상태를 유지합니다. 전환은 오직 대기 중이거나 작업이 완료된 후에만 이루어집니다.
     </system:String>
+<<<<<<< HEAD
     <system:String x:Key="Infrast.Custom.PlanIndexAutoSwitch">다음 계획용으로 자동 저장</system:String>
     <system:String x:Key="Infrast.Custom.PlanSelectOutOfIndex">사용자 지정 기반시설 구성 선택 항목이 인덱스를 초과했습니다.</system:String>
     <system:String x:Key="Infrast.Custom.TimeSchedule">로테이션 시간 ({0})</system:String>
@@ -1897,6 +1898,218 @@ MAA는 비설치형 응용 프로그램으로, 삭제 시 레지스트리 항목
     <system:String x:Key="Settings.Update.AutoCheck.Tip">게임 내 00:00 / 18:00 (서버 현지 시간 04:00 / 22:00)</system:String>
     <system:String x:Key="Settings.Update.AutoDownload">업데이트 자동 다운로드</system:String>
     <system:String x:Key="Settings.Update.AutoDownload.Tip" xml:space="preserve">체크 해제 시, 업데이트 감지 시 (수동으로 ｢{key=Settings.Update.CheckNow}｣ 실행 포함) 자동 다운로드가 중지되고 다운로드 링크가 포함된 시스템 알림만 표시됩니다. 링크에서 업데이트 패키지를 직접 다운로드한 후 MAA에 끌어다 놓아 수동으로 업데이트할 수 있습니다.
+=======
+    <system:String x:Key="CustomInfrastPlanIndexAutoSwitch">다음 계획용으로 자동 저장</system:String>
+    <system:String x:Key="CustomizeInfrastSelectionEmpty">{Key=InfrastModeCustom} 설정 선택이 비어 있습니다. 구성을 확인하거나 커스텀 기능을 끄세요.</system:String>
+    <system:String x:Key="General">일반 모드</system:String>
+    <system:String x:Key="BlueStacks">BlueStacks</system:String>
+    <system:String x:Key="MuMuEmulator12">MuMu Player</system:String>
+    <system:String x:Key="LDPlayer">LD Player</system:String>
+    <system:String x:Key="AVD">Android Virtual Device (AVD)</system:String>
+    <system:String x:Key="Androws">Androws</system:String>
+    <system:String x:Key="Nox">Nox</system:String>
+    <system:String x:Key="XYAZ">MEmu</system:String>
+    <system:String x:Key="WSA">WSA 레거시 버전</system:String>
+    <system:String x:Key="PC">명일방주 PC 클라이언트 (커뮤니티 유지보수)</system:String>
+    <system:String x:Key="MaaTouch">MaaTouch</system:String>
+    <system:String x:Key="Compatible">호환 모드</system:String>
+    <system:String x:Key="SecondResolution">분할 화면</system:String>
+    <system:String x:Key="GeneralWithoutScreencapErr">일반 모드 (예외 출력 차단)</system:String>
+    <system:String x:Key="ARPS">ARPS (실험적)</system:String>
+    <system:String x:Key="ArpsCompression">ARPS 압축</system:String>
+    <system:String x:Key="ArpsMaxFps">최대 FPS</system:String>
+    <system:String x:Key="ArpsCaptureMode">캡처 모드</system:String>
+    <system:String x:Key="ArpsExitPowerMode">종료 시 전원 모드</system:String>
+    <system:String x:Key="ArpsPowerOnIfScreenOff">화면이 꺼져 있으면 켜기</system:String>
+    <system:String x:Key="ArpsTurnScreenOff">스트림 시작 후 물리 화면 끄기</system:String>
+    <system:String x:Key="ArpsKeepScreenOn">화면 항상 켜기</system:String>
+    <system:String x:Key="ArpsNotEnabledMessage">ARPS 스크린샷 백엔드가 활성화되지 않았습니다. 관련 설정을 확인하세요</system:String>
+    <system:String x:Key="DormThreshold">{key=Operator} 컨디션 한계점</system:String>
+    <system:String x:Key="InfrastThresholdTip">커스텀 교대 근무 변경이 활성화된 경우 이 필드는 자동 채우기 및 {key=Operator} 교체를 사용하는 회의실에만 유효합니다</system:String>
+    <system:String x:Key="RoguelikeStrategyExp">레벨 우선, 최대한 많은 구역 클리어</system:String>
+    <system:String x:Key="RoguelikeStrategyGold">오리지늄각뿔 투자, 투자 완료 시 자동 종료</system:String>
+    <system:String x:Key="RoguelikeStrategyBlackFlowExp">레벨 우선, 빠르게 3구역으로 이동</system:String>
+    <system:String x:Key="RoguelikeStrategyBlackFlowInvestment">오리지늄각뿔 투자, 투자 완료 후 자동 종료</system:String>
+    <system:String x:Key="RoguelikeStrategyBlackFlowBabyAnimal">포대기 동물 육성</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTarget">목표 포대기 동물</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTargetCat">포대기의 고양이</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTargetFeatheredSerpent">포대기의 깃털 뱀</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTargetDog">포대기의 개</system:String>
+    <system:String x:Key="RoguelikeBlackFlowCultivationTargetCerberus">포대기의 케르베로스</system:String>
+    <system:String x:Key="RoguelikeStrategyLastReward">{key=Operator} 2차 정예화 또는 전기주전자 획득까지 반복</system:String>
+    <system:String x:Key="RoguelikeStrategyCollapse">희귀 붕괴 패러다임 파밍, 일반 붕괴 패러다임 획득 시 재시작</system:String>
+    <system:String x:Key="RoguelikeCollectibleModeSquad">작전 지원 선택 획득용 분대</system:String>
+    <system:String x:Key="RoguelikeStrategyMonthlySquad">월간 스쿼드 파밍, 최대한 많은 구역 클리어</system:String>
+    <system:String x:Key="RoguelikeStrategyDeepExploration">심층 조사 파밍, 최대한 많은 구역 클리어</system:String>
+    <system:String x:Key="RoguelikeStrategyFindPlaytime">여흥 노드 파밍, 1구역 쉐이의 잔식에 진입, 필요한 노드를 찾지 못하면 재시작</system:String>
+    <system:String x:Key="RoguelikeFindPlaytimeTarget">목표 여흥 노드</system:String>
+    <system:String x:Key="RoguelikePlaytimeLing">링 - 주화 놀이</system:String>
+    <system:String x:Key="RoguelikePlaytimeShu">슈 - 인과</system:String>
+    <system:String x:Key="RoguelikePlaytimeNian">니엔 - 한 명 부족</system:String>
+    <system:String x:Key="RoguelikeJieGardenTargetFound">목표 여흥 노드 발견 {0}</system:String>
+    <system:String x:Key="StartingSquad">시작 분대</system:String>
+    <system:String x:Key="StartingRoles">모집 조합</system:String>
+    <system:String x:Key="StartingCoreChar">시작 {key=Operator}</system:String>
+    <system:String x:Key="StartingCoreCharTip">작성하지 않으면 기본 설정이 사용됩니다. 세 위치의 직업은 서로 달라야 합니다.</system:String>
+    <system:String x:Key="EnableAdditionalStartingCoreChar">2·3번째 {key=StartingCoreChar} 활성화</system:String>
+    <system:String x:Key="EnableAdditionalStartingCoreCharTip" xml:space="preserve">활성화하면 일반 설정에서 2·3번째 시작 오퍼레이터를 입력할 수 있으며, 모집은 위치 순서대로 진행됩니다.&#10;모집은 목록 앞쪽의 몇 페이지만 탐색하므로 희망 소모가 낮은 오퍼레이터는 찾지 못할 수 있으며, 해당 위치는 기본 설정으로 대체됩니다.&#10;희망 소모가 높은 오퍼레이터를 앞쪽에 배치하는 것이 좋습니다.</system:String>
+    <system:String x:Key="StartingCoreChar2">2번째 {key=StartingCoreChar}</system:String>
+    <system:String x:Key="StartingCoreChar3">3번째 {key=StartingCoreChar}</system:String>
+    <system:String x:Key="RoguelikeThemeTipRecommended">←필독 추천</system:String>
+    <system:String x:Key="RoguelikeStartingCoreCharNotFound">해당 {key=Operator}는 battle_data에 없습니다</system:String>
+    <system:String x:Key="RoguelikeCoreCharSet">{key=StartingCoreChar} 설정: {0}</system:String>
+    <system:String x:Key="RoguelikeCoreCharCleared">{key=StartingCoreChar} 초기화됨</system:String>
+    <system:String x:Key="RoguelikeStartWithEliteTwo">｢{key=StartingCoreChar}｣ 2차 정예화까지 반복</system:String>
+    <system:String x:Key="RoguelikeOnlyStartWithEliteTwo">｢{key=StartingCoreChar}｣ 2차 정예화까지 반복, 전투 X</system:String>
+    <system:String x:Key="Roguelike3FirstFloorFoldartal">1구역 암호판 획득 반복, 전투 X</system:String>
+    <system:String x:Key="Roguelike3NewSquad2StartingFoldartal">생존지상 분대 목표 암호판 설정</system:String>
+    <system:String x:Key="Roguelike3NewSquad2StartingFoldartalTip">최대 3개까지 지원하며 ｢;｣ 로 구분합니다</system:String>
+    <system:String x:Key="Roguelike3FirstFloorFoldartalTip">암호판 이름을 입력하고, 여러 개는 ｢;｣ 로 구분합니다</system:String>
+    <system:String x:Key="RoguelikeCollapseList">붕괴 패러다임 목록</system:String>
+    <system:String x:Key="RoguelikeCollapseListTip">세미콜론 ｢;｣ 으로 구분, 비워 두면 기본 목록이 사용됩니다.</system:String>
+    <system:String x:Key="RoguelikeUseSupportUnitFormat">{0} 지원 유닛 사용</system:String>
+    <system:String x:Key="StartingCoreCharPosition1">1번째 {key=Operator}</system:String>
+    <system:String x:Key="StartingCoreCharPosition2">2번째 {key=Operator}</system:String>
+    <system:String x:Key="StartingCoreCharPosition3">3번째 {key=Operator}</system:String>
+    <system:String x:Key="RoguelikeRequireStartingCoreChar">먼저 ｢{key=StartingCoreChar}｣를 입력하세요</system:String>
+    <system:String x:Key="RoguelikeUseNonFriendSupport">친구가 아니어도 지원 유닛 사용</system:String>
+    <system:String x:Key="RoguelikeDelayAbortUntilCombatComplete">{key=AutoRoguelike} 중지 시 전투 종료 대기</system:String>
+    <system:String x:Key="RoguelikeStopAtFinalBoss">5스테이지 보스 앞에서 일시정지</system:String>
+    <system:String x:Key="RoguelikeStopAtMaxLevel">최대 레벨 달성 시 중지</system:String>
+    <system:String x:Key="RoguelikeStartWithSeed">지정 시드로 시작</system:String>
+    <!--<system:String x:Key="RoguelikeStartWithSeed">투자 시드 활성화</system:String>-->
+    <system:String x:Key="RoguelikeSeedFormatError">형식이 올바르지 않습니다</system:String>
+    <system:String x:Key="RoguelikeStartWithSeedTip">예: 2b3c4d,rogue_1,120</system:String>
+    <system:String x:Key="RoguelikeMonthlySquadAutoIterate">월간 스쿼드 자동 전환</system:String>
+    <system:String x:Key="RoguelikeMonthlySquadCheckComms">월간 스쿼드 통신</system:String>
+    <system:String x:Key="RoguelikeMonthlySquadCheckCommsTip" xml:space="preserve">활성화하면 MAA가 현재 스쿼드의 통신이 모두 해금되었는지 확인하고, 모두 해금된 후에 다음 월간 스쿼드로 전환합니다.&#10;보상만 획득하려면 이 옵션을 비활성화하여 반복 탐색을 줄일 수 있습니다.&#10;이 옵션을 비활성화한다고 해서 MAA가 진행 중인 탐색을 조기에 종료하지는 않습니다.</system:String>
+    <system:String x:Key="RoguelikeDeepExplorationAutoIterate">심층 조사 자동 전환</system:String>
+    <system:String x:Key="DeploymentWithPause" xml:space="preserve">일시정지 후 배치 (실험적)</system:String>
+    <system:String x:Key="DeploymentWithPauseTip">자동 전투에서 {key=Operator} 배치 시 게임을 일시정지한 후 다음 {key=Operator}를 배치합니다</system:String>
+    <system:String x:Key="AdbLiteEnabled">ADB Lite 사용 (실험적)</system:String>
+    <system:String x:Key="AdbLiteEnabledTip">MAA가 자체 구현한 ADB 기능으로, adb 명령을 실행할 때마다 adb.exe 프로세스가 실행되는 것을 방지합니다</system:String>
+    <system:String x:Key="KillAdbOnExit">종료 시 ADB 종료</system:String>
+    <system:String x:Key="DefaultSquad">기본값</system:String>
+    <system:String x:Key="IS2NewSquad1">마음가짐 분대</system:String>
+    <system:String x:Key="IS2NewSquad2">적재적소 분대</system:String>
+    <system:String x:Key="IS2NewSquad3">인적자원 분대</system:String>
+    <system:String x:Key="IS3NewSquad1">영원한 사냥 분대</system:String>
+    <system:String x:Key="IS3NewSquad2">생존지상 분대</system:String>
+    <system:String x:Key="IS3NewSquad3">과학주의 분대</system:String>
+    <system:String x:Key="IS3NewSquad4">특훈 분대</system:String>
+    <system:String x:Key="IS4NewSquad1">영혼호송 분대</system:String>
+    <system:String x:Key="IS4NewSquad2">박학다식 분대</system:String>
+    <system:String x:Key="IS4NewSquad3">도면 제작 분대</system:String>
+    <system:String x:Key="IS4NewSquad4">임기응변 분대</system:String>
+    <system:String x:Key="IS4NewSquad5">기상천외 분대</system:String>
+    <system:String x:Key="IS4NewSquad6">연금술 분대</system:String>
+    <system:String x:Key="IS4NewSquad7">의태학자 분대</system:String>
+    <system:String x:Key="IS4NewSquad8">전문가 분대</system:String>
+    <system:String x:Key="IS5NewSquad1">고지대 돌파 분대</system:String>
+    <system:String x:Key="IS5NewSquad2">지상 돌파 분대</system:String>
+    <system:String x:Key="IS5NewSquad3">방문객 분대</system:String>
+    <system:String x:Key="IS5NewSquad4">사세대 분대</system:String>
+    <system:String x:Key="IS5NewSquad5">천사부 분대</system:String>
+    <system:String x:Key="IS5NewSquad6">꽃다발 분대</system:String>
+    <system:String x:Key="IS5NewSquad7">초강수 분대</system:String>
+    <system:String x:Key="IS5NewSquad8">쉐이 울림 분대</system:String>
+    <system:String x:Key="IS5NewSquad9">대리인 분대 (미지원)</system:String>
+    <system:String x:Key="IS5NewSquad10">학자 분대</system:String>
+    <system:String x:Key="IS5NewSquad11">상인 분대</system:String>
+    <system:String x:Key="IS6NewSquad1">프라이멀 연구 분대 (本源研修分队)</system:String>
+    <system:String x:Key="IS6NewSquad2">문명 개화 분대 (文明开化分队)</system:String>
+    <system:String x:Key="IS6NewSquad3">개척자 분대 (开拓者分队)</system:String>
+    <system:String x:Key="IS6NewSquad4">다자 무역 분대 (多边贸易分队)</system:String>
+    <system:String x:Key="IS6NewSquad5">지질 조사 분대 (地质调查分队)</system:String>
+    <system:String x:Key="SpecialForceSquad">특근 분대</system:String>
+    <system:String x:Key="LeaderSquad">지휘 분대</system:String>
+    <system:String x:Key="GatheringSquad">집합 분대</system:String>
+    <system:String x:Key="SupportSquad">지원 분대</system:String>
+    <system:String x:Key="SpearheadSquad">예봉 분대</system:String>
+    <system:String x:Key="TacticalAssaultOperative">강습 전술 분대</system:String>
+    <system:String x:Key="TacticalFortificationOperative">방어 전술 분대</system:String>
+    <system:String x:Key="TacticalRangedOperative">원거리 전술 분대</system:String>
+    <system:String x:Key="TacticalDestructionOperative">파괴 전술 분대</system:String>
+    <system:String x:Key="ResearchSquad">연구 분대</system:String>
+    <system:String x:Key="First-ClassSquad">고급화 분대</system:String>
+    <system:String x:Key="DefaultRoles">기본값</system:String>
+    <system:String x:Key="FirstMoveAdvantage">선수필승 (뱅가드, 스나이퍼, 스페셜리스트)</system:String>
+    <system:String x:Key="SlowAndSteadyWinsTheRace">차근차근 (디펜더, 캐스터, 스나이퍼)</system:String>
+    <system:String x:Key="OvercomingYourWeaknesses">상호보완 (가드, 서포터, 메딕)</system:String>
+    <system:String x:Key="AsYourHeartDesires">원하는 대로 (랜덤)</system:String>
+    <system:String x:Key="FlexibleDeployment">유연한 배치 (뱅가드, 서포터, 스페셜리스트)</system:String>
+    <system:String x:Key="Unbreakable">파괴 불가 (디펜더, 캐스터, 메딕)</system:String>
+    <system:String x:Key="AlgorithmFinish">연산 종료</system:String>
+    <system:String x:Key="AlgorithmBadge">번영의 배지</system:String>
+    <system:String x:Key="AlgorithmConstructionPoint">빌드 포인트</system:String>
+    <system:String x:Key="AlgorithmDoneSmeltGold">순금 단조</system:String>
+    <system:String x:Key="ReclamationPnsModeError">현재 세이브 X 모드를 사용 중입니다. 기존 세이브를 수동으로 삭제한 후 다시 시도해 주세요. 세이브를 유지하려면 모드 전환을 고려하세요.</system:String>
+    <system:String x:Key="ReclamationPisModeError">현재 세이브 O 모드는 합성 가능한 도구가 있는 세이브가 필요합니다. 모드 전환을 고려하세요.</system:String>
+    <system:String x:Key="NotSwitch">미변경</system:String>
+    <system:String x:Key="NotSelected">미선택</system:String>
+    <system:String x:Key="Official">중국 (Official)</system:String>
+    <system:String x:Key="Bilibili">중국 (Bilibili)</system:String>
+    <system:String x:Key="YoStarEN">글로벌 (Yostar)</system:String>
+    <system:String x:Key="YoStarJP">일본 (Yostar)</system:String>
+    <system:String x:Key="YoStarKR">한국 (Yostar)</system:String>
+    <system:String x:Key="Txwy">TXWY (TW)</system:String>
+    <system:String x:Key="Switchable">전환 가능</system:String>
+    <system:String x:Key="Executable">실행 파일</system:String>
+    <system:String x:Key="AdbProgram">ADB 프로그램</system:String>
+    <system:String x:Key="EmulatorException">에뮬레이터를 검색하는 중에 오류가 발생했습니다.\n관리자 권한으로 실행하거나\n수동으로 연결을 설정해 주세요.</system:String>
+    <system:String x:Key="AdbException">ADB를 찾을 수 없었습니다.\n관리자 권한으로 실행하거나\n수동으로 연결을 설정해 주세요.</system:String>
+    <system:String x:Key="EmulatorNotFound">에뮬레이터를 찾을 수 없습니다.\n에뮬레이터가 실행 중인지 확인해 주세요\n에뮬레이터가 관리자 권한으로 실행된 경우, 본 소프트웨어도 관리자 권한으로 실행해야 합니다\n그래도 감지되지 않으면 수동으로 연결을 설정해 주세요.</system:String>
+    <system:String x:Key="EmulatorTooMany">다수의 에뮬레이터가 실행 중입니다.\n사용하지 않는 에뮬레이터를 종료하거나\n수동으로 연결을 설정해 주세요.</system:String>
+    <system:String x:Key="EmulatorStartFailed">에뮬레이터를 시작하지 못했습니다.\n사용하지 않는 에뮬레이터를 종료하거나\n또는 에뮬레이터를 수동으로 시작하세요.</system:String>
+    <system:String x:Key="SwitchLanguage">언어 전환 🌐</system:String>
+    <system:String x:Key="Language">언어</system:String>
+    <system:String x:Key="LanguageChangedTip">언어 설정이 변경되었습니다. 일부 콘텐츠는 재시작 후 완전히 적용됩니다.</system:String>
+    <system:String x:Key="LanguageRestartNow">재시작</system:String>
+    <system:String x:Key="LanguageSwitchNow">전환</system:String>
+    <system:String x:Key="ManualRestart">나중에</system:String>
+    <system:String x:Key="Tip">도움말</system:String>
+    <system:String x:Key="Warning">경고</system:String>
+    <system:String x:Key="Yes">네</system:String>
+    <system:String x:Key="No">아니요</system:String>
+    <system:String x:Key="Ok">확인</system:String>
+    <system:String x:Key="Cancel">취소</system:String>
+    <system:String x:Key="Confirm">확인</system:String>
+    <system:String x:Key="Rename">이름 변경</system:String>
+    <system:String x:Key="Delete">삭제</system:String>
+    <system:String x:Key="RenameTask">작업 이름 변경</system:String>
+    <system:String x:Key="RenameTaskPrompt">새 작업 이름을 입력하세요:</system:String>
+    <system:String x:Key="AddTaskQueueTask">새 작업 추가</system:String>
+    <system:String x:Key="ConfirmDeleteConfigurationMessage">정말로 구성 &lt;{0}&gt;을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</system:String>
+    <system:String x:Key="ConfirmDeleteTask">삭제 확인</system:String>
+    <system:String x:Key="ConfirmDeleteTaskMessage">정말로 {0} 번째 작업 "{1}"을 삭제하시겠습니까?</system:String>
+    <system:String x:Key="TaskRenamed">작업 이름 변경: {0}</system:String>
+    <system:String x:Key="TaskRenameFailed">작업 이름 변경 실패</system:String>
+    <system:String x:Key="TaskDeleted">작업 삭제: {0}</system:String>
+    <system:String x:Key="TaskCopied">작업 복사: {0}</system:String>
+    <system:String x:Key="StartGuideDemo">데모에서는 실제로 작업이 실행되지 않습니다</system:String>
+    <system:String x:Key="GuideDemoTaskAddLimitTip">데모 목록에는 최대 5개의 작업만 추가할 수 있습니다. 추가 전에 일부를 삭제해 주세요</system:String>
+    <system:String x:Key="TaskCopyFailed">작업 복사 실패</system:String>
+    <system:String x:Key="HotKeyShowGui">[단축키] MAA 보이기/숨기기</system:String>
+    <system:String x:Key="HotKeyLinkStart">[단축키] Link 시작/중지</system:String>
+    <system:String x:Key="HotKeyChangingTip">Backspace/Esc/Delete 키를 누르면 현재 값이 지워집니다</system:String>
+    <system:String x:Key="HotKeyRegistrationFailedOccupied">핫키 등록 실패: 이 조합은 다른 프로그램에서 이미 사용 중일 수 있습니다. 다른 조합으로 변경해 주세요</system:String>
+    <system:String x:Key="HotKeyRegistrationFailedDuplicate">핫키 등록 실패: 이 조합은 다른 MAA 핫키와 중복됩니다. 다른 조합으로 변경해 주세요</system:String>
+    <system:String x:Key="HotKeyNotSet">&lt; 미설정 &gt;</system:String>
+    <system:String x:Key="LabelSequenceTip">드래그하여 작업 순서를 변경할 수 있습니다</system:String>
+    <system:String x:Key="CheckBoxesNotSaved">이 옵션은 한 번만 유효합니다</system:String>
+    <system:String x:Key="CheckBoxesNotSavedAsNull">이 옵션은 우클릭 시 한 번만 적용됩니다</system:String>
+    <system:String x:Key="CheckBoxesNotSavedAsNullInvert">이 옵션은 우클릭 시 한 번만 건너뜁니다</system:String>
+    <system:String x:Key="SpecifiedDropsTip" xml:space="preserve">실제로 진입하는 스테이지는 아래의 ｢{key=StageSelect}｣ / ｢{key=StageSelect2}｣ 설정으로 계속 결정됩니다.
+• {key=Quantity}: 현재 전투 작업에서 해당 재료의 드롭 수를 목표로 삼아, 설정한 수량에 도달하면 멈춥니다.
+• {key=TargetInventory}: ｢{key=Toolbox}-{key=DepotRecognition}｣ 에 저장된 재고 데이터를 참고하여 설정한 재고 수량까지만 보충합니다.
+  • 재고 데이터는 캐시이므로 수동 파밍, 제작, 재료 사용 후 실제 수량과 달라질 수 있습니다. ｢{key=UserDataUpdate}｣ 또는 ｢{key=Toolbox}-{key=DepotRecognition}｣ 에서 동기화해 주세요.
+  • 실행 중에는 드롭에 따라 재고가 실시간 업데이트되며, 이전 작업에서 드롭된 재료가 후속 작업의 부족 수량에 반영됩니다.</system:String>
+    <system:String x:Key="StartupUpdateCheck">시작 시 업데이트 확인</system:String>
+    <system:String x:Key="UpdateAutoCheck">일정 시간마다 업데이트 확인</system:String>
+    <system:String x:Key="UpdateAutoCheckTip">게임 내 00:00 / 18:00 (서버 현지 시간 04:00 / 22:00)</system:String>
+    <system:String x:Key="UpdateAutoDownload">업데이트 자동 다운로드</system:String>
+    <system:String x:Key="UpdateAutoDownloadTip" xml:space="preserve">체크 해제 시, 업데이트 감지 시 (수동으로 ｢{key=UpdateCheckNow}｣ 실행 포함) 자동 다운로드가 중지되고 다운로드 링크가 포함된 시스템 알림만 표시됩니다. 링크에서 업데이트 패키지를 직접 다운로드한 후 MAA에 끌어다 놓아 수동으로 업데이트할 수 있습니다.
+>>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
 시스템 알림이 꺼져 있는 경우 앱 내 알림으로 전환되지만, 앱 내 알림에는 조작 가능한 다운로드 버튼이 제공되지 않습니다.</system:String>
     <system:String x:Key="Settings.Update.AutoInstall">업데이트 패키지 자동 설치</system:String>
     <system:String x:Key="Settings.Update.AutoInstall.Tip">새로운 버전이 확인되면 더 이상 묻지 않고, 작업이 없을 때 자동으로 업데이트하여 MAA를 다시 시작합니다</system:String>

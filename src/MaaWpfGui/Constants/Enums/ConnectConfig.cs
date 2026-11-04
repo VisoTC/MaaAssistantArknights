@@ -31,5 +31,9 @@ public enum ConnectConfig
     Compatible,
     SecondResolution,
     GeneralWithoutScreencapErr,
+<<<<<<< HEAD
     MuMuArm,
+=======
+    ARPS,
+>>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
 }
