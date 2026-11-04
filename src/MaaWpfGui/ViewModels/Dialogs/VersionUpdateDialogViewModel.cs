@@ -441,7 +441,6 @@ public partial class VersionUpdateDialogViewModel : Screen
 
     private const string MaaUpdateApi = "version/summary.json";
     private const int UpdatePackageDownloadMaxAttempts = 3;
-    private const string ForkReleasesApi = "https://api.github.com/repos/VisoTC/MaaAssistantArknights/releases";
 
     private JObject? _latestJson;
     private JObject? _assetsObject;
@@ -1535,15 +1534,14 @@ public partial class VersionUpdateDialogViewModel : Screen
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to check update by fork GitHub releases.");
+            _logger.Error(ex, "Failed to check update by Maa API.");
             return (CheckUpdateRetT.FailedToGetInfo, AppUpdateSource.MaaApi);
         }
     }
 
-    private async Task<CheckUpdateRetT> CheckUpdateByMaaApi()
-    {
-        return await CheckUpdateByForkGithubReleases();
-    }
+    private const string ForkReleasesApi = "https://api.github.com/repos/VisoTC/MaaAssistantArknights/releases";
+
+    private Task<CheckUpdateRetT> CheckUpdateByMaaApi() => CheckUpdateByForkGithubReleases();
 
     private async Task<CheckUpdateRetT> CheckUpdateByForkGithubReleases()
     {
@@ -1608,19 +1606,7 @@ public partial class VersionUpdateDialogViewModel : Screen
             return CheckUpdateRetT.AlreadyLatest;
         }
 
-        return GetVersionDetailsByForkGithubRelease(json);
-    }
-
-    private CheckUpdateRetT GetVersionDetailsByForkGithubRelease(JObject json)
-    {
-<<<<<<< HEAD
-        var (_, json) = await Instances.MaaApiService.RequestMaaApiWithCache($"version/{versionType}.json", false);
-        if (json is null)
-        {
-            return CheckUpdateRetT.NetworkError;
-        }
-
-        return ReadReleaseDetails(json["details"] as JObject, json["version"]?.ToString());
+        return ReadReleaseDetails(json, json["tag_name"]?.ToString());
     }
 
     private UpdateCredentialRequest? _githubUpdateRequest;
@@ -1632,12 +1618,6 @@ public partial class VersionUpdateDialogViewModel : Screen
         _assetsObject = null;
 
         if (string.IsNullOrEmpty(latestVersion) || release?["assets"] is not JArray assets)
-=======
-        _requiresFullPackageConfirmation = false;
-
-        string? latestVersion = json["tag_name"]?.ToString();
-        if (string.IsNullOrEmpty(latestVersion))
->>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
         {
             return CheckUpdateRetT.FailedToGetInfo;
         }
@@ -1648,24 +1628,9 @@ public partial class VersionUpdateDialogViewModel : Screen
         }
 
         _latestVersion = latestVersion;
-<<<<<<< HEAD
         _latestJson = release;
-=======
-        _latestJson = json;
-        if (_latestJson == null)
-        {
-            return CheckUpdateRetT.FailedToGetInfo;
-        }
-
-        _assetsObject = null;
->>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
 
         JObject? fullPackage = null;
-        var assets = _latestJson["assets"] as JArray;
-        if (assets == null)
-        {
-            return CheckUpdateRetT.FailedToGetInfo;
-        }
 
         var curVersionLower = _curVersion.ToLower();
         var latestVersionLower = _latestVersion.ToLower();

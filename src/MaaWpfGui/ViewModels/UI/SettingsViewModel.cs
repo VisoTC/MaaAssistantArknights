@@ -1943,16 +1943,11 @@ public class SettingsViewModel : Screen
         string uiVersionDisplay = DemoWindowTitleVersionOverride is { Length: > 0 } demoUiVersion
             ? demoUiVersion
             : LocalizationHelper.FormatVersion(uiVersion, VersionUpdateSettingsUserControlModel.BuildDateTime);
-<<<<<<< HEAD
         string adminTag = Bootstrapper.IsAdministratorWithUac() ? $" ({LocalizationHelper.GetString("Settings.About.Administrator")})" : string.Empty;
 
         // 常驻预览标记：防止带参数预览后忘记本进程未加载 Core
         string previewTag = Bootstrapper.IsCoreInitSkipped ? $" ({LocalizationHelper.GetString("Settings.About.UiPreviewMode")})" : string.Empty;
-        rvm.WindowTitle = $"{prefix}MAA{adminTag}{currentConfiguration} - {uiVersionDisplay}{resourceVersionDisplay}{connectConfigName}{connectAddress}{clientName}{previewTag}";
-=======
-        string adminTag = Bootstrapper.IsAdministratorWithUac() ? $" ({LocalizationHelper.GetString("Administrator")})" : string.Empty;
-        rvm.WindowTitle = $"{prefix}MAA-fork{adminTag}{currentConfiguration} - {uiVersionDisplay}{resourceVersionDisplay}{connectConfigName}{connectAddress}{clientName}";
->>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
+        rvm.WindowTitle = $"{prefix}MAA-fork{adminTag}{currentConfiguration} - {uiVersionDisplay}{resourceVersionDisplay}{connectConfigName}{connectAddress}{clientName}{previewTag}";
     }
 
     /// <summary>

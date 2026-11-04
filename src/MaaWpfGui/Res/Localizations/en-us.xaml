@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:system="clr-namespace:System;assembly=mscorlib">
 
+    <system:String x:Key="ARPS">ARPS (Experimental)</system:String>
     <system:String x:Key="About.Github">GitHub</system:String>
     <system:String x:Key="About.QqChannel">QQ channel</system:String>
     <system:String x:Key="About.QqGroup">QQ group</system:String>
@@ -358,6 +359,14 @@
     <system:String x:Key="Announcement.NotFinishedConfirm2">Yes, you — still clicking</system:String>
     <system:String x:Key="Announcement.NotFinishedConfirm3">Still clicking</system:String>
     <system:String x:Key="Announcement.Title">Announcement</system:String>
+    <system:String x:Key="ArpsCaptureMode">Capture Mode</system:String>
+    <system:String x:Key="ArpsCompression">ARPS Compression</system:String>
+    <system:String x:Key="ArpsExitPowerMode">Exit Power Mode</system:String>
+    <system:String x:Key="ArpsKeepScreenOn">Keep screen on</system:String>
+    <system:String x:Key="ArpsMaxFps">Max FPS</system:String>
+    <system:String x:Key="ArpsNotEnabledMessage">ARPS screenshot backend not enabled, please check related settings</system:String>
+    <system:String x:Key="ArpsPowerOnIfScreenOff">Wake screen if off</system:String>
+    <system:String x:Key="ArpsTurnScreenOff">Turn physical screen off after stream starts</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Failed">AttachWindow failed, please check screencap/input method settings</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Found">Found window "{0}"</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.MultipleFound">Found {0} "{1}" windows, using the first one</system:String>
@@ -1309,7 +1318,6 @@ Cache files (such as maps, operator avatars, etc.) need to be regenerated after 
     <system:String x:Key="Infrast.Custom.Plan.Tip">
         If ｢{key=Infrast.Custom.Plan}｣ has execution time, it will not switch automatically before ｢{key=TaskQueue.Task.Base}｣ task starts or during task execution, and will remain in the state at {key=TaskQueue.LinkStart}. Switching only occurs when idle or after the task is completed.
     </system:String>
-<<<<<<< HEAD
     <system:String x:Key="Infrast.Custom.PlanIndexAutoSwitch">Auto save for next plan</system:String>
     <system:String x:Key="Infrast.Custom.PlanSelectOutOfIndex">Custom infrast plan selection is out of index</system:String>
     <system:String x:Key="Infrast.Custom.TimeSchedule">Rotation time ({0})</system:String>
@@ -1897,218 +1905,6 @@ If you choose ｢{key=Common.ManualRestart}｣ and start MAA manually later, ｢
     <system:String x:Key="Settings.Update.AutoCheck.Tip">In-game 00:00 / 18:00 (Server local time 04:00 / 22:00)</system:String>
     <system:String x:Key="Settings.Update.AutoDownload">Auto Download Update</system:String>
     <system:String x:Key="Settings.Update.AutoDownload.Tip" xml:space="preserve">When disabled, detected updates (including manually triggered ｢{key=Settings.Update.CheckNow}｣) will no longer download automatically. Instead, a system notification with a download link will be shown, allowing you to download the package and drag it into MAA manually.
-=======
-    <system:String x:Key="CustomInfrastPlanIndexAutoSwitch">Auto save for next plan</system:String>
-    <system:String x:Key="CustomizeInfrastSelectionEmpty">Custom Base infrastructure selection is empty. Please check your configuration or turn off the Custom Base function.</system:String>
-    <system:String x:Key="General">General Mode</system:String>
-    <system:String x:Key="BlueStacks">BlueStacks</system:String>
-    <system:String x:Key="MuMuEmulator12">MuMu Emulator</system:String>
-    <system:String x:Key="LDPlayer">LD Player</system:String>
-    <system:String x:Key="AVD">Android Virtual Device (AVD)</system:String>
-    <system:String x:Key="Androws">Androws</system:String>
-    <system:String x:Key="Nox">Nox</system:String>
-    <system:String x:Key="XYAZ">MEmu</system:String>
-    <system:String x:Key="WSA">Old version of WSA</system:String>
-    <system:String x:Key="PC">Arknights PC Client (Community-maintained)</system:String>
-    <system:String x:Key="MaaTouch">MaaTouch</system:String>
-    <system:String x:Key="Compatible">Compatible Mode</system:String>
-    <system:String x:Key="SecondResolution">2nd Resolution</system:String>
-    <system:String x:Key="GeneralWithoutScreencapErr">General Mode (Blocked exception output)</system:String>
-    <system:String x:Key="ARPS">ARPS (Experimental)</system:String>
-    <system:String x:Key="ArpsCompression">ARPS Compression</system:String>
-    <system:String x:Key="ArpsMaxFps">Max FPS</system:String>
-    <system:String x:Key="ArpsCaptureMode">Capture Mode</system:String>
-    <system:String x:Key="ArpsExitPowerMode">Exit Power Mode</system:String>
-    <system:String x:Key="ArpsPowerOnIfScreenOff">Wake screen if off</system:String>
-    <system:String x:Key="ArpsTurnScreenOff">Turn physical screen off after stream starts</system:String>
-    <system:String x:Key="ArpsKeepScreenOn">Keep screen on</system:String>
-    <system:String x:Key="ArpsNotEnabledMessage">ARPS screenshot backend not enabled, please check related settings</system:String>
-    <system:String x:Key="DormThreshold">Morale Threshold</system:String>
-    <system:String x:Key="InfrastThresholdTip">If custom shifts are enabled, this field is only valid for rooms with autofill and {key=Operator} groups</system:String>
-    <system:String x:Key="RoguelikeStrategyExp">Gain Experience Points, clear as many nodes as possible</system:String>
-    <system:String x:Key="RoguelikeStrategyGold">Invests ingots, exits automatically after investment completes</system:String>
-    <system:String x:Key="RoguelikeStrategyBlackFlowExp">Farm levels, quickly reach Floor 3</system:String>
-    <system:String x:Key="RoguelikeStrategyBlackFlowInvestment">Farm Originium Ingots, exit after investing</system:String>
-    <system:String x:Key="RoguelikeStrategyBlackFlowBabyAnimal">Cultivation strategy</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTarget">Target swaddled animal</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTargetCat">Swaddled Cat</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTargetFeatheredSerpent">Swaddled Feathered Serpent</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTargetDog">Swaddled Dog</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTargetCerberus">Swaddled Cerberus</system:String>
-    <system:String x:Key="RoguelikeStrategyLastReward">Grind to obtain Hot Water Kettle or Elite 2 {key=Operator}s</system:String>
-    <system:String x:Key="RoguelikeStrategyCollapse">Farm collapse paradigms, restart immediately after encountering a non-rare collapse paradigm</system:String>
-    <system:String x:Key="RoguelikeCollectibleModeSquad">Squad to get collectibles</system:String>
-    <system:String x:Key="RoguelikeStrategyMonthlySquad">Grind Monthly Squad, clear as far as possible</system:String>
-    <system:String x:Key="RoguelikeStrategyDeepExploration">Grind Deep Investigation, clear as far as possible</system:String>
-    <system:String x:Key="RoguelikeStrategyFindPlaytime">Farm playtime nodes, enter the cave on the first floor, restart if target node not found</system:String>
-    <system:String x:Key="RoguelikeFindPlaytimeTarget">Target playtime node</system:String>
-    <system:String x:Key="RoguelikePlaytimeLing">Ling - Resounding Words</system:String>
-    <system:String x:Key="RoguelikePlaytimeShu">Shu - Reap What You Sow</system:String>
-    <system:String x:Key="RoguelikePlaytimeNian">Nian - Mahjong Trio</system:String>
-    <system:String x:Key="RoguelikeJieGardenTargetFound">Target playtime node found {0}</system:String>
-    <system:String x:Key="StartingSquad">Starting Squad</system:String>
-    <system:String x:Key="StartingRoles">Starting Roles</system:String>
-    <system:String x:Key="StartingCoreChar">Starting {key=Operator}</system:String>
-    <system:String x:Key="StartingCoreCharTip">If not filled out, the default policy will be used. The classes of the three positions must be different.</system:String>
-    <system:String x:Key="EnableAdditionalStartingCoreChar">Enable 2nd and 3rd {key=StartingCoreChar}</system:String>
-    <system:String x:Key="EnableAdditionalStartingCoreCharTip" xml:space="preserve">When enabled, the 2nd and 3rd starting operators can be filled in under General settings, and recruitment follows the position order.&#10;Recruitment only searches the first few pages, so operators with lower hope cost may not be found, and that position will fall back to the default policy.&#10;It is recommended to place operators with higher hope cost first.</system:String>
-    <system:String x:Key="StartingCoreChar2">2nd {key=StartingCoreChar}</system:String>
-    <system:String x:Key="StartingCoreChar3">3rd {key=StartingCoreChar}</system:String>
-    <system:String x:Key="RoguelikeThemeTipRecommended">← Highly recommended reading</system:String>
-    <system:String x:Key="RoguelikeStartingCoreCharNotFound">The {key=Operator} is not in battle_data.</system:String>
-    <system:String x:Key="RoguelikeCoreCharSet">{key=StartingCoreChar} set: {0}</system:String>
-    <system:String x:Key="RoguelikeCoreCharCleared">{key=StartingCoreChar} cleared</system:String>
-    <system:String x:Key="RoguelikeStartWithEliteTwo">Repeat for ｢{key=StartingCoreChar}｣ Elite 2</system:String>
-    <system:String x:Key="RoguelikeOnlyStartWithEliteTwo">Only Repeat for ｢{key=StartingCoreChar}｣ Elite 2, No Battle</system:String>
-    <system:String x:Key="Roguelike3FirstFloorFoldartal">Repeat for foldartal foreseed first floor, No Battle</system:String>
-    <system:String x:Key="Roguelike3NewSquad2StartingFoldartal">Start with ｢Life Prioritizing Squad｣ and acquire the cypherboard</system:String>
-    <system:String x:Key="Roguelike3NewSquad2StartingFoldartalTip">Write up to three and separate with ｢;｣</system:String>
-    <system:String x:Key="Roguelike3FirstFloorFoldartalTip">Enter the foldartal names, separated by ｢;｣</system:String>
-    <system:String x:Key="RoguelikeCollapseList">Collapse Paradigm List</system:String>
-    <system:String x:Key="RoguelikeCollapseListTip">Separate with ｢;｣. Leave blank to use the default list.</system:String>
-    <system:String x:Key="RoguelikeUseSupportUnitFormat">Select {0} from support unit list</system:String>
-    <system:String x:Key="StartingCoreCharPosition1">1st {key=Operator}</system:String>
-    <system:String x:Key="StartingCoreCharPosition2">2nd {key=Operator}</system:String>
-    <system:String x:Key="StartingCoreCharPosition3">3rd {key=Operator}</system:String>
-    <system:String x:Key="RoguelikeRequireStartingCoreChar">Please enter ｢{key=StartingCoreChar}｣ first</system:String>
-    <system:String x:Key="RoguelikeUseNonFriendSupport">Enable non-friend support</system:String>
-    <system:String x:Key="RoguelikeDelayAbortUntilCombatComplete">Don't abort Auto IS until the end of battle</system:String>
-    <system:String x:Key="RoguelikeStopAtFinalBoss">Stop before final boss</system:String>
-    <system:String x:Key="RoguelikeStopAtMaxLevel">Stop when max level is achieved</system:String>
-    <system:String x:Key="RoguelikeStartWithSeed">Start with seed</system:String>
-    <!--<system:String x:Key="RoguelikeStartWithSeed">Enable Investment Seed</system:String>-->
-    <system:String x:Key="RoguelikeSeedFormatError">Invalid format</system:String>
-    <system:String x:Key="RoguelikeStartWithSeedTip">Example: 2b3c4d,rogue_1,120</system:String>
-    <system:String x:Key="RoguelikeMonthlySquadAutoIterate">Monthly Squad Auto-Switch</system:String>
-    <system:String x:Key="RoguelikeMonthlySquadCheckComms">Monthly Squad Communication</system:String>
-    <system:String x:Key="RoguelikeMonthlySquadCheckCommsTip" xml:space="preserve">When enabled, MAA checks whether all communications for the current squad have been unlocked and only switches to the next Monthly Squad once they are all unlocked.&#10;If you only want the rewards, disable this option to reduce repeated exploration.&#10;MAA will not end the current exploration early just because this option is disabled.</system:String>
-    <system:String x:Key="RoguelikeDeepExplorationAutoIterate">Deep Investigation Auto-Switch</system:String>
-    <system:String x:Key="DeploymentWithPause" xml:space="preserve">Pause Trick (Experimental)</system:String>
-    <system:String x:Key="DeploymentWithPauseTip">Pauses the game when deploying {key=Operator} in auto combat, then deploys the next {key=Operator}</system:String>
-    <system:String x:Key="AdbLiteEnabled">Use ADB Lite (Experimental)</system:String>
-    <system:String x:Key="AdbLiteEnabledTip">ADB implementation built into MAA, avoiding launching an adb.exe process every time an adb command is executed</system:String>
-    <system:String x:Key="KillAdbOnExit">Kill ADB On Exit</system:String>
-    <system:String x:Key="DefaultSquad">Default Squad</system:String>
-    <system:String x:Key="IS2NewSquad1">Mind Over Matter Squad</system:String>
-    <system:String x:Key="IS2NewSquad2">Resourceful Squad</system:String>
-    <system:String x:Key="IS2NewSquad3">People-Oriented Squad</system:String>
-    <system:String x:Key="IS3NewSquad1">Eternal Hunting Squad</system:String>
-    <system:String x:Key="IS3NewSquad2">Life Prioritizing Squad</system:String>
-    <system:String x:Key="IS3NewSquad3">Scientific Thinking Squad</system:String>
-    <system:String x:Key="IS3NewSquad4">Special Training Squad</system:String>
-    <system:String x:Key="IS4NewSquad1">Soul Escort Squad</system:String>
-    <system:String x:Key="IS4NewSquad2">Erudite Squad</system:String>
-    <system:String x:Key="IS4NewSquad3">Blueprint Squad</system:String>
-    <system:String x:Key="IS4NewSquad4">Improvisation Squad</system:String>
-    <system:String x:Key="IS4NewSquad5">Mimic Squad</system:String>
-    <system:String x:Key="IS4NewSquad6">Ingots Squad</system:String>
-    <system:String x:Key="IS4NewSquad7">Collection Squad</system:String>
-    <system:String x:Key="IS4NewSquad8">Top Gun Squad</system:String>
-    <system:String x:Key="IS5NewSquad1">High Ground Breaching Squad</system:String>
-    <system:String x:Key="IS5NewSquad2">Ground Breaching Squad</system:String>
-    <system:String x:Key="IS5NewSquad3">Tourist Squad</system:String>
-    <system:String x:Key="IS5NewSquad4">Sui Regulator Squad</system:String>
-    <system:String x:Key="IS5NewSquad5">Tianshi Bureau Squad</system:String>
-    <system:String x:Key="IS5NewSquad6">Blooming Flowers Squad</system:String>
-    <system:String x:Key="IS5NewSquad7">Perilous Game Squad</system:String>
-    <system:String x:Key="IS5NewSquad8">Sui's Shadow Squad</system:String>
-    <system:String x:Key="IS5NewSquad9">Proxy Squad (Not Supported)</system:String>
-    <system:String x:Key="IS5NewSquad10">Knowledge Squad</system:String>
-    <system:String x:Key="IS5NewSquad11">Merchant Squad</system:String>
-    <system:String x:Key="IS6NewSquad1">本源研修分队</system:String>
-    <system:String x:Key="IS6NewSquad2">文明开化分队</system:String>
-    <system:String x:Key="IS6NewSquad3">开拓者分队</system:String>
-    <system:String x:Key="IS6NewSquad4">多边贸易分队</system:String>
-    <system:String x:Key="IS6NewSquad5">地质调查分队</system:String>
-    <system:String x:Key="SpecialForceSquad">Special Squad</system:String>
-    <system:String x:Key="LeaderSquad">Leader Squad</system:String>
-    <system:String x:Key="GatheringSquad">Gathering Squad</system:String>
-    <system:String x:Key="SupportSquad">Support Squad</system:String>
-    <system:String x:Key="SpearheadSquad">Spearhead Squad</system:String>
-    <system:String x:Key="TacticalAssaultOperative">Tactical Assault Squad</system:String>
-    <system:String x:Key="TacticalFortificationOperative">Tactical Fortification Squad</system:String>
-    <system:String x:Key="TacticalRangedOperative">Tactical Ranged Squad</system:String>
-    <system:String x:Key="TacticalDestructionOperative">Tactical Destruction Squad</system:String>
-    <system:String x:Key="ResearchSquad">Research Squad</system:String>
-    <system:String x:Key="First-ClassSquad">First-Class Squad</system:String>
-    <system:String x:Key="DefaultRoles">Default Roles</system:String>
-    <system:String x:Key="FirstMoveAdvantage">First Move Advantage (Vanguard, Sniper, Specialist)</system:String>
-    <system:String x:Key="SlowAndSteadyWinsTheRace">Slow and Steady Wins the Race (Defender, Caster, Sniper)</system:String>
-    <system:String x:Key="OvercomingYourWeaknesses">Overcoming Your Weaknesses (Guard, Supporter, Medic)</system:String>
-    <system:String x:Key="AsYourHeartDesires">As Your Heart Desires (Random)</system:String>
-    <system:String x:Key="FlexibleDeployment">Flexible Deployment (Vanguard, Supporter, Specialist)</system:String>
-    <system:String x:Key="Unbreakable">Indestructible (Defender, Caster, Medic)</system:String>
-    <system:String x:Key="AlgorithmFinish">Algorithm Finish</system:String>
-    <system:String x:Key="AlgorithmBadge">Algorithm Badge</system:String>
-    <system:String x:Key="AlgorithmConstructionPoint">Algorithm Construction Point</system:String>
-    <system:String x:Key="AlgorithmDoneSmeltGold">Forging Red Gold</system:String>
-    <system:String x:Key="ReclamationPnsModeError">Currently using no-save task mode. Please manually delete existing save and try again. If you wish to keep the save, please consider switching modes.</system:String>
-    <system:String x:Key="ReclamationPisModeError">Current task mode requires you to have a save with craftable items. Please consider switching modes.</system:String>
-    <system:String x:Key="NotSwitch">Don't Switch</system:String>
-    <system:String x:Key="NotSelected">Not selected</system:String>
-    <system:String x:Key="Official">Official (CN)</system:String>
-    <system:String x:Key="Bilibili">Bilibili</system:String>
-    <system:String x:Key="YoStarEN">YostarEN</system:String>
-    <system:String x:Key="YoStarJP">YostarJP</system:String>
-    <system:String x:Key="YoStarKR">YostarKR</system:String>
-    <system:String x:Key="Txwy">txwy</system:String>
-    <system:String x:Key="Switchable">Switchable</system:String>
-    <system:String x:Key="Executable">Executable</system:String>
-    <system:String x:Key="AdbProgram">ADB Program</system:String>
-    <system:String x:Key="EmulatorException">Error in emulator detection\nPlease use administrator privileges to open this software\nor set connection manually</system:String>
-    <system:String x:Key="AdbException">Error in ADB detection\nPlease use administrator privileges to open this software\nor set connection manually</system:String>
-    <system:String x:Key="EmulatorNotFound">No emulator detected\nPlease make sure the emulator is running\nIf the emulator is started with administrator privileges, please run this software as administrator\nIf still not detected, please set the connection manually</system:String>
-    <system:String x:Key="EmulatorTooMany">Too many emulators detected\nPlease shutdown not needed emulators \nor set connection manually</system:String>
-    <system:String x:Key="EmulatorStartFailed">Failed to start the emulator\nPlease open this software with administrator privileges \nor start the emulator manually.</system:String>
-    <system:String x:Key="SwitchLanguage">Switch Language 🌐</system:String>
-    <system:String x:Key="Language">Language</system:String>
-    <system:String x:Key="LanguageChangedTip">Language settings have been changed. Some content may require a restart to take full effect.</system:String>
-    <system:String x:Key="LanguageRestartNow">Restart</system:String>
-    <system:String x:Key="LanguageSwitchNow">Switch</system:String>
-    <system:String x:Key="ManualRestart">Later</system:String>
-    <system:String x:Key="Tip">Tip</system:String>
-    <system:String x:Key="Warning">Warning</system:String>
-    <system:String x:Key="Yes">Yes</system:String>
-    <system:String x:Key="No">No</system:String>
-    <system:String x:Key="Ok">OK</system:String>
-    <system:String x:Key="Cancel">Cancel</system:String>
-    <system:String x:Key="Confirm">Confirm</system:String>
-    <system:String x:Key="Rename">Rename</system:String>
-    <system:String x:Key="Delete">Delete</system:String>
-    <system:String x:Key="RenameTask">Rename Task</system:String>
-    <system:String x:Key="RenameTaskPrompt">Please enter a new task name:</system:String>
-    <system:String x:Key="AddTaskQueueTask">Add New Task</system:String>
-    <system:String x:Key="ConfirmDeleteConfigurationMessage">Are you sure you want to delete configuration &lt;{0}&gt;? This action cannot be undone.</system:String>
-    <system:String x:Key="ConfirmDeleteTask">Confirm Delete</system:String>
-    <system:String x:Key="ConfirmDeleteTaskMessage">Are you sure you want to delete {0} task "{1}"?</system:String>
-    <system:String x:Key="TaskRenamed">Task renamed to: {0}</system:String>
-    <system:String x:Key="TaskRenameFailed">Failed to rename task</system:String>
-    <system:String x:Key="TaskDeleted">Task deleted: {0}</system:String>
-    <system:String x:Key="TaskCopied">Task copied: {0}</system:String>
-    <system:String x:Key="StartGuideDemo">Tasks won't actually run in the demo.</system:String>
-    <system:String x:Key="GuideDemoTaskAddLimitTip">The demo list holds up to 5 tasks. Remove some before adding more.</system:String>
-    <system:String x:Key="TaskCopyFailed">Task copy failed</system:String>
-    <system:String x:Key="HotKeyShowGui">[HotKey] Show/collapse MAA</system:String>
-    <system:String x:Key="HotKeyLinkStart">[HotKey] Link start/stop</system:String>
-    <system:String x:Key="HotKeyChangingTip">Press Backspace / Esc / Delete to clear the current value</system:String>
-    <system:String x:Key="HotKeyRegistrationFailedOccupied">Failed to register the hotkey: the key combination may already be taken by another program. Please use a different combination.</system:String>
-    <system:String x:Key="HotKeyRegistrationFailedDuplicate">Failed to register the hotkey: the key combination duplicates another MAA hotkey. Please use a different combination.</system:String>
-    <system:String x:Key="HotKeyNotSet">&lt; not set &gt;</system:String>
-    <system:String x:Key="LabelSequenceTip">The label sequence can be dragged</system:String>
-    <system:String x:Key="CheckBoxesNotSaved">This option is effective once</system:String>
-    <system:String x:Key="CheckBoxesNotSavedAsNull">This option only takes effect once when right-clicked</system:String>
-    <system:String x:Key="CheckBoxesNotSavedAsNullInvert">This option only skips once when right-clicked</system:String>
-    <system:String x:Key="SpecifiedDropsTip" xml:space="preserve">The stage entered is still determined by the options below: ｢{key=StageSelect}｣ / ｢{key=StageSelect2}｣.
-• {key=Quantity}: uses the selected material's drop count in this combat task as the target, and stops when the set amount is reached.
-• {key=TargetInventory}: uses the saved inventory data from ｢{key=Toolbox}-{key=DepotRecognition}｣ and only farms until the target stock is reached.
-  • Inventory data is cached and may differ from your real stock after manual farming, crafting, or material use. Sync it with ｢{key=UserDataUpdate}｣ or ｢{key=Toolbox}-{key=DepotRecognition}｣.
-  • Inventory is updated in real time based on drops during a run; materials farmed by earlier tasks will reduce the deficit of subsequent tasks.</system:String>
-    <system:String x:Key="StartupUpdateCheck">Startup Update Check</system:String>
-    <system:String x:Key="UpdateAutoCheck">Scheduled Update Check</system:String>
-    <system:String x:Key="UpdateAutoCheckTip">In-game 00:00 / 18:00 (Server local time 04:00 / 22:00)</system:String>
-    <system:String x:Key="UpdateAutoDownload">Auto Download Update</system:String>
-    <system:String x:Key="UpdateAutoDownloadTip" xml:space="preserve">When disabled, detected updates (including manually triggered ｢{key=UpdateCheckNow}｣) will no longer download automatically. Instead, a system notification with a download link will be shown, allowing you to download the package and drag it into MAA manually.
->>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
 If system notifications are turned off, an in-app notification will be used instead, though it does not provide an interactive download button.</system:String>
     <system:String x:Key="Settings.Update.AutoInstall">Auto Install Update</system:String>
     <system:String x:Key="Settings.Update.AutoInstall.Tip">No longer shows a confirmation dialog when a new version is detected; MAA will update and restart automatically when tasks are idle</system:String>

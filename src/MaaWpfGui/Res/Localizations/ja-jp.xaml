@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:system="clr-namespace:System;assembly=mscorlib">
 
+    <system:String x:Key="ARPS">ARPS (実験的)</system:String>
     <system:String x:Key="About.Github">ソースコード: GitHub</system:String>
     <system:String x:Key="About.QqChannel">QQチャンネル</system:String>
     <system:String x:Key="About.QqGroup">QQグループ</system:String>
@@ -358,6 +359,14 @@
     <system:String x:Key="Announcement.NotFinishedConfirm2">そう、あなたですね、まだ押す</system:String>
     <system:String x:Key="Announcement.NotFinishedConfirm3">まだ押す</system:String>
     <system:String x:Key="Announcement.Title">アナウンス</system:String>
+    <system:String x:Key="ArpsCaptureMode">キャプチャモード</system:String>
+    <system:String x:Key="ArpsCompression">ARPS 圧縮</system:String>
+    <system:String x:Key="ArpsExitPowerMode">終了時の電源モード</system:String>
+    <system:String x:Key="ArpsKeepScreenOn">画面を常に点灯</system:String>
+    <system:String x:Key="ArpsMaxFps">最大 FPS</system:String>
+    <system:String x:Key="ArpsNotEnabledMessage">ARPS スクリーンショットバックエンドが有効ではありません。関連設定を確認してください</system:String>
+    <system:String x:Key="ArpsPowerOnIfScreenOff">画面消灯時に点灯</system:String>
+    <system:String x:Key="ArpsTurnScreenOff">ストリーム開始後に物理画面を消灯</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Failed">AttachWindow の接続に失敗しました。スクリーンキャプチャ/入力方法の設定を確認してください</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Found">ウィンドウ "{0}" が見つかりました</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.MultipleFound">{0} 個の "{1}" ウィンドウが見つかりました。最初のものを使用します</system:String>
@@ -1312,7 +1321,6 @@ DEBUGディレクトリに保存される画像には数量制限があり、超
     <system:String x:Key="Infrast.Custom.Plan.Tip">
         ｢{key=Infrast.Custom.Plan}｣ に実行時間が設定されている場合、｢{key=TaskQueue.Task.Base}｣ タスク開始前やタスク実行中には自動で切り替わらず、{key=TaskQueue.LinkStart}時点の状態を維持します。切り替えはアイドル時またはタスク完了後のみ行われます。
     </system:String>
-<<<<<<< HEAD
     <system:String x:Key="Infrast.Custom.PlanIndexAutoSwitch">次の計画を自動保存</system:String>
     <system:String x:Key="Infrast.Custom.PlanSelectOutOfIndex">カスタムインフラストラクチャ構成の選択がインデックスを超えています</system:String>
     <system:String x:Key="Infrast.Custom.TimeSchedule">時間ローテーション ({0})</system:String>
@@ -1900,218 +1908,6 @@ MAA は非インストール型のアプリケーションであり、レジス�
     <system:String x:Key="Settings.Update.AutoCheck.Tip">ゲーム内 00:00 / 18:00（サーバー現地時間 04:00 / 22:00）</system:String>
     <system:String x:Key="Settings.Update.AutoDownload">自動アップデート</system:String>
     <system:String x:Key="Settings.Update.AutoDownload.Tip" xml:space="preserve">オフの場合、更新の検出時（手動で ｢{key=Settings.Update.CheckNow}｣ を実行した場合を含む）に自動ダウンロードは行われず、ダウンロードリンク付きのシステム通知のみが表示されます。リンク先から更新パッケージをダウンロードし、MAA にドラッグして手動更新できます。
-=======
-    <system:String x:Key="CustomInfrastPlanIndexAutoSwitch">次の計画を自動保存</system:String>
-    <system:String x:Key="CustomizeInfrastSelectionEmpty">カスタム施設設定が空です。設定を確認するか、カスタマイズ機能をオフにしてください。</system:String>
-    <system:String x:Key="General">一般モード</system:String>
-    <system:String x:Key="BlueStacks">BlueStacks</system:String>
-    <system:String x:Key="MuMuEmulator12">MuMu Player</system:String>
-    <system:String x:Key="LDPlayer">LDPlayer</system:String>
-    <system:String x:Key="AVD">Android Virtual Device (AVD)</system:String>
-    <system:String x:Key="Androws">Androws</system:String>
-    <system:String x:Key="Nox">NoxPlayer</system:String>
-    <system:String x:Key="XYAZ">MEmu</system:String>
-    <system:String x:Key="WSA">古いバージョンのWSA</system:String>
-    <system:String x:Key="PC">アークナイツ PC クライアント（コミュニティ保守）</system:String>
-    <system:String x:Key="MaaTouch">MaaTouch</system:String>
-    <system:String x:Key="Compatible">互換モード</system:String>
-    <system:String x:Key="SecondResolution">2番目の決議</system:String>
-    <system:String x:Key="GeneralWithoutScreencapErr">一般モード（ブロックされた例外出力）</system:String>
-    <system:String x:Key="ARPS">ARPS (実験的)</system:String>
-    <system:String x:Key="ArpsCompression">ARPS 圧縮</system:String>
-    <system:String x:Key="ArpsMaxFps">最大 FPS</system:String>
-    <system:String x:Key="ArpsCaptureMode">キャプチャモード</system:String>
-    <system:String x:Key="ArpsExitPowerMode">終了時の電源モード</system:String>
-    <system:String x:Key="ArpsPowerOnIfScreenOff">画面消灯時に点灯</system:String>
-    <system:String x:Key="ArpsTurnScreenOff">ストリーム開始後に物理画面を消灯</system:String>
-    <system:String x:Key="ArpsKeepScreenOn">画面を常に点灯</system:String>
-    <system:String x:Key="ArpsNotEnabledMessage">ARPS スクリーンショットバックエンドが有効ではありません。関連設定を確認してください</system:String>
-    <system:String x:Key="DormThreshold">体力が設定した%以下になれば宿舎へ移動する</system:String>
-    <system:String x:Key="InfrastThresholdTip">カスタム シフトが有効な場合、このフィールドは自動入力と{key=Operator} グループのあるルームに対してのみ有効です</system:String>
-    <system:String x:Key="RoguelikeStrategyExp">経験値を取得し、できるだけクリア</system:String>
-    <system:String x:Key="RoguelikeStrategyGold">源石錐を収集、投資完了後に自動で終了</system:String>
-    <system:String x:Key="RoguelikeStrategyBlackFlowExp">レベル稼ぎ、素早く第3層へ</system:String>
-    <system:String x:Key="RoguelikeStrategyBlackFlowInvestment">源石錠稼ぎ、投資完了後に自動退出</system:String>
-    <system:String x:Key="RoguelikeStrategyBlackFlowBabyAnimal">襁褓動物を育成</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTarget">育成する襁褓動物</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTargetCat">襁褓の猫</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTargetFeatheredSerpent">襁褓の羽蛇</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTargetDog">襁褓の犬</system:String>
-    <system:String x:Key="RoguelikeBlackFlowCultivationTargetCerberus">襁褓のケルベロス</system:String>
-    <system:String x:Key="RoguelikeStrategyLastReward">支援選択あるいは昇進した{key=Operator}を得るため3層到着後に終了</system:String>
-    <system:String x:Key="RoguelikeStrategyCollapse">パラダイムロストをファーミングして、非レアパラダイムロストに遭遇したらすぐに再起動します</system:String>
-    <system:String x:Key="RoguelikeCollectibleModeSquad">支援選択を得るモードの分隊</system:String>
-    <system:String x:Key="RoguelikeStrategyMonthlySquad">月間小隊をグラインドし、できるだけ多くの層をクリア</system:String>
-    <system:String x:Key="RoguelikeStrategyDeepExploration">深層探索をグラインドし、できるだけ多くの層をクリア</system:String>
-    <system:String x:Key="RoguelikeStrategyFindPlaytime">常楽スポットをグラインドし、第一層で洞窟に入り、ターゲットスポットが見つからなければ再起動します</system:String>
-    <system:String x:Key="RoguelikeFindPlaytimeTarget">ターゲット常楽系スポット</system:String>
-    <system:String x:Key="RoguelikePlaytimeLing">リィン - 地に擲ちて声有り</system:String>
-    <system:String x:Key="RoguelikePlaytimeShu">シュウ - 因を種えて果を得る</system:String>
-    <system:String x:Key="RoguelikePlaytimeNian">ニェン - 一人足らぬ</system:String>
-    <system:String x:Key="RoguelikeJieGardenTargetFound">ターゲット常楽スポット {0} を見つけた</system:String>
-    <system:String x:Key="StartingSquad">最初の分隊</system:String>
-    <system:String x:Key="StartingRoles">最初の職業</system:String>
-    <system:String x:Key="StartingCoreChar">最初の{key=Operator}</system:String>
-    <system:String x:Key="StartingCoreCharTip">記入がない場合はデフォルトの方針を使用します。3つの位置の職業は同じにできません。</system:String>
-    <system:String x:Key="EnableAdditionalStartingCoreChar">2・3人目の{key=StartingCoreChar}を有効化</system:String>
-    <system:String x:Key="EnableAdditionalStartingCoreCharTip" xml:space="preserve">有効にすると、一般設定で2・3人目の最初のオペレーターを指定でき、募集は位置の順番で行われます。&#10;募集は先頭の数ページのみを検索するため、希望消費の低いオペレーターは見つからないことがあり、その位置はデフォルトの方針に戻ります。&#10;希望消費の高いオペレーターを前に配置することをお勧めします。</system:String>
-    <system:String x:Key="StartingCoreChar2">2人目の{key=StartingCoreChar}</system:String>
-    <system:String x:Key="StartingCoreChar3">3人目の{key=StartingCoreChar}</system:String>
-    <system:String x:Key="RoguelikeThemeTipRecommended">←必読推奨</system:String>
-    <system:String x:Key="RoguelikeStartingCoreCharNotFound">この{key=Operator}がbattle_dataにありません。</system:String>
-    <system:String x:Key="RoguelikeCoreCharSet">{key=StartingCoreChar}を設定しました: {0}</system:String>
-    <system:String x:Key="RoguelikeCoreCharCleared">{key=StartingCoreChar}をクリアしました</system:String>
-    <system:String x:Key="RoguelikeStartWithEliteTwo">｢{key=StartingCoreChar}｣ 直接昇進</system:String>
-    <system:String x:Key="RoguelikeOnlyStartWithEliteTwo">｢{key=StartingCoreChar}｣ の昇進招集までリセマラし、戦闘を行わない</system:String>
-    <system:String x:Key="Roguelike3FirstFloorFoldartal">第一層遠見で指定された啓示板を取得し、戦闘を行わない</system:String>
-    <system:String x:Key="Roguelike3NewSquad2StartingFoldartal">生活重視分隊で開始、指定された啓示板を取得する</system:String>
-    <system:String x:Key="Roguelike3NewSquad2StartingFoldartalTip">最大3つ書き込み、半角セミコロン;で区切る</system:String>
-    <system:String x:Key="Roguelike3FirstFloorFoldartalTip">予見啓示板の名前を入力し、複数は半角セミコロン;で区切ります</system:String>
-    <system:String x:Key="RoguelikeCollapseList">崩壊パラダイムリスト</system:String>
-    <system:String x:Key="RoguelikeCollapseListTip">英語のセミコロン ｢;｣ で区切る、空白のままにするとデフォルトリストが使用されます。</system:String>
-    <system:String x:Key="RoguelikeUseSupportUnitFormat">{0} をサポートから選択</system:String>
-    <system:String x:Key="StartingCoreCharPosition1">1人目の{key=Operator}</system:String>
-    <system:String x:Key="StartingCoreCharPosition2">2人目の{key=Operator}</system:String>
-    <system:String x:Key="StartingCoreCharPosition3">3人目の{key=Operator}</system:String>
-    <system:String x:Key="RoguelikeRequireStartingCoreChar">まず ｢{key=StartingCoreChar}｣ を入力してください</system:String>
-    <system:String x:Key="RoguelikeUseNonFriendSupport">戦友以外のサポートの使用を許可</system:String>
-    <system:String x:Key="RoguelikeDelayAbortUntilCombatComplete">自動ローグ 戦闘終了まえに ｢{key=Stop}｣ を遅らせる</system:String>
-    <system:String x:Key="RoguelikeStopAtFinalBoss">第5階層のボスの手前で一時停止する</system:String>
-    <system:String x:Key="RoguelikeStopAtMaxLevel">最大レベル達成時に停止</system:String>
-    <system:String x:Key="RoguelikeStartWithSeed">シードから始める</system:String>
-    <!--<system:String x:Key="RoguelikeStartWithSeed">投資のシードを有効にする</system:String>-->
-    <system:String x:Key="RoguelikeSeedFormatError">形式が正しくありません</system:String>
-    <system:String x:Key="RoguelikeStartWithSeedTip">例: 2b3c4d,rogue_1,120</system:String>
-    <system:String x:Key="RoguelikeMonthlySquadAutoIterate">月次小隊自動切替</system:String>
-    <system:String x:Key="RoguelikeMonthlySquadCheckComms">月次小隊通信</system:String>
-    <system:String x:Key="RoguelikeMonthlySquadCheckCommsTip" xml:space="preserve">有効にすると、MAAは現在の小隊の通信がすべて解放されているかを確認し、すべて解放されてから次の月次小隊に切り替えます。&#10;報酬の獲得のみが目的の場合は、この設定を無効にすると探索の繰り返しを減らせます。&#10;この設定を無効にしたからといって、MAAが進行中の探索を早めに終了することはありません。</system:String>
-    <system:String x:Key="RoguelikeDeepExplorationAutoIterate">多面調査自動切替</system:String>
-    <system:String x:Key="DeploymentWithPause">統合戦略/保全駐在でポーズトリックを使用します（ベータ機能のため非推奨です）</system:String>
-    <system:String x:Key="DeploymentWithPauseTip">自動戦闘で{key=Operator}を配置する際にゲームを一時停止し、次の{key=Operator}を配置します</system:String>
-    <system:String x:Key="AdbLiteEnabled">軽量ADBを使用（実験機能）</system:String>
-    <system:String x:Key="AdbLiteEnabledTip">MAA が独自に実装した ADB 機能で、adb コマンドを実行するたびに adb.exe プロセスが起動するのを避けられます</system:String>
-    <system:String x:Key="KillAdbOnExit">終了時にADBを終了する</system:String>
-    <system:String x:Key="DefaultSquad">デフォルト</system:String>
-    <system:String x:Key="IS2NewSquad1">精神論分隊</system:String>
-    <system:String x:Key="IS2NewSquad2">最大活用分隊</system:String>
-    <system:String x:Key="IS2NewSquad3">人文主義分隊</system:String>
-    <system:String x:Key="IS3NewSquad1">永久狩猟分隊</system:String>
-    <system:String x:Key="IS3NewSquad2">生活重視分隊</system:String>
-    <system:String x:Key="IS3NewSquad3">科学主義分隊</system:String>
-    <system:String x:Key="IS3NewSquad4">特訓分隊</system:String>
-    <system:String x:Key="IS4NewSquad1">霊魂護送分隊</system:String>
-    <system:String x:Key="IS4NewSquad2">博学多識分隊</system:String>
-    <system:String x:Key="IS4NewSquad3">位置測定分隊</system:String>
-    <system:String x:Key="IS4NewSquad4">臨機応変分隊</system:String>
-    <system:String x:Key="IS4NewSquad5">奇想天外分隊</system:String>
-    <system:String x:Key="IS4NewSquad6">破棘成金分隊</system:String>
-    <system:String x:Key="IS4NewSquad7">擬態学者分隊</system:String>
-    <system:String x:Key="IS4NewSquad8">専門家分隊</system:String>
-    <system:String x:Key="IS5NewSquad1">高台突破分隊</system:String>
-    <system:String x:Key="IS5NewSquad2">地面突破分隊</system:String>
-    <system:String x:Key="IS5NewSquad3">観光客分隊</system:String>
-    <system:String x:Key="IS5NewSquad4">司歳台分隊</system:String>
-    <system:String x:Key="IS5NewSquad5">天師府分隊</system:String>
-    <system:String x:Key="IS5NewSquad6">百花繚乱分隊</system:String>
-    <system:String x:Key="IS5NewSquad7">起死回生分隊</system:String>
-    <system:String x:Key="IS5NewSquad8">歳影反響分隊</system:String>
-    <system:String x:Key="IS5NewSquad9">代理人分隊（サポートされていません）</system:String>
-    <system:String x:Key="IS5NewSquad10">知学分隊</system:String>
-    <system:String x:Key="IS5NewSquad11">商人分隊</system:String>
-    <system:String x:Key="IS6NewSquad1">本源研修分队</system:String>
-    <system:String x:Key="IS6NewSquad2">文明开化分队</system:String>
-    <system:String x:Key="IS6NewSquad3">开拓者分队</system:String>
-    <system:String x:Key="IS6NewSquad4">多边贸易分队</system:String>
-    <system:String x:Key="IS6NewSquad5">地质调查分队</system:String>
-    <system:String x:Key="SpecialForceSquad">特別行動分隊</system:String>
-    <system:String x:Key="LeaderSquad">指揮分隊</system:String>
-    <system:String x:Key="GatheringSquad">集団分隊</system:String>
-    <system:String x:Key="SupportSquad">支援分隊</system:String>
-    <system:String x:Key="SpearheadSquad">先鋒分隊</system:String>
-    <system:String x:Key="TacticalAssaultOperative">突撃戦術分隊</system:String>
-    <system:String x:Key="TacticalFortificationOperative">要塞戦術分隊</system:String>
-    <system:String x:Key="TacticalRangedOperative">援護戦術分隊</system:String>
-    <system:String x:Key="TacticalDestructionOperative">破壊戦術分隊</system:String>
-    <system:String x:Key="ResearchSquad">研究分隊</system:String>
-    <system:String x:Key="First-ClassSquad">高規格分隊</system:String>
-    <system:String x:Key="DefaultRoles">デフォルト</system:String>
-    <system:String x:Key="FirstMoveAdvantage">先手必勝（先鋒、狙撃、特殊）</system:String>
-    <system:String x:Key="SlowAndSteadyWinsTheRace">攻守一体（重装、術師、狙撃）</system:String>
-    <system:String x:Key="OvercomingYourWeaknesses">前線支援（前衛、補助、医療）</system:String>
-    <system:String x:Key="AsYourHeartDesires">自由自在（ランダム）</system:String>
-    <system:String x:Key="FlexibleDeployment">柔軟配置（先鋒、補助、特殊）</system:String>
-    <system:String x:Key="Unbreakable">難攻不落（重装、術師、医療）</system:String>
-    <system:String x:Key="AlgorithmFinish">演算終了</system:String>
-    <system:String x:Key="AlgorithmBadge">繁栄のバッジ</system:String>
-    <system:String x:Key="AlgorithmConstructionPoint">ビルドポイント</system:String>
-    <system:String x:Key="AlgorithmDoneSmeltGold">鍛造レッドゴールド</system:String>
-    <system:String x:Key="ReclamationPnsModeError">現在はセーブなしのタスクモードを使用しています。既存のセーブデータを手動で削除してから再試行してください。セーブデータを保持したい場合は、モードを切り替えることを検討してください。</system:String>
-    <system:String x:Key="ReclamationPisModeError">現在のタスクモードでは、合成可能なアイテムを持っているセーブデータが必要です。モードを切り替えることを検討してください。</system:String>
-    <system:String x:Key="NotSwitch">切り替えない</system:String>
-    <system:String x:Key="NotSelected">選ばない</system:String>
-    <system:String x:Key="Official">CN-公式</system:String>
-    <system:String x:Key="Bilibili">Bilibili</system:String>
-    <system:String x:Key="YoStarEN">YostarEN</system:String>
-    <system:String x:Key="YoStarJP">YostarJP</system:String>
-    <system:String x:Key="YoStarKR">YostarKR</system:String>
-    <system:String x:Key="Txwy">txwy</system:String>
-    <system:String x:Key="Switchable">切り替え可能</system:String>
-    <system:String x:Key="Executable">実行ファイル</system:String>
-    <system:String x:Key="AdbProgram">ADBプログラム</system:String>
-    <system:String x:Key="EmulatorException">エミュレータのエラー検出\n管理者権限でこのアプリを開くか\n手動で接続設定を行ってください</system:String>
-    <system:String x:Key="AdbException">ADB検出エラー\nこのソフトウェアを開くには管理者権限を使用するか\n手動で接続を設定してください</system:String>
-    <system:String x:Key="EmulatorNotFound">エミュレータが検出されません\nエミュレータが起動していることを確認してください\nエミュレータが管理者権限で起動されている場合、本ソフトも管理者権限で起動してください\nそれでも検出できない場合は、手動で接続設定を行ってください</system:String>
-    <system:String x:Key="EmulatorTooMany">複数のシミュレータが検出されたため\n不要なエミュレータを閉じるか\n手動で接続設定を行ってください</system:String>
-    <system:String x:Key="EmulatorStartFailed">エミュレータの起動に失敗しました\n管理者権限でこのソフトウェアを開いていただくか\n手動でエミュレータを起動してください。</system:String>
-    <system:String x:Key="SwitchLanguage">言語を切り替える 🌐</system:String>
-    <system:String x:Key="Language">言語</system:String>
-    <system:String x:Key="LanguageChangedTip">言語設定が変更されました。一部のコンテンツは再起動後に完全に反映されます。</system:String>
-    <system:String x:Key="LanguageRestartNow">再起動</system:String>
-    <system:String x:Key="LanguageSwitchNow">切替</system:String>
-    <system:String x:Key="ManualRestart">後で</system:String>
-    <system:String x:Key="Tip">ヒント</system:String>
-    <system:String x:Key="Warning">警告</system:String>
-    <system:String x:Key="Yes">はい</system:String>
-    <system:String x:Key="No">いいえ</system:String>
-    <system:String x:Key="Ok">はい</system:String>
-    <system:String x:Key="Cancel">キャンセル</system:String>
-    <system:String x:Key="Confirm">認識する</system:String>
-    <system:String x:Key="Rename">名前を変更</system:String>
-    <system:String x:Key="Delete">削除</system:String>
-    <system:String x:Key="RenameTask">タスク名を変更</system:String>
-    <system:String x:Key="RenameTaskPrompt">新しいタスク名を入力してください：</system:String>
-    <system:String x:Key="AddTaskQueueTask">新しいタスクを追加</system:String>
-    <system:String x:Key="ConfirmDeleteConfigurationMessage">構成 &lt;{0}&gt; を削除してもよろしいですか？この操作は元に戻せません。</system:String>
-    <system:String x:Key="ConfirmDeleteTask">削除の確認</system:String>
-    <system:String x:Key="ConfirmDeleteTaskMessage">タスク "{1}" ({0}) を削除してもよろしいですか？</system:String>
-    <system:String x:Key="TaskRenamed">タスク名を変更しました: {0}</system:String>
-    <system:String x:Key="TaskRenameFailed">タスクの名前変更に失敗しました</system:String>
-    <system:String x:Key="TaskDeleted">タスクを削除しました: {0}</system:String>
-    <system:String x:Key="TaskCopied">タスクをコピーしました: {0}</system:String>
-    <system:String x:Key="StartGuideDemo">デモでは実際にタスクは実行されません</system:String>
-    <system:String x:Key="GuideDemoTaskAddLimitTip">デモリストに追加できるタスクは最大 5 個です。追加する前に一部を削除してください</system:String>
-    <system:String x:Key="TaskCopyFailed">タスクのコピーに失敗しました</system:String>
-    <system:String x:Key="HotKeyShowGui">[ホットキー] MAAの表示/最小化</system:String>
-    <system:String x:Key="HotKeyLinkStart">[ホットキー] Link 開始/停止</system:String>
-    <system:String x:Key="HotKeyChangingTip">バックスペース/Esc/デリート キーを押すことで初期化できます</system:String>
-    <system:String x:Key="HotKeyRegistrationFailedOccupied">ホットキーの登録に失敗しました：このキー組み合わせは他のプログラムで使用中の可能性があります。別の組み合わせをお試しください</system:String>
-    <system:String x:Key="HotKeyRegistrationFailedDuplicate">ホットキーの登録に失敗しました：このキー組み合わせは他の MAA ホットキーと重複しています。別の組み合わせをお試しください</system:String>
-    <system:String x:Key="HotKeyNotSet">&lt; 未設定 &gt;</system:String>
-    <system:String x:Key="LabelSequenceTip">タブの順番はドラッグ可能です</system:String>
-    <system:String x:Key="CheckBoxesNotSaved">このオプションは一度有効です</system:String>
-    <system:String x:Key="CheckBoxesNotSavedAsNull">このオプションは、右クリックで選択した時のみ一度だけ有効です</system:String>
-    <system:String x:Key="CheckBoxesNotSavedAsNullInvert">このオプションは、右クリックで選択した時のみ一度だけスキップします</system:String>
-    <system:String x:Key="SpecifiedDropsTip" xml:space="preserve">実際に入るステージは、引き続き下の ｢{key=StageSelect}｣ / ｢{key=StageSelect2}｣ で決まります。
-• {key=Quantity}: この理性作戦タスク中で、その素材のドロップ数が設定値に達するまで周回します。
-• {key=TargetInventory}: ｢{key=Toolbox}-{key=DepotRecognition}｣ に保存された在庫データを参照し、設定した在庫数になるまで補充します。
-  • 在庫データはキャッシュのため、手動周回や素材の使用後は実際とずれる場合があります。｢{key=UserDataUpdate}｣ または ｢{key=Toolbox}-{key=DepotRecognition}｣ で同期してください。
-  • 実行中はドロップに応じて在庫がリアルタイム更新され、前のタスクでドロップした素材が後続タスクの不足数に反映されます。</system:String>
-    <system:String x:Key="StartupUpdateCheck">起動時の更新チェック</system:String>
-    <system:String x:Key="UpdateAutoCheck">定期的な更新チェック</system:String>
-    <system:String x:Key="UpdateAutoCheckTip">ゲーム内 00:00 / 18:00（サーバー現地時間 04:00 / 22:00）</system:String>
-    <system:String x:Key="UpdateAutoDownload">自動アップデート</system:String>
-    <system:String x:Key="UpdateAutoDownloadTip" xml:space="preserve">オフの場合、更新の検出時（手動で ｢{key=UpdateCheckNow}｣ を実行した場合を含む）に自動ダウンロードは行われず、ダウンロードリンク付きのシステム通知のみが表示されます。リンク先から更新パッケージをダウンロードし、MAA にドラッグして手動更新できます。
->>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
 システム通知が無効な場合はアプリ内通知に切り替わりますが、アプリ内通知には操作可能なダウンロードボタンは提供されません。</system:String>
     <system:String x:Key="Settings.Update.AutoInstall">自動インストール更新</system:String>
     <system:String x:Key="Settings.Update.AutoInstall.Tip">新しいバージョンが見つかっても確認ダイアログを表示せず、タスクの空き時間に自動的にアップデートして MAA を再起動します</system:String>

@@ -94,7 +94,7 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
     /// Gets the list of the configuration of connection.
     /// </summary>
     public LocalizedObservableList<ConnectConfig> ConnectConfigList { get; } = new(
-<<<<<<< HEAD
+        (ConnectConfig.ARPS, "ARPS"),
         (ConnectConfig.General, "Connection.Config.General"),
         (ConnectConfig.BlueStacks, "Connection.Config.BlueStacks"),
         (ConnectConfig.MuMuEmulator12, "Connection.Config.MuMu"),
@@ -109,22 +109,6 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
         (ConnectConfig.Compatible, "Connection.Config.Compatible"),
         (ConnectConfig.SecondResolution, "Connection.Config.SecondResolution"),
         (ConnectConfig.GeneralWithoutScreencapErr, "Connection.Config.GeneralWithoutScreencapErr"));
-=======
-        (ConnectConfig.General, "General"),
-        (ConnectConfig.BlueStacks, "BlueStacks"),
-        (ConnectConfig.MuMuEmulator12, "MuMuEmulator12"),
-        (ConnectConfig.LDPlayer, "LDPlayer"),
-        (ConnectConfig.Androws, "Androws"),
-        (ConnectConfig.AVD, "AVD"),
-        (ConnectConfig.Nox, "Nox"),
-        (ConnectConfig.XYAZ, "XYAZ"),
-        (ConnectConfig.PC, "PC"),
-        (ConnectConfig.WSA, "WSA"),
-        (ConnectConfig.Compatible, "Compatible"),
-        (ConnectConfig.SecondResolution, "SecondResolution"),
-        (ConnectConfig.GeneralWithoutScreencapErr, "GeneralWithoutScreencapErr"),
-        (ConnectConfig.ARPS, "ARPS"));
->>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
 
     public static string TouchModeVideoPath => Path.Combine(PathsHelper.BaseDir, "Res", "Video", "TouchMode.mp4");
 
@@ -275,16 +259,10 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
 
     [PropertyDependsOn(nameof(ConnectConfig))]
     public ExtraConfig? ExtraConfig => ConnectConfig switch {
-<<<<<<< HEAD
         ConnectConfig.LDPlayer => _extras.LdPlayer,
         ConnectConfig.MuMuEmulator12 => _extras.Mumu12,
         ConnectConfig.PC => _extras.Win32,
-=======
-        ConnectConfig.LDPlayer => Extras.LdPlayer,
-        ConnectConfig.MuMuEmulator12 => Extras.Mumu12,
-        ConnectConfig.PC => Extras.Win32,
-        ConnectConfig.ARPS => Extras.Arps,
->>>>>>> 54faccbef (feat(arps): 应用 v6.18.0 单提交覆盖层)
+        ConnectConfig.ARPS => _extras.Arps,
         _ => null,
     };
 
