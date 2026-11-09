@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:system="clr-namespace:System;assembly=mscorlib">
 
+    <system:String x:Key="ARPS">ARPS（實驗性）</system:String>
     <system:String x:Key="About.Github">原始碼：GitHub</system:String>
     <system:String x:Key="About.QqChannel">QQ 頻道</system:String>
     <system:String x:Key="About.QqGroup">QQ 群</system:String>
@@ -358,6 +359,14 @@
     <system:String x:Key="Announcement.NotFinishedConfirm2">就是在說你，還點！</system:String>
     <system:String x:Key="Announcement.NotFinishedConfirm3">還點</system:String>
     <system:String x:Key="Announcement.Title">公告</system:String>
+    <system:String x:Key="ArpsCaptureMode">擷取模式</system:String>
+    <system:String x:Key="ArpsCompression">ARPS 壓縮</system:String>
+    <system:String x:Key="ArpsExitPowerMode">退出電源策略</system:String>
+    <system:String x:Key="ArpsKeepScreenOn">保持螢幕常亮</system:String>
+    <system:String x:Key="ArpsMaxFps">最大 FPS</system:String>
+    <system:String x:Key="ArpsNotEnabledMessage">ARPS 截圖後端未生效，請檢查相關設定</system:String>
+    <system:String x:Key="ArpsPowerOnIfScreenOff">熄屏時點亮螢幕</system:String>
+    <system:String x:Key="ArpsTurnScreenOff">推流後關閉實體螢幕</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Failed">AttachWindow 綁定視窗失敗，請檢查截圖/輸入方式設定</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Found">找到視窗 "{0}"</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.MultipleFound">找到 {0} 個 "{1}" 視窗，將使用第一個</system:String>

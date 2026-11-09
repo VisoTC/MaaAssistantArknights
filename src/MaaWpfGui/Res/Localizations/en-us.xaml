@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:system="clr-namespace:System;assembly=mscorlib">
 
+    <system:String x:Key="ARPS">ARPS (Experimental)</system:String>
     <system:String x:Key="About.Github">GitHub</system:String>
     <system:String x:Key="About.QqChannel">QQ channel</system:String>
     <system:String x:Key="About.QqGroup">QQ group</system:String>
@@ -358,6 +359,14 @@
     <system:String x:Key="Announcement.NotFinishedConfirm2">Yes, you — still clicking</system:String>
     <system:String x:Key="Announcement.NotFinishedConfirm3">Still clicking</system:String>
     <system:String x:Key="Announcement.Title">Announcement</system:String>
+    <system:String x:Key="ArpsCaptureMode">Capture Mode</system:String>
+    <system:String x:Key="ArpsCompression">ARPS Compression</system:String>
+    <system:String x:Key="ArpsExitPowerMode">Exit Power Mode</system:String>
+    <system:String x:Key="ArpsKeepScreenOn">Keep screen on</system:String>
+    <system:String x:Key="ArpsMaxFps">Max FPS</system:String>
+    <system:String x:Key="ArpsNotEnabledMessage">ARPS screenshot backend not enabled, please check related settings</system:String>
+    <system:String x:Key="ArpsPowerOnIfScreenOff">Wake screen if off</system:String>
+    <system:String x:Key="ArpsTurnScreenOff">Turn physical screen off after stream starts</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Failed">AttachWindow failed, please check screencap/input method settings</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Found">Found window "{0}"</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.MultipleFound">Found {0} "{1}" windows, using the first one</system:String>
