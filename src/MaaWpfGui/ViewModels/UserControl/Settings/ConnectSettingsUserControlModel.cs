@@ -94,6 +94,7 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
     /// Gets the list of the configuration of connection.
     /// </summary>
     public LocalizedObservableList<ConnectConfig> ConnectConfigList { get; } = new(
+        (ConnectConfig.ARPS, "ARPS"),
         (ConnectConfig.General, "Connection.Config.General"),
         (ConnectConfig.BlueStacks, "Connection.Config.BlueStacks"),
         (ConnectConfig.MuMuEmulator12, "Connection.Config.MuMu"),
@@ -262,7 +263,11 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
         ConnectConfig.LDPlayer => _extras.LdPlayer,
         ConnectConfig.MuMuEmulator12 => _extras.Mumu12,
         ConnectConfig.PC => _extras.Win32,
+<<<<<<< HEAD
         ConnectConfig.ModAVD => _extras.ModAvd,
+=======
+        ConnectConfig.ARPS => _extras.Arps,
+>>>>>>> 9e7e695e4 (feat(arps): 应用 v6.22.0 单提交覆盖层)
         _ => null,
     };
 
@@ -276,7 +281,11 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
 
         public Models.EmulatorConnectionExtra.Win32Extra Win32 { get; set; } = new();
 
+<<<<<<< HEAD
         public ModAvdExtra ModAvd { get; set; } = new();
+=======
+        public ArpsExtra Arps { get; set; } = new();
+>>>>>>> 9e7e695e4 (feat(arps): 应用 v6.22.0 单提交覆盖层)
 
         public Bluestacks BluestacksExtra { get; set; } = new();
 
@@ -718,10 +727,17 @@ public class ConnectSettingsUserControlModel : PropertyChangedBase
 
                 break;
 
+<<<<<<< HEAD
             case ConnectConfig.ModAVD:
                 if (ExtraConfig is ModAvdExtra { RootPath: not "" } && ScreencapMethod != "ModAvdExtras")
                 {
                     TestLinkInfo = $"{LocalizationHelper.GetString("Connection.ModAVD.ExtrasNotEnabledMessage")}\n{ScreencapTestCost}";
+=======
+            case ConnectConfig.ARPS:
+                if (ScreencapMethod != "ARPS")
+                {
+                    TestLinkInfo = $"{LocalizationHelper.GetString("ArpsNotEnabledMessage")}\n{ScreencapTestCost}";
+>>>>>>> 9e7e695e4 (feat(arps): 应用 v6.22.0 单提交覆盖层)
                     return;
                 }
 

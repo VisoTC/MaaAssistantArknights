@@ -794,7 +794,7 @@ public partial class VersionUpdateDialogViewModel : Screen
 
             if (curHash != null && latestHash != null)
             {
-                body = $"**Full Changelog**: [{curHash} -> {latestHash}](https://github.com/MaaAssistantArknights/MaaAssistantArknights/compare/{curHash}...{latestHash})";
+                body = $"**Full Changelog**: [{curHash} -> {latestHash}](https://github.com/VisoTC/MaaAssistantArknights/compare/{curHash}...{latestHash})";
             }
         }
 
@@ -1539,19 +1539,65 @@ public partial class VersionUpdateDialogViewModel : Screen
         }
     }
 
-    private async Task<CheckUpdateRetT> CheckUpdateByMaaApi()
-    {
-        var (_, json) = await Instances.MaaApiService.RequestMaaApiWithCache(MaaUpdateApi);
+    private const string ForkReleasesApi = "https://api.github.com/repos/VisoTC/MaaAssistantArknights/releases";
 
-        if (json is null)
+    private Task<CheckUpdateRetT> CheckUpdateByMaaApi() => CheckUpdateByForkGithubReleases();
+
+    private async Task<CheckUpdateRetT> CheckUpdateByForkGithubReleases()
+    {
+        var body = await Instances.HttpService.GetStringAsync(new Uri(ForkReleasesApi), new Dictionary<string, string>
         {
-            _logger.Error("Failed to get update info from MAA API.");
+            ["Accept"] = "application/vnd.github+json",
+            ["X-GitHub-Api-Version"] = "2022-11-28",
+        });
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            _logger.Error("Failed to get update info from fork GitHub releases.");
             return CheckUpdateRetT.FailedToGetInfo;
         }
 
-        string versionType = GetUpdateChannel();
+        var releases = JsonConvert.DeserializeObject<JArray>(body);
+        if (releases == null)
+        {
+            return CheckUpdateRetT.FailedToGetInfo;
+        }
 
-        var latestVersion = json[versionType]?["version"]?.ToString();
+        JObject? json = null;
+        foreach (var release in releases.OfType<JObject>())
+        {
+            if (release["draft"]?.ToObject<bool>() == true)
+            {
+                continue;
+            }
+
+            string? tag = release["tag_name"]?.ToString();
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                continue;
+            }
+
+            bool prerelease = release["prerelease"]?.ToObject<bool>() == true;
+            bool matchesChannel = SettingsViewModel.VersionUpdateSettings.VersionType switch {
+                VersionUpdateSettingsUserControlModel.UpdateVersionType.Beta => prerelease && IsBetaVersion(tag),
+                VersionUpdateSettingsUserControlModel.UpdateVersionType.Nightly => prerelease && SemVersion.TryParse(tag, SemVersionStyles.AllowLowerV, out var semVersion) && IsNightlyVersion(semVersion),
+                _ => !prerelease && IsStdVersion(tag),
+            };
+
+            if (matchesChannel)
+            {
+                json = release;
+                break;
+            }
+        }
+
+        if (json is null)
+        {
+            _logger.Error("Failed to find a matching release from fork GitHub releases.");
+            return CheckUpdateRetT.FailedToGetInfo;
+        }
+
+        var latestVersion = json["tag_name"]?.ToString();
 
         latestVersion ??= string.Empty;
 
@@ -1560,18 +1606,7 @@ public partial class VersionUpdateDialogViewModel : Screen
             return CheckUpdateRetT.AlreadyLatest;
         }
 
-        return await GetVersionDetailsByMaaApi(versionType);
-    }
-
-    private async Task<CheckUpdateRetT> GetVersionDetailsByMaaApi(string versionType)
-    {
-        var (_, json) = await Instances.MaaApiService.RequestMaaApiWithCache($"version/{versionType}.json", false);
-        if (json is null)
-        {
-            return CheckUpdateRetT.NetworkError;
-        }
-
-        return ReadReleaseDetails(json["details"] as JObject, json["version"]?.ToString());
+        return ReadReleaseDetails(json, json["tag_name"]?.ToString());
     }
 
     private UpdateCredentialRequest? _githubUpdateRequest;

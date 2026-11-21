@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:system="clr-namespace:System;assembly=mscorlib">
 
+    <system:String x:Key="ARPS">ARPS (実験的)</system:String>
     <system:String x:Key="About.Github">ソースコード: GitHub</system:String>
     <system:String x:Key="About.QqChannel">QQチャンネル</system:String>
     <system:String x:Key="About.QqGroup">QQグループ</system:String>
@@ -358,6 +359,14 @@
     <system:String x:Key="Announcement.NotFinishedConfirm2">そう、あなたですね、まだ押す</system:String>
     <system:String x:Key="Announcement.NotFinishedConfirm3">まだ押す</system:String>
     <system:String x:Key="Announcement.Title">アナウンス</system:String>
+    <system:String x:Key="ArpsCaptureMode">キャプチャモード</system:String>
+    <system:String x:Key="ArpsCompression">ARPS 圧縮</system:String>
+    <system:String x:Key="ArpsExitPowerMode">終了時の電源モード</system:String>
+    <system:String x:Key="ArpsKeepScreenOn">画面を常に点灯</system:String>
+    <system:String x:Key="ArpsMaxFps">最大 FPS</system:String>
+    <system:String x:Key="ArpsNotEnabledMessage">ARPS スクリーンショットバックエンドが有効ではありません。関連設定を確認してください</system:String>
+    <system:String x:Key="ArpsPowerOnIfScreenOff">画面消灯時に点灯</system:String>
+    <system:String x:Key="ArpsTurnScreenOff">ストリーム開始後に物理画面を消灯</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Failed">AttachWindow の接続に失敗しました。スクリーンキャプチャ/入力方法の設定を確認してください</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Found">ウィンドウ "{0}" が見つかりました</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.MultipleFound">{0} 個の "{1}" ウィンドウが見つかりました。最初のものを使用します</system:String>
