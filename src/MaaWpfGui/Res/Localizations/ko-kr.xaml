@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:system="clr-namespace:System;assembly=mscorlib">
 
+    <system:String x:Key="ARPS">ARPS (실험적)</system:String>
     <system:String x:Key="About.Github">소스 코드: GitHub</system:String>
     <system:String x:Key="About.QqChannel">QQ 채널</system:String>
     <system:String x:Key="About.QqGroup">QQ 그룹</system:String>
@@ -358,6 +359,14 @@
     <system:String x:Key="Announcement.NotFinishedConfirm2">그래 너, 계속 누르네</system:String>
     <system:String x:Key="Announcement.NotFinishedConfirm3">계속 누르네</system:String>
     <system:String x:Key="Announcement.Title">공지사항</system:String>
+    <system:String x:Key="ArpsCaptureMode">캡처 모드</system:String>
+    <system:String x:Key="ArpsCompression">ARPS 압축</system:String>
+    <system:String x:Key="ArpsExitPowerMode">종료 시 전원 모드</system:String>
+    <system:String x:Key="ArpsKeepScreenOn">화면 항상 켜기</system:String>
+    <system:String x:Key="ArpsMaxFps">최대 FPS</system:String>
+    <system:String x:Key="ArpsNotEnabledMessage">ARPS 스크린샷 백엔드가 활성화되지 않았습니다. 관련 설정을 확인하세요</system:String>
+    <system:String x:Key="ArpsPowerOnIfScreenOff">화면이 꺼져 있으면 켜기</system:String>
+    <system:String x:Key="ArpsTurnScreenOff">스트림 시작 후 물리 화면 끄기</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Failed">AttachWindow 연결에 실패했습니다. 스크린샷/입력 방법 설정을 확인하세요</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.Found">창 "{0}"을(를) 찾았습니다</system:String>
     <system:String x:Key="Asst.Connection.AttachWindow.MultipleFound">{0}개의 "{1}" 창을 찾았습니다. 첫 번째 창을 사용합니다</system:String>

@@ -34,7 +34,11 @@ public partial class ConnectSettings : NotifyPropertyChangedWithValue, IJsonOnDe
         Extras.Mumu12.PropertyChanged += Handler.OnPropertyChangedFactory(_bindingPrefix + nameof(ConnectSettings) + "." + nameof(ExtraConfigs) + "." + nameof(Extras.Mumu12) + ".");
         Extras.LDPlayer.PropertyChanged += Handler.OnPropertyChangedFactory(_bindingPrefix + nameof(ConnectSettings) + "." + nameof(ExtraConfigs) + "." + nameof(Extras.LDPlayer) + ".");
         Extras.Win32Extra.PropertyChanged += Handler.OnPropertyChangedFactory(_bindingPrefix + nameof(ConnectSettings) + "." + nameof(ExtraConfigs) + "." + nameof(Extras.Win32Extra) + ".");
+<<<<<<< HEAD
         Extras.ModAvd.PropertyChanged += Handler.OnPropertyChangedFactory(_bindingPrefix + nameof(ConnectSettings) + "." + nameof(ExtraConfigs) + "." + nameof(Extras.ModAvd) + ".");
+=======
+        Extras.Arps.PropertyChanged += Handler.OnPropertyChangedFactory(_bindingPrefix + nameof(ConnectSettings) + "." + nameof(ExtraConfigs) + "." + nameof(Extras.Arps) + ".");
+>>>>>>> 9e7e695e4 (feat(arps): 应用 v6.22.0 单提交覆盖层)
     }
 
     public void OnDeserialized()
@@ -81,8 +85,12 @@ public partial class ConnectSettings : NotifyPropertyChangedWithValue, IJsonOnDe
 
         public Win32Extra Win32Extra { get; set; } = new();
 
+<<<<<<< HEAD
         [JsonPropertyName("ModAVD")]
         public ModAvdExtra ModAvd { get; set; } = new();
+=======
+        public ArpsExtra Arps { get; set; } = new();
+>>>>>>> 9e7e695e4 (feat(arps): 应用 v6.22.0 单提交覆盖层)
 
         public Bluestacks BluestacksExtra { get; set; } = new();
 

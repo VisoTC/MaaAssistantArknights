@@ -202,9 +202,15 @@ public class AsstProxy
         AsstSetConnectionExtras("LDPlayer", extras);
     }
 
+<<<<<<< HEAD
     private static void AsstSetConnectionExtrasModAvd(string extras)
     {
         AsstSetConnectionExtras("ModAVD", extras);
+=======
+    private static void AsstSetConnectionExtrasArps(string extras)
+    {
+        AsstSetConnectionExtras("ARPS", extras);
+>>>>>>> 9e7e695e4 (feat(arps): 应用 v6.22.0 单提交覆盖层)
     }
 
     private static unsafe AsstTaskId AsstAppendTask(AsstHandle handle, string type, string taskParams)
@@ -1244,6 +1250,7 @@ public class AsstProxy
 
                             break;
 
+<<<<<<< HEAD
                         case ConnectConfig.ModAVD:
                             // 根目录为空时只用 ADB 截图，不提示
                             if (SettingsViewModel.ConnectSettings.ExtraConfig is ModAvdExtra { RootPath: not "" } && method != "ModAvdExtras")
@@ -1251,6 +1258,13 @@ public class AsstProxy
                                 var modAvdExtrasMsg = LocalizationHelper.GetString("Connection.ModAVD.ExtrasNotEnabledMessage");
                                 Instances.TaskQueueViewModel.AddLog(modAvdExtrasMsg, UiLogColor.Error);
                                 Instances.CopilotViewModel.AddLog(modAvdExtrasMsg, UiLogColor.Error, showTime: false);
+=======
+                        case ConnectConfig.ARPS:
+                            if (method != "ARPS")
+                            {
+                                Instances.TaskQueueViewModel.AddLog(LocalizationHelper.GetString("ArpsNotEnabledMessage"), UiLogColor.Error);
+                                Instances.CopilotViewModel.AddLog(LocalizationHelper.GetString("ArpsNotEnabledMessage"), UiLogColor.Error, showTime: false);
+>>>>>>> 9e7e695e4 (feat(arps): 应用 v6.22.0 单提交覆盖层)
                                 needToStop = true;
                             }
 
@@ -3553,9 +3567,15 @@ public class AsstProxy
         {
             AsstSetConnectionExtrasLdPlayer(ldPlayer.Config);
         }
+<<<<<<< HEAD
         else if (SettingsViewModel.ConnectSettings.ExtraConfig is ModAvdExtra modAvd)
         {
             AsstSetConnectionExtrasModAvd(modAvd.Config);
+=======
+        else if (ConnectSettingsUserControlModel.Instance.ExtraConfig is ArpsExtra arps)
+        {
+            AsstSetConnectionExtrasArps(arps.Config);
+>>>>>>> 9e7e695e4 (feat(arps): 应用 v6.22.0 单提交覆盖层)
         }
 
         switch (SettingsViewModel.ConnectSettings.ConnectConfig)

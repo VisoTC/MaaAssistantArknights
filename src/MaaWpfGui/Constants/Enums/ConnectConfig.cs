@@ -32,5 +32,9 @@ public enum ConnectConfig
     SecondResolution,
     GeneralWithoutScreencapErr,
     MuMuArm,
+<<<<<<< HEAD
     ModAVD,
+=======
+    ARPS,
+>>>>>>> 9e7e695e4 (feat(arps): 应用 v6.22.0 单提交覆盖层)
 }
