@@ -2103,7 +2103,7 @@ public class SettingsViewModel : Screen
 
         // 常驻预览标记：防止带参数预览后忘记本进程未加载 Core
         string previewTag = Bootstrapper.IsCoreInitSkipped ? $" ({LocalizationHelper.GetString("Settings.About.UiPreviewMode")})" : string.Empty;
-        rvm.WindowTitle = $"{prefix}MAA{adminTag}{currentConfiguration} - {uiVersionDisplay}{resourceVersionDisplay}{connectConfigName}{connectAddress}{clientName}{previewTag}";
+        rvm.WindowTitle = $"{prefix}MAA-fork{adminTag}{currentConfiguration} - {uiVersionDisplay}{resourceVersionDisplay}{connectConfigName}{connectAddress}{clientName}{previewTag}";
     }
 
     /// <summary>
